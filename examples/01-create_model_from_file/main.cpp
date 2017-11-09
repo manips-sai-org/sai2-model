@@ -13,7 +13,7 @@ int main (int argc, char ** argv) {
 
 	Model::RBDLModel robot = Model::RBDLModel(robot_fname, true);
 
-	cout << "robot degrees of freedom : " << robot._dof << endl;
+	cout << "robot degrees of freedom : " << robot.dof() << endl;
 	cout << "robot coordinates : " << robot._q.transpose() << endl;
 
 	return 0;

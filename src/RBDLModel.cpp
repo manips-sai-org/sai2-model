@@ -1,5 +1,5 @@
 /*
- * RbdlModel.cpp
+ * RBDLModel.cpp
  * 
  *  Wrapper around RBDL plus functions to facilitate the whole body control framework from Stanford robotics lab
  *
@@ -37,35 +37,41 @@ RBDLModel::RBDLModel (const std::string path_to_model_file, bool verbose)
     _ddq.setZero(_dof);
     _M.setIdentity(_dof,_dof);
     _M_inv.setIdentity(_dof,_dof);
-	// 
-	updateModel(_q, _dq, _ddq);
+
+	updateModel();
 }
 
 
 RBDLModel::~RBDLModel (){}
 
 
-void RBDLModel::updateModel(const Eigen::VectorXd& q,
-	const Eigen::VectorXd& dq,
-	const Eigen::VectorXd& ddq)
+void RBDLModel::updateKinematics()
 {
-	UpdateKinematicsCustom(_rbdl_model, &q, &dq, &ddq);
+	UpdateKinematicsCustom(_rbdl_model, &_q, &_dq, &_ddq);
 }
 
 
-void RBDLModel::massMatrix(Eigen::MatrixXd& A,
-	const Eigen::VectorXd& q)
+void RBDLModel::updateDynamics()
 {
-	if (A.rows()!=_dof|| A.cols()!=_dof){
-	A.setZero(_dof,_dof);
-	}
+	if (_M.rows()!=_dof|| _M.cols()!=_dof)
+	{_M.setZero(_dof,_dof);}
 
-	CompositeRigidBodyAlgorithm(_rbdl_model, q, A, false);
+	CompositeRigidBodyAlgorithm(_rbdl_model, _q, _M, false);
+	_M_inv = _M.inverse();
 }
 
+void RBDLModel::updateModel()
+{
+	updateKinematics();
+	updateDynamics();
+}
+
+int RBDLModel::dof()
+{
+	return _dof;
+}
 
 void RBDLModel::gravityVector(Eigen::VectorXd& g,
-	const Eigen::VectorXd& q,
 	const Eigen::Vector3d& gravity)
 {
 
@@ -81,146 +87,135 @@ void RBDLModel::gravityVector(Eigen::VectorXd& g,
 	{
 		double mass = it_body->mMass;
 		Eigen::MatrixXd Jv = Eigen::MatrixXd::Zero(3, _dof);
-		CalcPointJacobian(_rbdl_model, q, body_id, it_body->mCenterOfMass, Jv, false);
+		CalcPointJacobian(_rbdl_model, _q, body_id, it_body->mCenterOfMass, Jv, false);
 
 		g += Jv.transpose() * (-mass * gravity);
 	}
 }
 
 
-void RBDLModel::coriolisForce(Eigen::VectorXd& b,
-	const Eigen::VectorXd& q,
-	const Eigen::VectorXd& dq)
+void RBDLModel::coriolisForce(Eigen::VectorXd& b)
 {
-	NonlinearEffects(_rbdl_model,q,dq,b);
+	NonlinearEffects(_rbdl_model,_q,_dq,b);
 }
 
-void RBDLModel::J_0(Eigen::MatrixXd& J,
+void RBDLModel::J(Eigen::MatrixXd& J,
 	const std::string& link_name,
-	const Eigen::Vector3d& pos_in_link,
-	const Eigen::VectorXd& q)
+	const Eigen::Vector3d& pos_in_link)
 {
 	if (J.rows()!=6 || J.cols()!=_dof) // resize to the right format
 	{
 		J.setZero(6,_dof);
 	}
 	Eigen::MatrixXd J_temp = Eigen::MatrixXd::Zero(6,_dof);
-	CalcPointJacobian6D (_rbdl_model, q, linkId(link_name), pos_in_link, J_temp, false);
+	CalcPointJacobian6D (_rbdl_model, _q, linkId(link_name), pos_in_link, J_temp, false);
 
 	// RBDL gives Jw as the top 3 rows and Jv as the bottom part. We need to swap it here
 	J << J_temp.block(3,0,3,_dof),
 		 J_temp.block(0,0,3,_dof);
 }
 
-void RBDLModel::J(Eigen::MatrixXd& J,
+void RBDLModel::J_0(Eigen::MatrixXd& J,
 	const std::string& link_name,
-	const Eigen::Vector3d& pos_in_link,
-	const Eigen::VectorXd& q)
+	const Eigen::Vector3d& pos_in_link)
 {
 	if (J.rows()!=6 || J.cols()!=_dof) // resize to the right format
 	{
 		J.setZero(6,_dof);
 	}
-	CalcPointJacobian6D (_rbdl_model, q, linkId(link_name), pos_in_link, J, false);
+	CalcPointJacobian6D (_rbdl_model, _q, linkId(link_name), pos_in_link, J, false);
 }
 
 
 
 void RBDLModel::Jv(Eigen::MatrixXd& J,
 	const std::string& link_name,
-	const Eigen::Vector3d& pos_in_link,
-	const Eigen::VectorXd& q)
+	const Eigen::Vector3d& pos_in_link)
 {
 	if (J.rows()!=3 || J.cols()!=_dof)
 	{
 		J.setZero(3,_dof);
 	}
 
-	CalcPointJacobian(_rbdl_model, q, linkId(link_name), pos_in_link, J, false);
+	CalcPointJacobian(_rbdl_model, _q, linkId(link_name), pos_in_link, J, false);
 }
 
 
 
 void RBDLModel::Jw(Eigen::MatrixXd& J,
- const std::string& link_name,
- const Eigen::VectorXd& q)
+ const std::string& link_name)
 {
 	// compute the full jacobian at the center of the link and take rotational part
 	Eigen::MatrixXd J_temp = Eigen::MatrixXd::Zero(6,_dof);
-	CalcPointJacobian6D (_rbdl_model, q, linkId(link_name), Eigen::Vector3d::Zero(), J_temp, false);
+	CalcPointJacobian6D (_rbdl_model, _q, linkId(link_name), Eigen::Vector3d::Zero(), J_temp, false);
 	J = J_temp.topRows<3>();
 }
 
 
 
 void RBDLModel::transform(Eigen::Affine3d& T,
- const std::string& link_name,
- const Eigen::VectorXd& q)
+ const std::string& link_name)
 {
 	unsigned int link_id = linkId(link_name);
 	Eigen::Vector3d pos_in_body(0,0,0);
-	T.linear() = CalcBodyWorldOrientation(_rbdl_model, q, link_id, false).transpose();
-	T.translation() = CalcBodyToBaseCoordinates(_rbdl_model, q, link_id, pos_in_body, false);
+	T.linear() = CalcBodyWorldOrientation(_rbdl_model, _q, link_id, false).transpose();
+	T.translation() = CalcBodyToBaseCoordinates(_rbdl_model, _q, link_id, pos_in_body, false);
 }
 
+void RBDLModel::transform(Eigen::Affine3d& T,
+ const std::string& link_name,
+ const Eigen::Vector3d& pos_in_body)
+{
+	unsigned int link_id = linkId(link_name);
+	T.linear() = CalcBodyWorldOrientation(_rbdl_model, _q, link_id, false).transpose();
+	T.translation() = CalcBodyToBaseCoordinates(_rbdl_model, _q, link_id, pos_in_body, false);
+}
 
 void RBDLModel::position(Eigen::Vector3d& pos,
 	const std::string& link_name,
-	const Eigen::Vector3d& pos_in_link,
-	const Eigen::VectorXd& q)
+	const Eigen::Vector3d& pos_in_link)
 {
-	pos = CalcBodyToBaseCoordinates(_rbdl_model, q, linkId(link_name), pos_in_link, false);
+	pos = CalcBodyToBaseCoordinates(_rbdl_model, _q, linkId(link_name), pos_in_link, false);
 }
 
 
 void RBDLModel::linearVelocity(Eigen::Vector3d& vel,
 	const std::string& link_name,
-	const Eigen::Vector3d& pos_in_link,
-	const Eigen::VectorXd& q,
-	const Eigen::VectorXd& dq)
+	const Eigen::Vector3d& pos_in_link)
 {
-	vel = CalcPointVelocity(_rbdl_model,q,dq,linkId(link_name),pos_in_link,false);
+	vel = CalcPointVelocity(_rbdl_model,_q,_dq,linkId(link_name),pos_in_link,false);
 }
 
 
 void RBDLModel::linearAcceleration(Eigen::Vector3d& accel,
 	const std::string& link_name,
-	const Eigen::Vector3d& pos_in_link,
-	const Eigen::VectorXd& q,
-	const Eigen::VectorXd& dq,
-	const Eigen::VectorXd& ddq)
+	const Eigen::Vector3d& pos_in_link)
 {
-	accel = CalcPointAcceleration(_rbdl_model,q,dq,ddq,linkId(link_name),pos_in_link,false);
+	accel = CalcPointAcceleration(_rbdl_model,_q,_dq,_ddq,linkId(link_name),pos_in_link,false);
 }
 
 
 void RBDLModel::rotation(Eigen::Matrix3d& rot,
-	const std::string& link_name,
-	const Eigen::VectorXd& q)
+	const std::string& link_name)
 {
-	rot = CalcBodyWorldOrientation(_rbdl_model, q, linkId(link_name), false).transpose();
+	rot = CalcBodyWorldOrientation(_rbdl_model, _q, linkId(link_name), false).transpose();
 }
 
 
 void RBDLModel::angularVelocity(Eigen::Vector3d& avel,
- const std::string& link_name,
- const Eigen::VectorXd& q,
- const Eigen::VectorXd& dq)
+ const std::string& link_name)
 {
 	Eigen::VectorXd v_tmp = Eigen::VectorXd::Zero(6);
-	v_tmp = CalcPointVelocity6D(_rbdl_model,q,dq,linkId(link_name),Eigen::Vector3d::Zero(),false);
+	v_tmp = CalcPointVelocity6D(_rbdl_model,_q,_dq,linkId(link_name),Eigen::Vector3d::Zero(),false);
 	avel = v_tmp.head(3);
 }
 
 
 void RBDLModel::angularAcceleration(Eigen::Vector3d& aaccel,
- const std::string& link_name,
- const Eigen::VectorXd& q,
- const Eigen::VectorXd& dq,
- const Eigen::VectorXd& ddq)
+ const std::string& link_name)
 {
 	Eigen::VectorXd a_tmp = Eigen::VectorXd::Zero(6);
-	a_tmp = CalcPointAcceleration6D(_rbdl_model,q,dq,ddq,linkId(link_name),Eigen::Vector3d::Zero(),false);
+	a_tmp = CalcPointAcceleration6D(_rbdl_model,_q,_dq,_ddq,linkId(link_name),Eigen::Vector3d::Zero(),false);
 	aaccel = a_tmp.head(3);
 }
 
