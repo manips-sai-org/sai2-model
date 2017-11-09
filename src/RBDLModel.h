@@ -13,6 +13,8 @@
 namespace Model
 {
 
+enum ContactNature {PointContact, SurfaceContact};
+
 class RBDLModel
 {
 public:
@@ -195,6 +197,143 @@ public:
     void getLinkMass(double& mass,
                      Eigen::Vector3d& center_of_mass,
                      const std::string& link_name);
+
+
+     /**
+     * @brief Gives orientation error from rotation matrices
+     * @param delta_phi Vector on which the orientation error will be written
+     * @param desired_orientation desired orientation rotation matrix
+     * @param current_orientation current orientation matrix
+     */
+    void orientationError(Eigen::Vector3d& delta_phi,
+                          const Eigen::Matrix3d& desired_orientation,
+                          const Eigen::Matrix3d& current_orientation);
+
+
+    /**
+     * @brief Gives orientation error from quaternions
+     * @param delta_phi Vector on which the orientation error will be written
+     * @param desired_orientation desired orientation quaternion
+     * @param current_orientation current orientation quaternion
+     */
+    void orientationError(Eigen::Vector3d& delta_phi,
+                          const Eigen::Quaterniond& desired_orientation,
+                          const Eigen::Quaterniond& current_orientation);
+
+    /**
+     * @brief Computes the operational space matrix corresponding to a given Jacobian
+     * @param Lambda Matrix on which the operational space mass matrix will be written
+     * @param task_jacobian The jacobian of the task for which we want the op space mass matrix
+     */
+    void taskInertiaMatrix(Eigen::MatrixXd& Lambda,
+                           const Eigen::MatrixXd& task_jacobian);
+
+    /**
+     * @brief Computes the operational space matrix robust to singularities
+     * @param Lambda Matrix on which the operational space mass matrix will be written
+     * @param task_jacobian The jacobian of the task for which we want the op space mass matrix
+     */
+    void taskInertiaMatrixWithPseudoInv(Eigen::MatrixXd& Lambda,
+                           const Eigen::MatrixXd& task_jacobian);
+
+    /**
+     * @brief      Computes the dynamically consistent inverse of the jacobian for a given task. Recomputes the task inertia at each call
+     *
+     * @param      Jbar           Matrix to which the dynamically consistent inverse will be written
+     * @param[in]  task_jacobian  The task jacobian
+     */
+    void dynConsistentInverseJacobian(Eigen::MatrixXd& Jbar,
+                                      const Eigen::MatrixXd& task_jacobian);
+
+
+    /**
+     * @brief      Computes the nullspace matrix for the highest priority task. Recomputes the dynamically consistent inverse and the task mass matrix at each call
+     *
+     * @param      N              Matrix to which the nullspace matrix will be written
+     * @param[in]  task_jacobian  The task jacobian
+     */
+    void nullspaceMatrix(Eigen::MatrixXd& N,
+                             const Eigen::MatrixXd& task_jacobian);
+
+    /**
+     * @brief      Computes the nullspace matrix of the task, consistent with the previous nullspace
+     *             Recomputes the dynamically consistent inverse and the task mass matrix at each call   
+     *  
+     * @param      N              Matrix to which the nullspace matrix will be written
+     * @param[in]  task_jacobian  The task jacobian
+     * @param[in]  N_prec         The previous nullspace matrix
+     */
+    void nullspaceMatrix(Eigen::MatrixXd& N,
+                             const Eigen::MatrixXd& task_jacobian,
+                             const Eigen::MatrixXd& N_prec);
+
+    /**
+     * @brief      Computes the operational spce matrices (task inertia, dynamically consistent inverse of the jacobian and nullspace) for a given task,
+     *             for the first task. More efficient than calling the three individual functions.
+     *
+     * @param      Lambda         Matrix to which the operational space mass matrix will be written
+     * @param      Jbar           Matrix to which the dynamically consistent inverse of the jacobian will be written
+     * @param      N              Matrix to which the nullspace matrix will be written
+     * @param[in]  task_jacobian  Task jacobian
+     */
+    void operationalSpaceMatrices(Eigen::MatrixXd& Lambda, Eigen::MatrixXd& Jbar, Eigen::MatrixXd& N,
+                                    const Eigen::MatrixXd& task_jacobian);
+
+    /**
+     * @brief      Computes the operational spce matrices (task inertia, dynamically consistent inverse of the jacobian and nullspace) for a given task,
+     *             In the nullspace of the previous task. More efficient than calling the three individual functions.
+     *
+     * @param      Lambda         Matrix to which the operational space mass matrix will be written
+     * @param      Jbar           Matrix to which the dynamically consistent inverse of the jacobian will be written
+     * @param      N              Matrix to which the nullspace matrix will be written
+     * @param[in]  task_jacobian  Task jacobian
+     * @param[in]  N_prec         Previous nullspace matrix
+     */
+    void operationalSpaceMatrices(Eigen::MatrixXd& Lambda, Eigen::MatrixXd& Jbar, Eigen::MatrixXd& N,
+                                    const Eigen::MatrixXd& task_jacobian,
+                                    const Eigen::MatrixXd& N_prec);
+
+   
+    /**
+     * @brief Computes the grasp matrix in the cases where there are 
+     * 2, 3 or 4 contact points.
+     * the external forces and moments are assumed to be in world frame
+     * for 2 contact points, the output quantities are given in local frame, and the description of the local frame is given by R
+     * for 3 and 4 contacts, the output quantities are given in world frame
+     * the convention for the output is the following order : support forces, support moments, internal tensions, internal moments
+     * the internal tensions are given in the order 1-2, 1-3, 2-3 in the 3 contact case
+     * and 1-2, 1-3, 1-4, 2-3, 2-4, 3-4 in the 4 contact case.
+     * @param G  :  The grasp matrix that is going to be populated
+     * @param R : the rotation matrix between the world frame and the frame attached to the object (useful when 2 contacts only)
+     * @param link_names  :  a vector of the names of the links where the contact occur
+     * @param pos_in_links  :  a vector of the position of the contact in each link
+     * @param contact_natures  :  a vector containing the nature of each contact (we only consider point contact and surface contact)
+     * @param center_point  :  The position (in world frame) of the point on which we resolve the resultant forces and moments
+     */
+    void GraspMatrix(Eigen::MatrixXd& G,
+                     Eigen::Matrix3d& R,
+                     const std::vector<std::string> link_names,
+                     const std::vector<Eigen::Vector3d> pos_in_links,
+                     const std::vector<ContactNature> contact_natures,
+                     const Eigen::Vector3d center_point);
+
+    /**
+     * @brief Computes the grasp matrix in the cases where there are 
+     * 2, 3 or 4 contact points.
+     * @param G  :  The grasp matrix that is going to be populated
+     * @param R : the rotation matrix between the world frame and the frame attached to the object (useful when 2 contacts only)
+     * @param geopetric_center  :  The position (in world frame) of the geometric center (found and returned by the function) on which we resolve the resultant forces and moments
+     * @param link_names  :  a vector of the names of the links where the contact occur
+     * @param pos_in_links  :  a vector of the position of the contact in each link
+     * @param contact_natures  :  a vector containing the nature of each contact (we only consider point contact and surface contact)
+     */
+    void GraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
+                     Eigen::Matrix3d& R,
+                     Eigen::Vector3d& geometric_center,
+                     const std::vector<std::string> link_names,
+                     const std::vector<Eigen::Vector3d> pos_in_links,
+                     const std::vector<ContactNature> contact_natures);
+
 
     /// \brief internal rbdl model
     RigidBodyDynamics::Model _rbdl_model;
