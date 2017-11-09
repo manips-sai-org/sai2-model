@@ -36,7 +36,7 @@ SET(PARSER_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/src/parser)
 SET(PARSER_SOURCE ${PROJECT_SOURCE_DIR}/src/parser/URDFToRBDLModel.cpp)
 
 # include Model
-SET(SAI2-MODEL_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/src)
+SET(SAI2-MODEL_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/src)
 SET(MODEL_SOURCE ${PROJECT_SOURCE_DIR}/src/RBDLModel.cpp)
 
 # Add the include directory to the include paths
@@ -82,4 +82,4 @@ write_basic_package_version_file(
 )
 
 # add examples
-# ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/examples)
+ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/examples)

@@ -31,7 +31,14 @@ RBDLModel::RBDLModel (const std::string path_to_model_file, bool verbose)
 	_dof = _rbdl_model.dof_count;
 
 	// TODO : support other initial joint configuration
-	updateModel(Eigen::VectorXd::Zero(_dof), Eigen::VectorXd::Zero(_dof), Eigen::VectorXd::Zero(_dof));
+    // resize state vectors
+    _q.setZero(_dof);
+    _dq.setZero(_dof);
+    _ddq.setZero(_dof);
+    _M.setIdentity(_dof,_dof);
+    _M_inv.setIdentity(_dof,_dof);
+	// 
+	updateModel(_q, _dq, _ddq);
 }
 
 

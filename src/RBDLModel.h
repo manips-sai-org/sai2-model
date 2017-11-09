@@ -17,7 +17,7 @@ class RBDLModel
 {
 public:
     RBDLModel ();
-    RBDLModel (const std::string path_to_model_file, bool verbose);
+    RBDLModel (const std::string path_to_model_file, bool verbose=true);
     ~RBDLModel ();
 
 
