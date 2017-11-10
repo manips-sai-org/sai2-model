@@ -1,6 +1,6 @@
 #include <rbdl/rbdl.h>
 
-#include "URDFToRBDLModel.h"
+#include "UrdfToSai2Model.h"
 
 #include <assert.h>
 #include <iostream>

@@ -33,11 +33,11 @@ find_package(SAI2-URDF REQUIRED)
 
 # include Parser
 SET(PARSER_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/src/parser)
-SET(PARSER_SOURCE ${PROJECT_SOURCE_DIR}/src/parser/URDFToRBDLModel.cpp)
+SET(PARSER_SOURCE ${PROJECT_SOURCE_DIR}/src/parser/UrdfToSai2Model.cpp)
 
 # include Model
 SET(SAI2-MODEL_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/src)
-SET(MODEL_SOURCE ${PROJECT_SOURCE_DIR}/src/RBDLModel.cpp)
+SET(MODEL_SOURCE ${PROJECT_SOURCE_DIR}/src/Sai2Model.cpp)
 
 # Add the include directory to the include paths
 INCLUDE_DIRECTORIES (

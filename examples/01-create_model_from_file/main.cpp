@@ -2,7 +2,7 @@
 
 #include <iostream>
 // #include <string>
-#include <RBDLModel.h>
+#include <Sai2Model.h>
 
 using namespace std;
 
@@ -11,7 +11,7 @@ const string robot_fname = "resources/pbot.urdf";
 int main (int argc, char ** argv) {
 	cout << "Loading robot file: " << robot_fname << endl;
 
-	Model::RBDLModel robot = Model::RBDLModel(robot_fname, true);
+	Sai2Model::Sai2Model robot = Sai2Model::Sai2Model(robot_fname, true);
 
 	cout << "robot degrees of freedom : " << robot.dof() << endl;
 	cout << "robot coordinates : " << robot._q.transpose() << endl;

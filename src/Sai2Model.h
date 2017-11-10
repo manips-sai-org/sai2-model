@@ -1,26 +1,26 @@
 /*
- * RBDLModel.h
+ * Sai2Model.h
  *
  *  Created on: Dec 14, 2016
  *      Author: Mikael Jorda
  */
 
-#ifndef SAI2_RBDLMODEL_H_
-#define SAI2_RBDLMODEL_H_
+#ifndef SAI2MODEL_H_
+#define SAI2MODEL_H_
 
 #include <rbdl/Model.h>
 
-namespace Model
+namespace Sai2Model
 {
 
 enum ContactNature {PointContact, SurfaceContact};
 
-class RBDLModel
+class Sai2Model
 {
 public:
-    // RBDLModel ();
-    RBDLModel (const std::string path_to_model_file, bool verbose=true);
-    ~RBDLModel ();
+    // Sai2Model ();
+    Sai2Model (const std::string path_to_model_file, bool verbose=true);
+    ~Sai2Model ();
 
 
     /**

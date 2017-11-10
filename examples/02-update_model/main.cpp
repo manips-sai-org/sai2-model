@@ -2,8 +2,7 @@
 // example of how to use the different kinematic and dynamic functions
 
 #include <iostream>
-// #include <string>
-#include <RBDLModel.h>
+#include <Sai2Model.h>
 
 using namespace std;
 
@@ -12,7 +11,7 @@ const string robot_fname = "resources/rpbot.urdf";
 int main (int argc, char ** argv) {
 	cout << "Loading robot file: " << robot_fname << endl;
 
-	Model::RBDLModel* robot = new Model::RBDLModel(robot_fname, false);
+	Sai2Model::Sai2Model* robot = new Sai2Model::Sai2Model(robot_fname, false);
 	int dof = robot->dof();
 
 	const string ee_link = "link1";

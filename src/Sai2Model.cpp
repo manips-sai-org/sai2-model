@@ -1,5 +1,5 @@
 /*
- * RBDLModel.cpp
+ * Sai2Model.cpp
  * 
  *  Wrapper around RBDL plus functions to facilitate the whole body control framework from Stanford robotics lab
  *
@@ -7,17 +7,17 @@
  *      Author: Mikael Jorda
  */
 
-#include "RBDLModel.h"
+#include "Sai2Model.h"
 
 #include <rbdl/rbdl.h>
-#include <URDFToRBDLModel.h>
+#include <UrdfToSai2Model.h>
 
 #include <stdexcept>
 
-namespace Model
+namespace Sai2Model
 {
 
-RBDLModel::RBDLModel (const std::string path_to_model_file, bool verbose)
+Sai2Model::Sai2Model (const std::string path_to_model_file, bool verbose)
 {
 
 	// parse rbdl model from urdf
@@ -42,16 +42,16 @@ RBDLModel::RBDLModel (const std::string path_to_model_file, bool verbose)
 }
 
 
-RBDLModel::~RBDLModel (){}
+Sai2Model::~Sai2Model (){}
 
 
-void RBDLModel::updateKinematics()
+void Sai2Model::updateKinematics()
 {
 	UpdateKinematicsCustom(_rbdl_model, &_q, &_dq, &_ddq);
 }
 
 
-void RBDLModel::updateDynamics()
+void Sai2Model::updateDynamics()
 {
 	if (_M.rows()!=_dof|| _M.cols()!=_dof)
 	{_M.setZero(_dof,_dof);}
@@ -60,18 +60,18 @@ void RBDLModel::updateDynamics()
 	_M_inv = _M.inverse();
 }
 
-void RBDLModel::updateModel()
+void Sai2Model::updateModel()
 {
 	updateKinematics();
 	updateDynamics();
 }
 
-int RBDLModel::dof()
+int Sai2Model::dof()
 {
 	return _dof;
 }
 
-void RBDLModel::gravityVector(Eigen::VectorXd& g,
+void Sai2Model::gravityVector(Eigen::VectorXd& g,
 	const Eigen::Vector3d& gravity)
 {
 
@@ -94,12 +94,12 @@ void RBDLModel::gravityVector(Eigen::VectorXd& g,
 }
 
 
-void RBDLModel::coriolisForce(Eigen::VectorXd& b)
+void Sai2Model::coriolisForce(Eigen::VectorXd& b)
 {
 	NonlinearEffects(_rbdl_model,_q,_dq,b);
 }
 
-void RBDLModel::J(Eigen::MatrixXd& J,
+void Sai2Model::J(Eigen::MatrixXd& J,
 	const std::string& link_name,
 	const Eigen::Vector3d& pos_in_link)
 {
@@ -115,7 +115,7 @@ void RBDLModel::J(Eigen::MatrixXd& J,
 		 J_temp.block(0,0,3,_dof);
 }
 
-void RBDLModel::J_0(Eigen::MatrixXd& J,
+void Sai2Model::J_0(Eigen::MatrixXd& J,
 	const std::string& link_name,
 	const Eigen::Vector3d& pos_in_link)
 {
@@ -128,7 +128,7 @@ void RBDLModel::J_0(Eigen::MatrixXd& J,
 
 
 
-void RBDLModel::Jv(Eigen::MatrixXd& J,
+void Sai2Model::Jv(Eigen::MatrixXd& J,
 	const std::string& link_name,
 	const Eigen::Vector3d& pos_in_link)
 {
@@ -142,7 +142,7 @@ void RBDLModel::Jv(Eigen::MatrixXd& J,
 
 
 
-void RBDLModel::Jw(Eigen::MatrixXd& J,
+void Sai2Model::Jw(Eigen::MatrixXd& J,
  const std::string& link_name)
 {
 	// compute the full jacobian at the center of the link and take rotational part
@@ -153,7 +153,7 @@ void RBDLModel::Jw(Eigen::MatrixXd& J,
 
 
 
-void RBDLModel::transform(Eigen::Affine3d& T,
+void Sai2Model::transform(Eigen::Affine3d& T,
  const std::string& link_name)
 {
 	unsigned int link_id = linkId(link_name);
@@ -162,7 +162,7 @@ void RBDLModel::transform(Eigen::Affine3d& T,
 	T.translation() = CalcBodyToBaseCoordinates(_rbdl_model, _q, link_id, pos_in_body, false);
 }
 
-void RBDLModel::transform(Eigen::Affine3d& T,
+void Sai2Model::transform(Eigen::Affine3d& T,
  const std::string& link_name,
  const Eigen::Vector3d& pos_in_body)
 {
@@ -171,7 +171,7 @@ void RBDLModel::transform(Eigen::Affine3d& T,
 	T.translation() = CalcBodyToBaseCoordinates(_rbdl_model, _q, link_id, pos_in_body, false);
 }
 
-void RBDLModel::position(Eigen::Vector3d& pos,
+void Sai2Model::position(Eigen::Vector3d& pos,
 	const std::string& link_name,
 	const Eigen::Vector3d& pos_in_link)
 {
@@ -179,7 +179,7 @@ void RBDLModel::position(Eigen::Vector3d& pos,
 }
 
 
-void RBDLModel::linearVelocity(Eigen::Vector3d& vel,
+void Sai2Model::linearVelocity(Eigen::Vector3d& vel,
 	const std::string& link_name,
 	const Eigen::Vector3d& pos_in_link)
 {
@@ -187,7 +187,7 @@ void RBDLModel::linearVelocity(Eigen::Vector3d& vel,
 }
 
 
-void RBDLModel::linearAcceleration(Eigen::Vector3d& accel,
+void Sai2Model::linearAcceleration(Eigen::Vector3d& accel,
 	const std::string& link_name,
 	const Eigen::Vector3d& pos_in_link)
 {
@@ -195,14 +195,14 @@ void RBDLModel::linearAcceleration(Eigen::Vector3d& accel,
 }
 
 
-void RBDLModel::rotation(Eigen::Matrix3d& rot,
+void Sai2Model::rotation(Eigen::Matrix3d& rot,
 	const std::string& link_name)
 {
 	rot = CalcBodyWorldOrientation(_rbdl_model, _q, linkId(link_name), false).transpose();
 }
 
 
-void RBDLModel::angularVelocity(Eigen::Vector3d& avel,
+void Sai2Model::angularVelocity(Eigen::Vector3d& avel,
  const std::string& link_name)
 {
 	Eigen::VectorXd v_tmp = Eigen::VectorXd::Zero(6);
@@ -211,7 +211,7 @@ void RBDLModel::angularVelocity(Eigen::Vector3d& avel,
 }
 
 
-void RBDLModel::angularAcceleration(Eigen::Vector3d& aaccel,
+void Sai2Model::angularAcceleration(Eigen::Vector3d& aaccel,
  const std::string& link_name)
 {
 	Eigen::VectorXd a_tmp = Eigen::VectorXd::Zero(6);
@@ -220,7 +220,7 @@ void RBDLModel::angularAcceleration(Eigen::Vector3d& aaccel,
 }
 
 
-unsigned int RBDLModel::linkId(const std::string& link_name)
+unsigned int Sai2Model::linkId(const std::string& link_name)
 {
 	auto iter = _rbdl_model.mBodyNameMap.find(link_name);
 	unsigned int body_id = iter->second;
@@ -233,7 +233,7 @@ unsigned int RBDLModel::linkId(const std::string& link_name)
 }
 
 
-void RBDLModel::getLinkMass(double& mass,
+void Sai2Model::getLinkMass(double& mass,
  Eigen::Vector3d& center_of_mass,
  Eigen::Matrix3d& inertia,
  const std::string& link_name)
@@ -245,7 +245,7 @@ void RBDLModel::getLinkMass(double& mass,
 	inertia = b.mInertia;
 }
 
-void RBDLModel::getLinkMass(double& mass,
+void Sai2Model::getLinkMass(double& mass,
  Eigen::Vector3d& center_of_mass,
  const std::string& link_name)
 {
@@ -256,7 +256,7 @@ void RBDLModel::getLinkMass(double& mass,
 }
 
 // TODO : Untested
-void RBDLModel::orientationError(Eigen::Vector3d& delta_phi,
+void Sai2Model::orientationError(Eigen::Vector3d& delta_phi,
 		              const Eigen::Matrix3d& desired_orientation,
 		              const Eigen::Matrix3d& current_orientation)
 {
@@ -265,7 +265,7 @@ void RBDLModel::orientationError(Eigen::Vector3d& delta_phi,
 	Eigen::Matrix3d Q2 = current_orientation*current_orientation.transpose() - Eigen::Matrix3d::Identity();
 	if(Q1.norm() > 0.0001 || Q2.norm() > 0.0001)
 	{
-		throw std::invalid_argument("Invalid rotation matrices in RBDLModel::orientationError");
+		throw std::invalid_argument("Invalid rotation matrices in Sai2Model::orientationError");
 		return;
 	}
 	else
@@ -280,7 +280,7 @@ void RBDLModel::orientationError(Eigen::Vector3d& delta_phi,
 	}
 }
 
-void RBDLModel::orientationError(Eigen::Vector3d& delta_phi,
+void Sai2Model::orientationError(Eigen::Vector3d& delta_phi,
 		              const Eigen::Quaterniond& desired_orientation,
 		              const Eigen::Quaterniond& current_orientation)
 {
@@ -289,23 +289,23 @@ void RBDLModel::orientationError(Eigen::Vector3d& delta_phi,
 }
 
 // TODO : Untested
-void RBDLModel::taskInertiaMatrix(Eigen::MatrixXd& Lambda,
+void Sai2Model::taskInertiaMatrix(Eigen::MatrixXd& Lambda,
     					   const Eigen::MatrixXd& task_jacobian)
 {
 	// check matrices have the right size
 	if(Lambda.rows() != Lambda.cols())
 	{
-		throw std::invalid_argument("Lambda matrix not square in RBDLModel::taksInertiaMatrix");
+		throw std::invalid_argument("Lambda matrix not square in Sai2Model::taksInertiaMatrix");
 		return;
 	}
 	else if (Lambda.rows() != task_jacobian.rows())
 	{
-		throw std::invalid_argument("Rows of Jacobian inconsistent with size of Lambda matrix in RBDLModel::taksInertiaMatrix");
+		throw std::invalid_argument("Rows of Jacobian inconsistent with size of Lambda matrix in Sai2Model::taksInertiaMatrix");
 		return;
 	}
 	else if(task_jacobian.cols() != _dof)
 	{
-		throw std::invalid_argument("Jacobian size inconsistent with DOF of robot model in RBDLModel::taksInertiaMatrix");
+		throw std::invalid_argument("Jacobian size inconsistent with DOF of robot model in Sai2Model::taksInertiaMatrix");
 		return;
 	}
 	// compute task inertia
@@ -317,23 +317,23 @@ void RBDLModel::taskInertiaMatrix(Eigen::MatrixXd& Lambda,
 }
 
 // TODO : Untested
-void RBDLModel::taskInertiaMatrixWithPseudoInv(Eigen::MatrixXd& Lambda,
+void Sai2Model::taskInertiaMatrixWithPseudoInv(Eigen::MatrixXd& Lambda,
     					   const Eigen::MatrixXd& task_jacobian)
 {
 	// check matrices have the right size
 	if (Lambda.rows() != Lambda.cols())
 	{
-		throw std::invalid_argument("Lambda matrix not square in RBDLModel::taskInertiaMatrixWithPseudoInv");
+		throw std::invalid_argument("Lambda matrix not square in Sai2Model::taskInertiaMatrixWithPseudoInv");
 		return;
 	}
 	else if (Lambda.rows() != task_jacobian.rows())
 	{
-		throw std::invalid_argument("Rows of Jacobian inconsistent with size of Lambda matrix in RBDLModel::taskInertiaMatrixWithPseudoInv");
+		throw std::invalid_argument("Rows of Jacobian inconsistent with size of Lambda matrix in Sai2Model::taskInertiaMatrixWithPseudoInv");
 		return;
 	}
 	else if (task_jacobian.cols() != _dof)
 	{
-		throw std::invalid_argument("Jacobian size inconsistent with DOF of robot model in RBDLModel::taskInertiaMatrixWithPseudoInv");
+		throw std::invalid_argument("Jacobian size inconsistent with DOF of robot model in Sai2Model::taskInertiaMatrixWithPseudoInv");
 		return;
 	}
 
@@ -349,13 +349,13 @@ void RBDLModel::taskInertiaMatrixWithPseudoInv(Eigen::MatrixXd& Lambda,
 }
 
 //TODO : Untested
-void RBDLModel::dynConsistentInverseJacobian(Eigen::MatrixXd& Jbar,
+void Sai2Model::dynConsistentInverseJacobian(Eigen::MatrixXd& Jbar,
 									const Eigen::MatrixXd& task_jacobian)
 {
 	// check matrices have the right size
 	if(Jbar.rows() != task_jacobian.cols() || Jbar.cols() != task_jacobian.rows())
 	{
-		throw std::invalid_argument("Matrix dimmensions inconsistent in RBDLModel::dynConsistentInverseJacobian");
+		throw std::invalid_argument("Matrix dimmensions inconsistent in Sai2Model::dynConsistentInverseJacobian");
 		return;
 	}
 	// compute Jbar
@@ -367,7 +367,7 @@ void RBDLModel::dynConsistentInverseJacobian(Eigen::MatrixXd& Jbar,
 	}
 }
 
-void RBDLModel::nullspaceMatrix(Eigen::MatrixXd& N,
+void Sai2Model::nullspaceMatrix(Eigen::MatrixXd& N,
         					 const Eigen::MatrixXd& task_jacobian)
 {
 	Eigen::MatrixXd N_prec = Eigen::MatrixXd::Identity(dof(),dof());
@@ -375,24 +375,24 @@ void RBDLModel::nullspaceMatrix(Eigen::MatrixXd& N,
 }
 
 //TODO :: Untested
-void RBDLModel::nullspaceMatrix(Eigen::MatrixXd& N,
+void Sai2Model::nullspaceMatrix(Eigen::MatrixXd& N,
     					 const Eigen::MatrixXd& task_jacobian,
     					 const Eigen::MatrixXd& N_prec)
 {
 	// check matrices dimmnsions
 	if(N.rows() != N.cols() || N.rows() != _dof)
 	{
-		throw std::invalid_argument("N matrix dimensions inconsistent in RBDLModel::nullspaceMatrix");
+		throw std::invalid_argument("N matrix dimensions inconsistent in Sai2Model::nullspaceMatrix");
 		return;
 	}
 	else if(N_prec.rows() != N_prec.cols() || N_prec.rows() != _dof)
 	{
-		throw std::invalid_argument("N_prec matrix dimensions inconsistent in RBDLModel::nullspaceMatrix");
+		throw std::invalid_argument("N_prec matrix dimensions inconsistent in Sai2Model::nullspaceMatrix");
 		return;
 	}
 	else if(task_jacobian.cols() != N.rows())
 	{
-		throw std::invalid_argument("jacobian matrix dimensions inconsistent with model dof in RBDLModel::nullspaceMatrix");
+		throw std::invalid_argument("jacobian matrix dimensions inconsistent with model dof in Sai2Model::nullspaceMatrix");
 		return;
 	}
 	// Compute N
@@ -407,7 +407,7 @@ void RBDLModel::nullspaceMatrix(Eigen::MatrixXd& N,
 }
 
 // TODO : Untested
-void RBDLModel::operationalSpaceMatrices(Eigen::MatrixXd& Lambda, Eigen::MatrixXd& Jbar, Eigen::MatrixXd& N,
+void Sai2Model::operationalSpaceMatrices(Eigen::MatrixXd& Lambda, Eigen::MatrixXd& Jbar, Eigen::MatrixXd& N,
                                     const Eigen::MatrixXd& task_jacobian)
 {
 	Eigen::MatrixXd N_prec = Eigen::MatrixXd::Identity(dof(),dof());
@@ -415,44 +415,44 @@ void RBDLModel::operationalSpaceMatrices(Eigen::MatrixXd& Lambda, Eigen::MatrixX
 }
 
 // TODO : Untested
-void RBDLModel::operationalSpaceMatrices(Eigen::MatrixXd& Lambda, Eigen::MatrixXd& Jbar, Eigen::MatrixXd& N,
+void Sai2Model::operationalSpaceMatrices(Eigen::MatrixXd& Lambda, Eigen::MatrixXd& Jbar, Eigen::MatrixXd& N,
                                     const Eigen::MatrixXd& task_jacobian,
                                     const Eigen::MatrixXd& N_prec)
 {
 	// check matrices have the right size
 	if(Lambda.rows() != Lambda.cols())
 	{
-		throw std::invalid_argument("Lambda matrix not square in RBDLModel::operationalSpaceMatrices");
+		throw std::invalid_argument("Lambda matrix not square in Sai2Model::operationalSpaceMatrices");
 		return;
 	}
 	else if (Lambda.rows() != task_jacobian.rows())
 	{
-		throw std::invalid_argument("Rows of Jacobian inconsistent with size of Lambda matrix in RBDLModel::operationalSpaceMatrices");
+		throw std::invalid_argument("Rows of Jacobian inconsistent with size of Lambda matrix in Sai2Model::operationalSpaceMatrices");
 		return;
 	}
 	else if(task_jacobian.cols() != _dof)
 	{
-		throw std::invalid_argument("Jacobian size inconsistent with DOF of robot model in RBDLModel::operationalSpaceMatrices");
+		throw std::invalid_argument("Jacobian size inconsistent with DOF of robot model in Sai2Model::operationalSpaceMatrices");
 		return;
 	}
 	else if(Jbar.rows() != task_jacobian.cols() || Jbar.cols() != task_jacobian.rows())
 	{
-		throw std::invalid_argument("Matrix dimmensions inconsistent in RBDLModel::operationalSpaceMatrices");
+		throw std::invalid_argument("Matrix dimmensions inconsistent in Sai2Model::operationalSpaceMatrices");
 		return;
 	}
 	else if(N.rows() != N.cols() || N.rows() != _dof)
 	{
-		throw std::invalid_argument("N matrix dimensions inconsistent in RBDLModel::operationalSpaceMatrices");
+		throw std::invalid_argument("N matrix dimensions inconsistent in Sai2Model::operationalSpaceMatrices");
 		return;
 	}
 	else if(N_prec.rows() != N_prec.cols() || N_prec.rows() != _dof)
 	{
-		throw std::invalid_argument("N_prec matrix dimensions inconsistent in RBDLModel::operationalSpaceMatrices");
+		throw std::invalid_argument("N_prec matrix dimensions inconsistent in Sai2Model::operationalSpaceMatrices");
 		return;
 	}
 	else if(task_jacobian.cols() != N.rows())
 	{
-		throw std::invalid_argument("jacobian matrix dimensions inconsistent with model dof in RBDLModel::operationalSpaceMatrices");
+		throw std::invalid_argument("jacobian matrix dimensions inconsistent with model dof in Sai2Model::operationalSpaceMatrices");
 		return;
 	}
 	// Compute the matrices
@@ -467,7 +467,7 @@ void RBDLModel::operationalSpaceMatrices(Eigen::MatrixXd& Lambda, Eigen::MatrixX
 	}
 }
 
-void RBDLModel::GraspMatrix(Eigen::MatrixXd& G,
+void Sai2Model::GraspMatrix(Eigen::MatrixXd& G,
 	Eigen::Matrix3d& R,
 	const std::vector<std::string> link_names,
 	const std::vector<Eigen::Vector3d> pos_in_links,
@@ -828,7 +828,7 @@ void RBDLModel::GraspMatrix(Eigen::MatrixXd& G,
 
 }
 
-void RBDLModel::GraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
+void Sai2Model::GraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
                      Eigen::Matrix3d& R,
                      Eigen::Vector3d& geometric_center,
                      const std::vector<std::string> link_names,
