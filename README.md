@@ -1,7 +1,7 @@
 # sai2-model
 
 This is SAI2 robot model library for robot kinematics and dynamics.
-It uses RBDL and adds function to facilitate the implementation of the whole body control framework from Stanford Robotics Lab.
+It uses [RBDL](https://rbdl.bitbucket.io/) and adds function to facilitate the implementation of the whole body control framework from Stanford Robotics Lab.
 
 ## Dependencies
 sai2-model depends on eigen3 amd sai2-urdfreader.
