@@ -336,7 +336,7 @@ public:
 
 
     /// \brief internal rbdl model
-    RigidBodyDynamics::Model _rbdl_model;
+    RigidBodyDynamics::Model* _rbdl_model;
 
 
     /// \brief Joint positions
