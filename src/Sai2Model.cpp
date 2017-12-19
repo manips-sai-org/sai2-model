@@ -17,13 +17,13 @@
 namespace Sai2Model
 {
 
-Sai2Model::Sai2Model (const std::string path_to_model_file, bool verbose)
+Sai2Model::Sai2Model (const std::string path_to_model_file, bool verbose, const Eigen::Vector3d world_gravity)
 {
 
 	_rbdl_model = new RigidBodyDynamics::Model();
 
 	// parse rbdl model from urdf
-	bool success = RigidBodyDynamics::URDFReadFromFile(path_to_model_file.c_str(), _rbdl_model, false, verbose);
+	bool success = RigidBodyDynamics::URDFReadFromFile(path_to_model_file.c_str(), _rbdl_model, false, verbose, world_gravity);
 	if (!success) 
 	{
 		std::cout << "Error loading model [" + path_to_model_file + "]" << "\n";

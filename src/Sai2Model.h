@@ -19,7 +19,7 @@ class Sai2Model
 {
 public:
     // Sai2Model ();
-    Sai2Model (const std::string path_to_model_file, bool verbose=true);
+    Sai2Model (const std::string path_to_model_file, bool verbose=true, const Eigen::Vector3d world_gravity=Eigen::Vector3d(0.0,0.0,-9.81));
     ~Sai2Model ();
 
 

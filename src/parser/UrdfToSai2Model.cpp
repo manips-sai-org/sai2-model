@@ -263,7 +263,7 @@ bool construct_model (Model* rbdl_model, ModelPtr urdf_model, bool floating_base
 	return true;
 }
 
-RBDL_DLLAPI bool URDFReadFromFile (const char* filename, Model* model, bool floating_base, bool verbose) {
+RBDL_DLLAPI bool URDFReadFromFile (const char* filename, Model* model, bool floating_base, bool verbose, Eigen::Vector3d world_gravity) {
 	ifstream model_file (filename);
 	if (!model_file) {
 		cerr << "Error opening file '" << filename << "'." << endl;
@@ -279,10 +279,10 @@ RBDL_DLLAPI bool URDFReadFromFile (const char* filename, Model* model, bool floa
 
 	model_file.close();
 
-	return URDFReadFromString (model_xml_string.c_str(), model, floating_base, verbose);
+	return URDFReadFromString (model_xml_string.c_str(), model, floating_base, verbose, world_gravity);
 }
 
-RBDL_DLLAPI bool URDFReadFromString (const char* model_xml_string, Model* model, bool floating_base, bool verbose) {
+RBDL_DLLAPI bool URDFReadFromString (const char* model_xml_string, Model* model, bool floating_base, bool verbose, Eigen::Vector3d world_gravity) {
 	assert (model);
 
 	ModelPtr urdf_model = urdf::parseURDF (model_xml_string);
@@ -292,7 +292,8 @@ RBDL_DLLAPI bool URDFReadFromString (const char* model_xml_string, Model* model,
 		return false;
 	}
 
-	model->gravity.set (0., 0., -9.81);
+	// model->gravity.set (0., 0., -9.81);
+	model->gravity = world_gravity;
 
 	return true;
 }
