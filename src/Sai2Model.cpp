@@ -20,6 +20,8 @@ namespace Sai2Model
 Sai2Model::Sai2Model (const std::string path_to_model_file, bool verbose)
 {
 
+	_rbdl_model = new RigidBodyDynamics::Model();
+
 	// parse rbdl model from urdf
 	bool success = RigidBodyDynamics::URDFReadFromFile(path_to_model_file.c_str(), _rbdl_model, false, verbose);
 	if (!success) 
