@@ -99,7 +99,7 @@ void Sai2Model::coriolisForce(Eigen::VectorXd& b)
 	NonlinearEffects(_rbdl_model,_q,_dq,b);
 }
 
-void Sai2Model::J(Eigen::MatrixXd& J,
+void Sai2Model::J_0(Eigen::MatrixXd& J,
 	const std::string& link_name,
 	const Eigen::Vector3d& pos_in_link)
 {
@@ -115,7 +115,7 @@ void Sai2Model::J(Eigen::MatrixXd& J,
 		 J_temp.block(0,0,3,_dof);
 }
 
-void Sai2Model::J_0(Eigen::MatrixXd& J,
+void Sai2Model::J(Eigen::MatrixXd& J,
 	const std::string& link_name,
 	const Eigen::Vector3d& pos_in_link)
 {

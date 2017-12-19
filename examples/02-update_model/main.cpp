@@ -29,7 +29,7 @@ int main (int argc, char ** argv) {
 	robot->linearVelocity(velocity, ee_link, ee_pos_in_link);
 	robot->rotation(rotation, ee_link);
 	// jacobian at the end effector (1m from second joint)
-	robot->J(J,ee_link,ee_pos_in_link);
+	robot->J_0(J,ee_link,ee_pos_in_link);
 	// gravity and coriolis/centrifugal forces
 	robot->gravityVector(gravity);
 
@@ -52,7 +52,7 @@ int main (int argc, char ** argv) {
 	robot->position(position, ee_link, Eigen::Vector3d(0.0, 0.0, 0.0));
 	robot->linearVelocity(velocity, ee_link, ee_pos_in_link);
 	robot->rotation(rotation, ee_link);
-	robot->J(J,ee_link,ee_pos_in_link);
+	robot->J_0(J,ee_link,ee_pos_in_link);
 	robot->gravityVector(gravity);
 
 	cout << endl;
@@ -75,7 +75,7 @@ int main (int argc, char ** argv) {
 	robot->position(position, ee_link, Eigen::Vector3d(0.0, 0.0, 0.0));
 	robot->linearVelocity(velocity, ee_link, ee_pos_in_link);
 	robot->rotation(rotation, ee_link);
-	robot->J(J,ee_link,ee_pos_in_link);
+	robot->J_0(J,ee_link,ee_pos_in_link);
 	robot->gravityVector(gravity);
 
 	cout << endl;
@@ -115,7 +115,7 @@ int main (int argc, char ** argv) {
 	robot->position(position, ee_link, Eigen::Vector3d(0.0, 0.0, 0.0));
 	robot->linearVelocity(velocity, ee_link, ee_pos_in_link);
 	robot->rotation(rotation, ee_link);
-	robot->J(J,ee_link,ee_pos_in_link);
+	robot->J_0(J,ee_link,ee_pos_in_link);
 	robot->gravityVector(gravity);
 
 	cout << endl;
