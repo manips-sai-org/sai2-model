@@ -58,6 +58,25 @@ public:
     void coriolisForce(Eigen::VectorXd& b);
 
     /**
+     * @brief Computes the modified Newton-Euler Algorithm as described in
+     * '''
+     * De Luca, A., & Ferrajoli, L. (2009, May). 
+     * A modified Newton-Euler method for dynamic computations in robot fault detection and control. 
+     * In Robotics and Automation, 2009. ICRA'09. IEEE International Conference on (pp. 3359-3364). IEEE.
+     * '''
+     * @tau                return vector
+     * @param q            joint positions
+     * @param dq           joint velocity
+     * @param dqa          auxiliary joint velocity
+     * @param ddq          joint acceleration
+     */
+    void modifiedNewtonEuler(Eigen::VectorXd& tau, 
+                                const Eigen::VectorXd& q,
+                                const Eigen::VectorXd& dq,
+                                const Eigen::VectorXd& dqa,
+                                const Eigen::VectorXd& ddq);
+
+    /**
      * @brief Full jacobian for link, relative to base (id=0) in the form [Jv; Jw]
      * @param J Matrix to which the jacobian will be written
      * @param link_name the name of the link where to compute the jacobian
@@ -354,7 +373,7 @@ public:
     /// \brief Inverse of the mass matrix
     Eigen::MatrixXd _M_inv;
 
-protected:
+public:
     /// \brief compute the cross product operator of a 3d vector
     static Eigen::Matrix3d CrossProductOperator(const Eigen::Vector3d& v)
     {
