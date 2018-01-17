@@ -44,12 +44,19 @@ public:
     int dof();
 
     /**
-     * @brief Gives the joint gravity torques vector of the last updated configuration
+     * @brief Gives the joint gravity torques vector of the last updated configuration using the model world gravity
+     * @param g Vector to which the joint gravity torques will be written
+     */
+    void gravityVector(Eigen::VectorXd& g);
+
+
+    /**
+     * @brief Gives the joint gravity torques vector of the last updated configuration suing a custom world gravity vector
      * @param g Vector to which the joint gravity torques will be written
      * @param gravity the 3d gravity vector of the world in base frame
      */
     void gravityVector(Eigen::VectorXd& g,
-                               const Eigen::Vector3d& gravity = Eigen::Vector3d(0,0,-9.81));
+                               const Eigen::Vector3d& gravity);
 
     /**
      * @brief Gives the joint coriolis and centrifugal forces of the last updated configuration
@@ -64,17 +71,21 @@ public:
      * A modified Newton-Euler method for dynamic computations in robot fault detection and control. 
      * In Robotics and Automation, 2009. ICRA'09. IEEE International Conference on (pp. 3359-3364). IEEE.
      * '''
-     * @tau                return vector
-     * @param q            joint positions
-     * @param dq           joint velocity
-     * @param dqa          auxiliary joint velocity
-     * @param ddq          joint acceleration
+     * @tau                       return vector
+     * @param consider_gravity    consider or not the acceleration due to gravity at the base
+     * @param q                   joint positions
+     * @param dq                  joint velocity
+     * @param dqa                 auxiliary joint velocity
+     * @param ddq                 joint acceleration
      */
     void modifiedNewtonEuler(Eigen::VectorXd& tau, 
+                                const bool consider_gravity,
                                 const Eigen::VectorXd& q,
                                 const Eigen::VectorXd& dq,
                                 const Eigen::VectorXd& dqa,
                                 const Eigen::VectorXd& ddq);
+
+    void factorizedChristoffelMatrix(Eigen::MatrixXd& C);
 
     /**
      * @brief Full jacobian for link, relative to base (id=0) in the form [Jv; Jw]

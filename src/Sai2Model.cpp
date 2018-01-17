@@ -77,6 +77,28 @@ int Sai2Model::dof()
 	return _dof;
 }
 
+void Sai2Model::gravityVector(Eigen::VectorXd& g)
+{
+	Eigen::Vector3d gravity = _rbdl_model->gravity;
+
+	if (g.size() != _dof){ g.resize(_dof); }
+	g.setZero();
+
+	std::vector<RigidBodyDynamics::Body>::iterator it_body;
+	int body_id;
+
+	for (it_body = _rbdl_model->mBodies.begin(), body_id=0;
+	it_body != _rbdl_model->mBodies.end();
+	++it_body, ++body_id)
+	{
+		double mass = it_body->mMass;
+		Eigen::MatrixXd Jv = Eigen::MatrixXd::Zero(3, _dof);
+		CalcPointJacobian(*_rbdl_model, _q, body_id, it_body->mCenterOfMass, Jv, false);
+
+		g += Jv.transpose() * (-mass * gravity);
+	}
+}
+
 void Sai2Model::gravityVector(Eigen::VectorXd& g,
 	const Eigen::Vector3d& gravity)
 {
@@ -102,10 +124,17 @@ void Sai2Model::gravityVector(Eigen::VectorXd& g,
 
 void Sai2Model::coriolisForce(Eigen::VectorXd& b)
 {
+	// actually returns v + g. Need to substract the gravity from it
 	NonlinearEffects(*_rbdl_model,_q,_dq,b);
+
+	Eigen::VectorXd g = Eigen::VectorXd::Zero(_dof);
+	gravityVector(g);
+
+	b -= g;
 }
 
 void Sai2Model::modifiedNewtonEuler(Eigen::VectorXd& u, 
+								const bool consider_gravity,
                                 const Eigen::VectorXd& q,
                                 const Eigen::VectorXd& dq,
                                 const Eigen::VectorXd& dqa,
@@ -115,17 +144,25 @@ void Sai2Model::modifiedNewtonEuler(Eigen::VectorXd& u,
 
 	// std::cout << u.transpose() << std::endl;
 
-	std::vector<Eigen::Vector3d> w, dw, ddO, ddB, f, tau;
+	std::vector<Eigen::Vector3d> w, wa, dw, ddO, ddB, f, tau;
 	std::vector<Eigen::Vector3d> ripi_list, rib_list, z_list;
-	Eigen::Vector3d w_i, dw_i, ddO_i, ddB_i, f_i, tau_i;
-	Eigen::Vector3d wp, dwp, ddOp, ddBp, fc, tauc;
+	Eigen::Vector3d w_i, wa_i, dw_i, ddO_i, ddB_i, f_i, tau_i;
+	Eigen::Vector3d wp, wap, dwp, ddOp, ddBp, fc, tauc;
 	Eigen::Vector3d z, r_ipi, r_ipb, r_ib;
 
 	// initial conditions forward recursion
 	w_i.setZero();
+	wa_i.setZero();
 	dw_i.setZero();
 	// ddO_i.setZero();
-	ddO_i = -_rbdl_model->gravity;
+	if(consider_gravity)
+	{
+		ddO_i = -_rbdl_model->gravity;
+	}
+	else
+	{
+		ddO_i.setZero();
+	}
 	ddB_i = ddO_i;
 
 	f_i.setZero();
@@ -136,6 +173,7 @@ void Sai2Model::modifiedNewtonEuler(Eigen::VectorXd& u,
 	r_ib.setZero();
 
 	w.push_back(w_i);
+	wa.push_back(wa_i);
 	dw.push_back(dw_i);
 	ddO.push_back(ddO_i);
 	ddB.push_back(ddB_i);
@@ -174,6 +212,7 @@ void Sai2Model::modifiedNewtonEuler(Eigen::VectorXd& u,
 
 		// transform parent quantities in local frame
 		wp = _rbdl_model->X_lambda[i].E*w[parent];
+		wap = _rbdl_model->X_lambda[i].E*wa[parent];
 		dwp = _rbdl_model->X_lambda[i].E*dw[parent];
 		ddOp = _rbdl_model->X_lambda[i].E*ddO[parent];
 		// ddBp = _rbdl_model->X_lambda[i].E*w[parent];
@@ -190,9 +229,10 @@ void Sai2Model::modifiedNewtonEuler(Eigen::VectorXd& u,
 		// std::cout << "dq : " << dq.transpose() << std::endl;
 
 		w_i = wp + dq(parent)*z;
-		dw_i = dwp + ddq(parent)*z + dq(parent)*wp.cross(z);
-		ddO_i = ddOp + dw_i.cross(r_ipi) + w_i.cross(w_i.cross(r_ipi));
-		ddB_i = ddO_i + dw_i.cross(r_ib) + w_i.cross(w_i.cross(r_ib));
+		wa_i = wap + dqa(parent)*z;
+		dw_i = dwp + ddq(parent)*z + dq(parent)*wap.cross(z);
+		ddO_i = ddOp + dw_i.cross(r_ipi) + w_i.cross(wa_i.cross(r_ipi));
+		ddB_i = ddO_i + dw_i.cross(r_ib) + w_i.cross(wa_i.cross(r_ib));
 
 		// std::cout << "w_i : " << w_i.transpose() << std::endl;
 		// std::cout << "dw_i : " << dw_i.transpose() << std::endl;
@@ -201,6 +241,7 @@ void Sai2Model::modifiedNewtonEuler(Eigen::VectorXd& u,
 		// std::cout << std::endl << std::endl;
 
 		w.push_back(w_i);
+		wa.push_back(wa_i);
 		dw.push_back(dw_i);
 		ddO.push_back(ddO_i);
 		ddB.push_back(ddB_i);
@@ -213,7 +254,7 @@ void Sai2Model::modifiedNewtonEuler(Eigen::VectorXd& u,
 		tau.push_back(tau_i);
 	}
 
-	std::cout << "end of forward recursion" << std::endl << std::endl;
+	// std::cout << "end of forward recursion" << std::endl << std::endl;
 	// std::cout << w << std::endl;
 
 	// backward recursion
@@ -245,7 +286,7 @@ void Sai2Model::modifiedNewtonEuler(Eigen::VectorXd& u,
 		// std::cout << "inertia :\n" << I << std::endl;
 
 		f_i = fip + m*ddB[i];
-		tau_i = tauip - f_i.cross(ripi_list[i]+rib_list[i]) + fip.cross(rib_list[i]) + I*dw[i] + w[i].cross(I*w[i]);
+		tau_i = tauip - f_i.cross(ripi_list[i]+rib_list[i]) + fip.cross(rib_list[i]) + I*dw[i] + wa[i].cross(I*w[i]);
 		
 		// std::cout << "fip : " << fip.transpose() << std::endl;
 		// std::cout << "tauip : " << tauip.transpose() << std::endl;
@@ -266,6 +307,36 @@ void Sai2Model::modifiedNewtonEuler(Eigen::VectorXd& u,
 	}
 
 
+}
+
+void Sai2Model::factorizedChristoffelMatrix(Eigen::MatrixXd& C)
+{
+	// check matrix have the right size
+	if(C.rows() != C.cols())
+	{
+		throw std::invalid_argument("C matrix not square in Sai2Model::factorizedChristoffelMatrix");
+		return;
+	}
+	else if(C.cols() != _dof)
+	{
+		throw std::invalid_argument("C matrix size inconsistent with DOF of robot model in Sai2Model::factorizedChristoffelMatrix");
+		return;
+	}
+	// compute task inertia
+	else
+	{
+		Eigen::VectorXd vi = Eigen::VectorXd::Zero(_dof);
+		Eigen::VectorXd u = Eigen::VectorXd::Zero(_dof);
+
+		for(int i=0; i<_dof; i++)
+		{
+			vi.setZero();
+			u.setZero();
+			vi(i) = 1;
+			modifiedNewtonEuler(u, false, _q, _dq, vi, Eigen::VectorXd::Zero(_dof));
+			C.col(i) = u;
+		}
+	}
 }
 
 void Sai2Model::J_0(Eigen::MatrixXd& J,
