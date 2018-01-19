@@ -201,10 +201,16 @@ public:
                                      const std::string& link_name);
 
     /**
-     * @brief Gives the link id for a given nave with the right indexing for rbdl
+     * @brief Gives the link id for a given name with the right indexing for rbdl
      * @param link_name name of the link
      */
     unsigned int linkId(const std::string& link_name);
+
+    /**
+     * @brief Gives the joint id for a given name with the right indexing for rbdl
+     * @param joint_name name of the joint
+     */
+    int jointId(const std::string& joint_name);
 
     /**
      * @brief Gives the mass properties of a given link
@@ -397,6 +403,10 @@ public:
 
     /// \brief number of Dof of robot
     int _dof;
+
+protected:
+    /// \brief map from joint names to joint id
+    std::map<std::string,int> _joint_names_map;
 
 };
 

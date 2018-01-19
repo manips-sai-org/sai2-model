@@ -28,7 +28,7 @@ typedef vector<JointPtr> URDFJointVector;
 typedef map<string, LinkPtr > URDFLinkMap;
 typedef map<string, JointPtr > URDFJointMap;
 
-bool construct_model (Model* rbdl_model, ModelPtr urdf_model, bool floating_base, bool verbose) {
+bool construct_model (Model* rbdl_model, ModelPtr urdf_model, std::map<std::string,int>& joint_names_map, bool floating_base, bool verbose) {
 	LinkPtr urdf_root_link;
 
 	URDFLinkMap link_map;
@@ -141,6 +141,7 @@ bool construct_model (Model* rbdl_model, ModelPtr urdf_model, bool floating_base
 		JointPtr urdf_joint = joint_map[joint_names[j]];
 		LinkPtr urdf_parent = link_map[urdf_joint->parent_link_name];
 		LinkPtr urdf_child = link_map[urdf_joint->child_link_name];
+		joint_names_map[urdf_joint->name] = j;
 
 		// determine where to add the current joint and child body
 		unsigned int rbdl_parent_id = 0;
@@ -263,7 +264,7 @@ bool construct_model (Model* rbdl_model, ModelPtr urdf_model, bool floating_base
 	return true;
 }
 
-RBDL_DLLAPI bool URDFReadFromFile (const char* filename, Model* model, bool floating_base, bool verbose, Eigen::Vector3d world_gravity) {
+RBDL_DLLAPI bool URDFReadFromFile (const char* filename, Model* model, std::map<std::string,int>& joint_names_map, bool floating_base, bool verbose, Eigen::Vector3d world_gravity) {
 	ifstream model_file (filename);
 	if (!model_file) {
 		cerr << "Error opening file '" << filename << "'." << endl;
@@ -279,15 +280,15 @@ RBDL_DLLAPI bool URDFReadFromFile (const char* filename, Model* model, bool floa
 
 	model_file.close();
 
-	return URDFReadFromString (model_xml_string.c_str(), model, floating_base, verbose, world_gravity);
+	return URDFReadFromString (model_xml_string.c_str(), model, joint_names_map, floating_base, verbose, world_gravity);
 }
 
-RBDL_DLLAPI bool URDFReadFromString (const char* model_xml_string, Model* model, bool floating_base, bool verbose, Eigen::Vector3d world_gravity) {
+RBDL_DLLAPI bool URDFReadFromString (const char* model_xml_string, Model* model, std::map<std::string,int>& joint_names_map, bool floating_base, bool verbose, Eigen::Vector3d world_gravity) {
 	assert (model);
 
 	ModelPtr urdf_model = urdf::parseURDF (model_xml_string);
  
-	if (!construct_model (model, urdf_model, floating_base, verbose)) {
+	if (!construct_model (model, urdf_model, joint_names_map, floating_base, verbose)) {
 		cerr << "Error constructing model from urdf file." << endl;
 		return false;
 	}

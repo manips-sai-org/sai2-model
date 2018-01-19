@@ -23,7 +23,7 @@ Sai2Model::Sai2Model (const std::string path_to_model_file, bool verbose, const 
 	_rbdl_model = new RigidBodyDynamics::Model();
 
 	// parse rbdl model from urdf
-	bool success = RigidBodyDynamics::URDFReadFromFile(path_to_model_file.c_str(), _rbdl_model, false, verbose, world_gravity);
+	bool success = RigidBodyDynamics::URDFReadFromFile(path_to_model_file.c_str(), _rbdl_model, _joint_names_map, false, verbose, world_gravity);
 	if (!success) 
 	{
 		std::cout << "Error loading model [" + path_to_model_file + "]" << "\n";
@@ -472,6 +472,19 @@ unsigned int Sai2Model::linkId(const std::string& link_name)
 	return body_id;
 }
 
+int Sai2Model::jointId(const std::string& joint_name)
+{
+	int joint_id = -1;
+	if(_joint_names_map.find(joint_name) == _joint_names_map.end())
+	{
+		std::cout << "joint ["+joint_name+"] does not exists\n";
+	}
+	else
+	{
+		joint_id = _joint_names_map[joint_name];
+	}
+	return joint_id;
+}
 
 void Sai2Model::getLinkMass(double& mass,
  Eigen::Vector3d& center_of_mass,
