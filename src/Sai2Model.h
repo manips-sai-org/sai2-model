@@ -19,7 +19,10 @@ class Sai2Model
 {
 public:
     // Sai2Model ();
-    Sai2Model (const std::string path_to_model_file, bool verbose=true, const Eigen::Vector3d world_gravity=Eigen::Vector3d(0.0,0.0,-9.81));
+    Sai2Model (const std::string path_to_model_file, 
+               bool verbose=true, 
+               const Eigen::Vector3d world_gravity=Eigen::Vector3d(0.0,0.0,-9.81),
+               const Eigen::Affine3d position_in_world=Eigen::Affine3d::Identity());
     ~Sai2Model ();
 
 
@@ -147,12 +150,39 @@ public:
                            const Eigen::Vector3d& pos_in_body);
 
     /**
+     * @brief transformation from world origin to link, in world coordinates.
+     * @param T Transformation matrix to which the result is computed
+     * @param link_name name of the link where to compute the transformation matrix
+     */
+    void transform_in_world_frame(Eigen::Affine3d& T,
+                           const std::string& link_name);
+
+    /**
+     * @brief transformation from world origin to link at the given position, in world coordinates.
+     * @param T Transformation matrix to which the result is computed
+     * @param link_name name of the link where to compute the transformation matrix
+     */
+    void transform_in_world_frame(Eigen::Affine3d& T,
+                           const std::string& link_name,
+                           const Eigen::Vector3d& pos_in_body);
+
+    /**
      * @brief Position from base to point in link, in base coordinates
      * @param pos Vector of position to which the result is written
      * @param link_name name of the link in which is the point where to compute the position
      * @param pos_in_link the position of the point in the link, in local link frame
      */
     void position(Eigen::Vector3d& pos,
+                          const std::string& link_name,
+                          const Eigen::Vector3d& pos_in_link);
+
+    /**
+     * @brief Position from world origin to point in link, in world coordinates
+     * @param pos Vector of position to which the result is written
+     * @param link_name name of the link in which is the point where to compute the position
+     * @param pos_in_link the position of the point in the link, in local link frame
+     */
+    void position_in_world_frame(Eigen::Vector3d& pos,
                           const std::string& link_name,
                           const Eigen::Vector3d& pos_in_link);
 
@@ -182,6 +212,14 @@ public:
      * @param link_name name of the link for which to compute the rotation
      */
     void rotation(Eigen::Matrix3d& rot,
+                          const std::string& link_name);
+
+    /**
+     * @brief Rotation of a link with respect to the world origin
+     * @param rot Rotation matrix to which the result is written
+     * @param link_name name of the link for which to compute the rotation
+     */
+    void rotation_in_world_frame(Eigen::Matrix3d& rot,
                           const std::string& link_name);
 
     /**
@@ -403,6 +441,9 @@ public:
 
     /// \brief number of Dof of robot
     int _dof;
+
+    /// \brief Transform from world coordinates to robot base coordinates
+    Eigen::Affine3d _base_position_in_world;
 
 protected:
     /// \brief map from joint names to joint id
