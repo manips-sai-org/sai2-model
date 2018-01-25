@@ -23,13 +23,13 @@ public:
     ContactModel();
     ContactModel(const std::string link_name, 
                  const Eigen::Vector3d pos, 
-                 const Eigen::Matrix3d orientation,
-                 const int constained_rot)
+                 const int constained_rot,
+                 const Eigen::Matrix3d orientation)
     {
         _link_name = link_name;
         _contact_position = pos;
-        _contact_orientation = orientation;
         _constrained_rotations = constained_rot;
+        _contact_orientation = orientation;
     }
     ~ContactModel(){}
 
@@ -413,8 +413,8 @@ public:
      */
     void addContact(const std::string link, 
                     const Eigen::Vector3d pos_in_link,
-                    const Eigen::Matrix3d orientation,
-                    const int constraints_in_rotation = 0);
+                    const int constraints_in_rotation = 0,
+                    const Eigen::Matrix3d orientation = Eigen::Matrix3d::Identity());
 
 
     /**
@@ -440,12 +440,12 @@ public:
      * @param contact_natures  :  a vector containing the nature of each contact (we only consider point contact and surface contact)
      * @param center_point  :  The position (in world frame) of the point on which we resolve the resultant forces and moments
      */
-    void GraspMatrix(Eigen::MatrixXd& G,
-                     Eigen::Matrix3d& R,
-                     const std::vector<std::string> link_names,
-                     const std::vector<Eigen::Vector3d> pos_in_links,
-                     const std::vector<ContactNature> contact_natures,
-                     const Eigen::Vector3d center_point);
+    // void GraspMatrix(Eigen::MatrixXd& G,
+    //                  Eigen::Matrix3d& R,
+    //                  const std::vector<std::string> link_names,
+    //                  const std::vector<Eigen::Vector3d> pos_in_links,
+    //                  const std::vector<ContactNature> contact_natures,
+    //                  const Eigen::Vector3d center_point);
 
     /**
      * @brief Computes the grasp matrix in the cases where there are 
@@ -474,12 +474,12 @@ public:
      * @param pos_in_links  :  a vector of the position of the contact in each link
      * @param contact_natures  :  a vector containing the nature of each contact (we only consider point contact and surface contact)
      */
-    void GraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
-                     Eigen::Matrix3d& R,
-                     Eigen::Vector3d& geometric_center,
-                     const std::vector<std::string> link_names,
-                     const std::vector<Eigen::Vector3d> pos_in_links,
-                     const std::vector<ContactNature> contact_natures);
+    // void GraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
+    //                  Eigen::Matrix3d& R,
+    //                  Eigen::Vector3d& geometric_center,
+    //                  const std::vector<std::string> link_names,
+    //                  const std::vector<Eigen::Vector3d> pos_in_links,
+    //                  const std::vector<ContactNature> contact_natures);
 
     /**
      * @brief Computes the grasp matrix in the cases where there are 
