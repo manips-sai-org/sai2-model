@@ -15,6 +15,40 @@ namespace Sai2Model
 
 enum ContactNature {PointContact, SurfaceContact};
 
+class ContactModel
+{
+    friend class Sai2Model;
+// private:
+public:
+    ContactModel();
+    ContactModel(const std::string link_name, 
+                 const Eigen::Vector3d pos, 
+                 const Eigen::Matrix3d orientation,
+                 const int constained_rot)
+    {
+        _link_name = link_name;
+        _contact_position = pos;
+        _contact_orientation = orientation;
+        _constrained_rotations = constained_rot;
+    }
+    ~ContactModel(){}
+
+public:
+
+    /// \brief name of the link at which the contact occurs
+    std::string _link_name;
+
+    /// \brief the position of the contact in the link. if possible, it should be the geometrical center of the contact zone 
+    // (center of the line if line contact, center of surface if surface contact, contact point if point contact)
+    Eigen::Vector3d _contact_position;
+
+    /// \brief orientation of contact. Assumes the constrained direction is z. If there is a line contact, assumes the free rotation is along the x axis
+    Eigen::Matrix3d _contact_orientation;
+
+    /// \brief number of constrained rotations for the contact. 0 means point contact, 1 means line contact with line aligned with contact frame X axis, 2 means plane contact
+    int _constrained_rotations;
+};
+
 class Sai2Model
 {
 public:
@@ -367,7 +401,29 @@ public:
                                     const Eigen::MatrixXd& task_jacobian,
                                     const Eigen::MatrixXd& N_prec);
 
-   
+    /**
+     * @brief adds a contact at the desired link and location
+     *
+     * @param link                      link at which the contact happens
+     * @param pos_in_link               position of the contact in the link in local coordinates
+     * @param orientation               orientation of the contact frame in the link frame. 
+                                        Z axis needs to be aligned with the constrained direction of motion (surface normal)
+                                        if line contact, the free rotation should be around the X axis
+     * @param constraints_in_rotation   selection matrix of constrained directions of moment in local frame
+     */
+    void addContact(const std::string link, 
+                    const Eigen::Vector3d pos_in_link,
+                    const Eigen::Matrix3d orientation,
+                    const int constraints_in_rotation = 0);
+
+
+    /**
+     * @brief deletes the contact at a given link
+     *
+     * @param link_name       the link at which we want to delete the contact
+     */
+    void deleteContact(const std::string link_name);
+
     /**
      * @brief Computes the grasp matrix in the cases where there are 
      * 2, 3 or 4 contact points.
@@ -393,10 +449,27 @@ public:
 
     /**
      * @brief Computes the grasp matrix in the cases where there are 
+     * 2, 3 or 4 contacts in the _contact member vector.
+     * the external forces and moments are assumed to be in world frame
+     * for 2 contact points, the output quantities are given in local frame, and the description of the local frame is given by R
+     * for 3 and 4 contacts, the output quantities are given in world frame
+     * the convention for the output is the following order : support forces, support moments, internal tensions, internal moments
+     * the internal tensions are given in the order 1-2, 1-3, 2-3 in the 3 contact case
+     * and 1-2, 1-3, 1-4, 2-3, 2-4, 3-4 in the 4 contact case.
+     * @param G                 The grasp matrix that is going to be populated
+     * @param R                 the rotation matrix between the world frame and the frame attached to the object (useful when 2 contacts only)
+     * @param center_point      The position (in world frame) of the point on which we resolve the resultant forces and moments
+     */
+    void GraspMatrix(Eigen::MatrixXd& G,
+                     Eigen::Matrix3d& R,
+                     const Eigen::Vector3d center_point);
+
+    /**
+     * @brief Computes the grasp matrix in the cases where there are 
      * 2, 3 or 4 contact points.
      * @param G  :  The grasp matrix that is going to be populated
      * @param R : the rotation matrix between the world frame and the frame attached to the object (useful when 2 contacts only)
-     * @param geopetric_center  :  The position (in world frame) of the geometric center (found and returned by the function) on which we resolve the resultant forces and moments
+     * @param geometric_center  :  The position (in world frame) of the geometric center (found and returned by the function) on which we resolve the resultant forces and moments
      * @param link_names  :  a vector of the names of the links where the contact occur
      * @param pos_in_links  :  a vector of the position of the contact in each link
      * @param contact_natures  :  a vector containing the nature of each contact (we only consider point contact and surface contact)
@@ -408,10 +481,19 @@ public:
                      const std::vector<Eigen::Vector3d> pos_in_links,
                      const std::vector<ContactNature> contact_natures);
 
+    /**
+     * @brief Computes the grasp matrix in the cases where there are 
+     * 2, 3 or 4 contact points.
+     * @param G                   The grasp matrix that is going to be populated
+     * @param R                   the rotation matrix between the world frame and the frame attached to the object (useful when 2 contacts only)
+     * @param geometric_center    The position (in world frame) of the geometric center (found and returned by the function) on which we resolve the resultant forces and moments
+     */
+    void GraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
+                     Eigen::Matrix3d& R,
+                     Eigen::Vector3d& geometric_center);
 
     /// \brief internal rbdl model
     RigidBodyDynamics::Model* _rbdl_model;
-
 
     /// \brief Joint positions
     Eigen::VectorXd _q;
@@ -427,6 +509,7 @@ public:
 
     /// \brief Inverse of the mass matrix
     Eigen::MatrixXd _M_inv;
+
 
 public:
     /// \brief compute the cross product operator of a 3d vector
@@ -448,6 +531,9 @@ public:
 protected:
     /// \brief map from joint names to joint id
     std::map<std::string,int> _joint_names_map;
+
+    /// \brief List of active contacts on the robot
+    std::vector<ContactModel> _contacts;
 
 };
 
