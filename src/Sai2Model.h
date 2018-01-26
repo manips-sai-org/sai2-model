@@ -467,6 +467,7 @@ public:
     /**
      * @brief Computes the grasp matrix in the cases where there are 
      * 2, 3 or 4 contact points.
+     * the external forces and moments are assumed to be in world frame
      * @param G  :  The grasp matrix that is going to be populated
      * @param R : the rotation matrix between the world frame and the frame attached to the object (useful when 2 contacts only)
      * @param geometric_center  :  The position (in world frame) of the geometric center (found and returned by the function) on which we resolve the resultant forces and moments
@@ -483,7 +484,8 @@ public:
 
     /**
      * @brief Computes the grasp matrix in the cases where there are 
-     * 2, 3 or 4 contact points.
+     * 2, 3 or 4 contact points. The resultant is given at the geometric center of the virtual linkage.
+     * the external forces and moments are assumed to be in world frame
      * @param G                   The grasp matrix that is going to be populated
      * @param R                   the rotation matrix between the world frame and the frame attached to the object (useful when 2 contacts only)
      * @param geometric_center    The position (in world frame) of the geometric center (found and returned by the function) on which we resolve the resultant forces and moments
@@ -510,6 +512,8 @@ public:
     /// \brief Inverse of the mass matrix
     Eigen::MatrixXd _M_inv;
 
+    /// \brief List of active contacts on the robot
+    std::vector<ContactModel> _contacts;
 
 public:
     /// \brief compute the cross product operator of a 3d vector
@@ -532,8 +536,6 @@ protected:
     /// \brief map from joint names to joint id
     std::map<std::string,int> _joint_names_map;
 
-    /// \brief List of active contacts on the robot
-    std::vector<ContactModel> _contacts;
 
 };
 
