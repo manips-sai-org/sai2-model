@@ -1256,7 +1256,7 @@ void Sai2Model::GraspMatrix(Eigen::MatrixXd& G,
 			Rr.block<3,3>(0,0) = R;
 			Rr.block<3,3>(3,3) = R;
 
-			Wf = Rr.transpose() * Wf;
+			// Wf = Rr.transpose() * Wf;
 
 			switch(k)
 			{
@@ -1274,7 +1274,7 @@ void Sai2Model::GraspMatrix(Eigen::MatrixXd& G,
 					     0, 0, 1;
 					I = I*R.transpose();
 
-					Wm = Rr.transpose()*Wm;
+					// Wm = Rr.transpose()*Wm;
 
 					// populate G
 					G = Eigen::MatrixXd::Zero(9,9);
@@ -1296,7 +1296,7 @@ void Sai2Model::GraspMatrix(Eigen::MatrixXd& G,
 						  0, 0, 0, 0, 0, 1;
 					I = I*Rr.transpose();
 
-					Wm = Rr.transpose()*Wm;
+					// Wm = Rr.transpose()*Wm;
 
 					// populate G
 					G = Eigen::MatrixXd::Zero(12,12);

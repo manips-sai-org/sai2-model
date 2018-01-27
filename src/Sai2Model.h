@@ -451,7 +451,9 @@ public:
      * @brief Computes the grasp matrix in the cases where there are 
      * 2, 3 or 4 contacts in the _contact member vector.
      * the external forces and moments are assumed to be in world frame
-     * for 2 contact points, the output quantities are given in local frame, and the description of the local frame is given by R
+     * for 2 contact points, the output resultant (first 6 lines) is given in world frame, 
+     *                   and the output internal tension and moments are given in local frame, 
+     *                   and the description of the local frame is given by R
      * for 3 and 4 contacts, the output quantities are given in world frame
      * the convention for the output is the following order : support forces, support moments, internal tensions, internal moments
      * the internal tensions are given in the order 1-2, 1-3, 2-3 in the 3 contact case
