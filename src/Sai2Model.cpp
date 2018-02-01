@@ -26,7 +26,7 @@ Sai2Model::Sai2Model (const std::string path_to_model_file,
 	_rbdl_model = new RigidBodyDynamics::Model();
 
 	// parse rbdl model from urdf
-	bool success = RigidBodyDynamics::URDFReadFromFile(path_to_model_file.c_str(), _rbdl_model, _joint_names_map, false, verbose, world_gravity);
+	bool success = RigidBodyDynamics::URDFReadFromFile(path_to_model_file.c_str(), _rbdl_model, _link_names_map, _joint_names_map, false, verbose, world_gravity);
 	if (!success) 
 	{
 		std::cout << "Error loading model [" + path_to_model_file + "]" << "\n";
@@ -548,6 +548,55 @@ void Sai2Model::getLinkMass(double& mass,
 	center_of_mass = b.mCenterOfMass;
 }
 
+void Sai2Model::comPosition(Eigen::Vector3d& robot_com) 
+{
+	robot_com.setZero();
+	double mass;
+	double robot_mass = 0.0;
+	Eigen::Vector3d center_of_mass_local;
+	Eigen::Vector3d center_of_mass_global_frame;
+	Eigen::Matrix3d inertia;
+	int n_bodies = _rbdl_model->mBodies.size();
+	for(int i=0; i<n_bodies; i++) 
+	{
+		RigidBodyDynamics::Body b = _rbdl_model->mBodies[i];
+		
+		mass = b.mMass;
+		center_of_mass_local = b.mCenterOfMass;
+
+		center_of_mass_global_frame = CalcBodyToBaseCoordinates(*_rbdl_model, _q, i, center_of_mass_local, false);
+
+		robot_com += center_of_mass_global_frame*mass;
+		robot_mass += mass;
+	}
+	robot_com = robot_com/robot_mass;
+}
+
+void Sai2Model::comJacobian(Eigen::MatrixXd& Jv_com) {
+	Jv_com.setZero(3, _dof);
+	Eigen::MatrixXd link_Jv;
+	link_Jv.setZero(3, _dof);
+	double mass;
+	double robot_mass = 0.0;
+	Eigen::Vector3d center_of_mass_local;
+	Eigen::Matrix3d inertia;
+	int n_bodies = _rbdl_model->mBodies.size();
+	for(int i=0; i<n_bodies; i++) 
+	{
+		RigidBodyDynamics::Body b = _rbdl_model->mBodies[i];
+
+		mass = b.mMass;
+		center_of_mass_local = b.mCenterOfMass;
+		inertia = b.mInertia;
+
+		CalcPointJacobian(*_rbdl_model, _q, i, center_of_mass_local, link_Jv, false);
+
+		Jv_com += link_Jv*mass;
+		robot_mass += mass;
+	}
+	Jv_com = Jv_com/robot_mass; //TODO: this is obviously incorrect for Jw. Need to fix by implementing the parallel axis theorem.
+}
+
 // TODO : Untested
 void Sai2Model::orientationError(Eigen::Vector3d& delta_phi,
 		              const Eigen::Matrix3d& desired_orientation,
@@ -703,6 +752,7 @@ void Sai2Model::nullspaceMatrix(Eigen::MatrixXd& N,
 void Sai2Model::operationalSpaceMatrices(Eigen::MatrixXd& Lambda, Eigen::MatrixXd& Jbar, Eigen::MatrixXd& N,
                                     const Eigen::MatrixXd& task_jacobian)
 {
+	N = Eigen::MatrixXd::Identity(_dof, _dof);
 	Eigen::MatrixXd N_prec = Eigen::MatrixXd::Identity(dof(),dof());
 	operationalSpaceMatrices(Lambda,Jbar,N,task_jacobian,N_prec);
 }
@@ -1142,7 +1192,7 @@ void Sai2Model::deleteContact(const std::string link_name)
 
 // }
 
-void Sai2Model::GraspMatrix(Eigen::MatrixXd& G,
+void Sai2Model::graspMatrix(Eigen::MatrixXd& G,
 	Eigen::Matrix3d& R,
 	const Eigen::Vector3d center_point)
 {
@@ -1550,7 +1600,7 @@ void Sai2Model::GraspMatrix(Eigen::MatrixXd& G,
 // 	GraspMatrix(G, R, link_names, pos_in_links, contact_natures, geometric_center);
 // }
 
-void Sai2Model::GraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
+void Sai2Model::graspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
                      Eigen::Matrix3d& R,
                      Eigen::Vector3d& geometric_center)
 {
@@ -1575,8 +1625,27 @@ void Sai2Model::GraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
 	}
 	geometric_center = geometric_center/(double)n;
 
-	GraspMatrix(G, R, geometric_center);
+	graspMatrix(G, R, geometric_center);
 }
 
+void Sai2Model::displayJoints()
+{
+	std::cout << "\nRobot Joints :" << std::endl;
+	for(std::map<std::string,int>::iterator it = _joint_names_map.begin(); it!=_joint_names_map.end(); ++it)
+	{
+		std::cout << "joint : " << it->first << "\t id : " << it->second << std::endl;
+	}
+	std::cout << std::endl;
+}
+
+void Sai2Model::displayLinks()
+{
+	std::cout << "\nRobot Joints :" << std::endl;
+	for(std::map<std::string,int>::iterator it = _link_names_map.begin(); it!=_link_names_map.end(); ++it)
+	{
+		std::cout << "link : " << it->first << "\t id : " << it->second << std::endl;
+	}
+	std::cout << std::endl;
+}
 
 } /* namespace Model */

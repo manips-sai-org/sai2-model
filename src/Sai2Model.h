@@ -306,6 +306,17 @@ public:
                      Eigen::Vector3d& center_of_mass,
                      const std::string& link_name);
 
+    /**
+     * @brief returns the position of the center of mass of the robot in robot base frame
+     * @param robot_com the returned center of mass position
+     */
+    void comPosition(Eigen::Vector3d& robot_com);
+
+    /**
+     * @brief returns the center of mass velocity Jacobian of the robot in robot base frame
+     * @param Jv_com the returned center of mass full jacobian
+     */
+    void comJacobian(Eigen::MatrixXd& Jv_com);
 
      /**
      * @brief Gives orientation error from rotation matrices
@@ -462,7 +473,7 @@ public:
      * @param R                 the rotation matrix between the world frame and the frame attached to the object (useful when 2 contacts only)
      * @param center_point      The position (in world frame) of the point on which we resolve the resultant forces and moments
      */
-    void GraspMatrix(Eigen::MatrixXd& G,
+    void graspMatrix(Eigen::MatrixXd& G,
                      Eigen::Matrix3d& R,
                      const Eigen::Vector3d center_point);
 
@@ -492,9 +503,19 @@ public:
      * @param R                   the rotation matrix between the world frame and the frame attached to the object (useful when 2 contacts only)
      * @param geometric_center    The position (in world frame) of the geometric center (found and returned by the function) on which we resolve the resultant forces and moments
      */
-    void GraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
+    void graspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
                      Eigen::Matrix3d& R,
                      Eigen::Vector3d& geometric_center);
+
+    /**
+     * @brief displays the joints of the robot with the corresponding numbers
+     */
+    void displayJoints();
+
+    /**
+     * @brief displays the links of the robot with the corresponding numbers
+     */
+    void displayLinks();
 
     /// \brief internal rbdl model
     RigidBodyDynamics::Model* _rbdl_model;
@@ -538,7 +559,8 @@ protected:
     /// \brief map from joint names to joint id
     std::map<std::string,int> _joint_names_map;
 
-
+    /// \brief map from link names to link id
+    std::map<std::string,int> _link_names_map;
 };
 
 } /* namespace Model */
