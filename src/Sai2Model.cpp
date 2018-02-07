@@ -597,38 +597,6 @@ void Sai2Model::comJacobian(Eigen::MatrixXd& Jv_com) {
 	Jv_com = Jv_com/robot_mass; //TODO: this is obviously incorrect for Jw. Need to fix by implementing the parallel axis theorem.
 }
 
-// TODO : Untested
-void Sai2Model::orientationError(Eigen::Vector3d& delta_phi,
-		              const Eigen::Matrix3d& desired_orientation,
-		              const Eigen::Matrix3d& current_orientation)
-{
-	// check that the matrices are valid rotations
-	Eigen::Matrix3d Q1 = desired_orientation*desired_orientation.transpose() - Eigen::Matrix3d::Identity();
-	Eigen::Matrix3d Q2 = current_orientation*current_orientation.transpose() - Eigen::Matrix3d::Identity();
-	if(Q1.norm() > 0.0001 || Q2.norm() > 0.0001)
-	{
-		throw std::invalid_argument("Invalid rotation matrices in Sai2Model::orientationError");
-		return;
-	}
-	else
-	{
-		Eigen::Vector3d rc1 = current_orientation.block<3,1>(0,0);
-		Eigen::Vector3d rc2 = current_orientation.block<3,1>(0,1);
-		Eigen::Vector3d rc3 = current_orientation.block<3,1>(0,2);
-		Eigen::Vector3d rd1 = desired_orientation.block<3,1>(0,0);
-		Eigen::Vector3d rd2 = desired_orientation.block<3,1>(0,1);
-		Eigen::Vector3d rd3 = desired_orientation.block<3,1>(0,2);
-		delta_phi = -1.0/2.0*(rc1.cross(rd1) + rc2.cross(rd2) + rc3.cross(rd3));
-	}
-}
-
-void Sai2Model::orientationError(Eigen::Vector3d& delta_phi,
-		              const Eigen::Quaterniond& desired_orientation,
-		              const Eigen::Quaterniond& current_orientation)
-{
-	Eigen::Quaterniond inv_dlambda = desired_orientation*current_orientation.conjugate();
-	delta_phi = 2.0*inv_dlambda.vec();
-}
 
 // TODO : Untested
 void Sai2Model::taskInertiaMatrix(Eigen::MatrixXd& Lambda,
@@ -830,367 +798,6 @@ void Sai2Model::deleteContact(const std::string link_name)
 	}
 	_contacts = new_contacts;
 }
-
-// void Sai2Model::GraspMatrix(Eigen::MatrixXd& G,
-// 	Eigen::Matrix3d& R,
-// 	const std::vector<std::string> link_names,
-// 	const std::vector<Eigen::Vector3d> pos_in_links,
-// 	const std::vector<ContactNature> contact_natures,
-// 	const Eigen::Vector3d center_point)
-// {
-	// G = Eigen::MatrixXd::Zero(1,1);
-	// R = Eigen::Matrix3d::Identity();
-
-	// // number of contact points
-	// int n = link_names.size();
-	// if(n < 2)
-	// {
-	// 	throw std::invalid_argument("invalid number of contact points (2 points min)\n");
-	// }
-	// if(n > 4)
-	// {
-	// 	throw std::invalid_argument("invalid number of contact points (4 points max)\n");
-	// }
-	// if((pos_in_links.size() != n) || (contact_natures.size() != n))
-	// {
-	// 	throw std::invalid_argument("input vectors for the link names, pos in links and contact natures don't have the same size\n");
-	// }
-	// // number of surface contacts (that can apply a moment)
-	// int k = std::count(contact_natures.begin(), contact_natures.end(), SurfaceContact);
-
-	// Eigen::MatrixXd Wf = Eigen::MatrixXd::Zero(6, 3*n);
-	// Eigen::MatrixXd Wm = Eigen::MatrixXd::Zero(6, 3*k);
-
-	// std::vector<Eigen::Vector3d> positions_in_world;
-
-	// for(int i=0; i<n; i++)
-	// {
-	// 	Eigen::Vector3d pi;
-	// 	position(pi, link_names[i], pos_in_links[i]);
-	// 	positions_in_world.push_back(pi);
-	// 	Eigen::Vector3d ri = pi-center_point;
-	// 	Wf.block<3,3>(0,3*i) = Eigen::Matrix3d::Identity();
-	// 	Wf.block<3,3>(3,3*i) = CrossProductOperator(ri);
-	// }
-	// for(int i=0; i<k; i++)
-	// {
-	// 	Wm.block<3,3>(3,3*i) = Eigen::Matrix3d::Identity();
-	// }
-
-	// Eigen::MatrixXd E, I;
-
-	// switch (n)
-	// {
-	// 	case 2: 
-	// 	{
-	// 		// resize E
-	// 		E = Eigen::MatrixXd::Zero(6,1);
-			
-	// 		// compute the point to point vectors
-	// 		Eigen::Vector3d e12 = positions_in_world[1] - positions_in_world[0];
-	// 		e12.normalize();
-
-	// 		// fill in E matrix
-	// 		E.block<3,1>(0,0) = -e12;
-	// 		E.block<3,1>(3,0) = e12;
-
-	// 		// create Ebar
-	// 		Eigen::MatrixXd Ebar = (E.transpose()*E).inverse() * E.transpose();
-
-	// 		// find R
-	// 		Eigen::Vector3d x = e12;
-	// 		// std::cout << "new x : " << x.transpose() << std::endl;
-	// 		// std::cout << "new x cross world x : " << (x.cross(Eigen::Vector3d(1,0,0))).transpose() << std::endl;
-	// 		// std::cout << "new x cross world x norm : " << (x.cross(Eigen::Vector3d(1,0,0))).norm() << std::endl;
-	// 		// std::cout << "abs : " << std::abs((x.cross(Eigen::Vector3d(1,0,0))).norm()) << std::endl;
-	// 		// std::cout << std::endl;
-	// 		if(std::abs((x.cross(Eigen::Vector3d(1,0,0))).norm()) < 1e-3) // new x is aligned with world x
-	// 		{
-	// 			if(x.dot(Eigen::Vector3d(1,0,0)) > 0) // same direction
-	// 			{
-	// 				R = Eigen::Matrix3d::Identity();
-	// 				// std::cout << "R is identity" << std::endl;
-	// 			}
-	// 			else // rotation around Z axis by 180 degrees
-	// 			{
-	// 				R << -1, 0, 0,
-	// 					 0, -1, 0, 
-	// 					 0, 0, 1;
-	// 			}
-	// 		}
-	// 		else
-	// 		{
-	// 			Eigen::Vector3d y = x.cross(Eigen::Vector3d(1,0,0));
-	// 			y.normalize();
-	// 			Eigen::Vector3d z = x.cross(y);
-	// 			z.normalize();
-	// 			R.block<3,1>(0,0) = x;
-	// 			R.block<3,1>(0,1) = y;
-	// 			R.block<3,1>(0,2) = z;
-	// 		}
-
-	// 		Eigen::MatrixXd Rr = Eigen::MatrixXd::Zero(6,6);
-	// 		Rr.block<3,3>(0,0) = R;
-	// 		Rr.block<3,3>(3,3) = R;
-
-	// 		Wf = Rr.transpose() * Wf;
-
-	// 		switch(k)
-	// 		{
-	// 			case 0:
-	// 			{
-	// 				throw std::runtime_error("Case 2-0 not implemented yet\n");
-	// 				break;
-	// 			}
-	// 			case 1: 
-	// 			{
-	// 				// only 2 internal moments
-	// 				I = Eigen::MatrixXd::Zero(2,3);
-
-	// 				I << 0, 1, 0,
-	// 				     0, 0, 1;
-	// 				I = I*R.transpose();
-
-	// 				Wm = Rr.transpose()*Wm;
-
-	// 				// populate G
-	// 				G = Eigen::MatrixXd::Zero(9,9);
-	// 				G.block<6,6>(0,0) = Wf;
-	// 				G.block<6,3>(0,6) = Wm;
-	// 				G.block<1,6>(6,0) = Ebar;
-	// 				G.block<2,3>(7,6) = I;
-	// 				break;
-	// 			}
-	// 			case 2: 
-	// 			{
-	// 				I = Eigen::MatrixXd::Zero(5,6);
-
-	// 				// find I
-	// 				I << -0.5, 0, 0, 0.5, 0, 0,
-	// 					  0, 1, 0, 0, 0, 0,
-	// 					  0, 0, 1, 0, 0, 0,
-	// 					  0, 0, 0, 0, 1, 0,
-	// 					  0, 0, 0, 0, 0, 1;
-	// 				I = I*Rr.transpose();
-
-	// 				Wm = Rr.transpose()*Wm;
-
-	// 				// populate G
-	// 				G = Eigen::MatrixXd::Zero(12,12);
-	// 				G.block<6,6>(0,0) = Wf;
-	// 				G.block<6,6>(0,6) = Wm;
-	// 				G.block<1,6>(6,0) = Ebar;
-	// 				G.block<5,6>(7,6) = I;
-	// 				break;
-	// 			}
-	// 			default: 
-	// 			throw std::runtime_error("Should not arrive here (number of contact points is 2, number of surface contacts incoherent)\n");
-
-	// 		}
-	// 		break;
-
-	// 	}
-
-	// 	case 3: 
-	// 	{
-	// 		// resize E
-	// 		E = Eigen::MatrixXd::Zero(9,3);
-			
-	// 		// compute the point to point vectors
-	// 		Eigen::Vector3d e12 = positions_in_world[1] - positions_in_world[0];
-	// 		Eigen::Vector3d e13 = positions_in_world[2] - positions_in_world[0];
-	// 		Eigen::Vector3d e23 = positions_in_world[2] - positions_in_world[1];
-
-	// 		e12.normalize();
-	// 		e13.normalize();
-	// 		e23.normalize();
-
-	// 		// fill in E matrix
-	// 		E.block<3,1>(0,0) = -e12;
-	// 		E.block<3,1>(3,0) = e12;
-	// 		E.block<3,1>(0,1) = -e13;
-	// 		E.block<3,1>(6,1) = e13;
-	// 		E.block<3,1>(3,2) = -e23;
-	// 		E.block<3,1>(6,2) = e23;
-
-	// 		// std::cout << "E : \n" << E << std::endl << std::endl;
-
-	// 		// create Ebar
-	// 		Eigen::MatrixXd Ebar = (E.transpose()*E).inverse() * E.transpose();
-
-	// 		switch(k)
-	// 		{
-	// 			case 0:
-	// 			{
-	// 				// populate G
-	// 				G = Eigen::MatrixXd::Zero(9,9);
-	// 				G.block<6,9>(0,0) = Wf;
-	// 				G.block<3,9>(6,0) = Ebar;
-	// 				break;
-	// 			}
-	// 			case 1: 
-	// 			{
-	// 				// compute I
-	// 				Eigen::MatrixXd I = Eigen::MatrixXd::Identity(3,3);
-
-	// 				// populate G
-	// 				G = Eigen::MatrixXd::Zero(12,12);
-	// 				G.block<6,9>(0,0) = Wf;
-	// 				G.block<6,3>(0,9) = Wm;
-	// 				G.block<3,9>(6,0) = Ebar;
-	// 				G.block<3,3>(9,9) = I;
-	// 				break;
-	// 			}
-	// 			case 2: 
-	// 			{
-	// 				// compute I
-	// 				Eigen::MatrixXd I = Eigen::MatrixXd::Identity(6,6);
-
-	// 				// populate G
-	// 				G = Eigen::MatrixXd::Zero(15,15);
-	// 				G.block<6,9>(0,0) = Wf;
-	// 				G.block<6,6>(0,9) = Wm;
-	// 				G.block<3,9>(6,0) = Ebar;
-	// 				G.block<6,6>(9,9) = I;
-	// 				break;
-	// 			}
-	// 			case 3: 
-	// 			{
-	// 				// compute I
-	// 				Eigen::MatrixXd I = Eigen::MatrixXd::Identity(9,9);
-
-	// 				// populate G
-	// 				G = Eigen::MatrixXd::Zero(18,18);
-	// 				G.block<6,9>(0,0) = Wf;
-	// 				G.block<6,9>(0,9) = Wm;
-	// 				G.block<3,9>(6,0) = Ebar;
-	// 				G.block<9,9>(9,9) = I;
-	// 				break;
-	// 			}
-
-	// 			default: 
-	// 			throw std::runtime_error("Should not arrive here (number of contact points is 3, number of surface contacts incoherent)\n");
-
-	// 		}
-	// 		break;
-
-	// 	}		
-
-	// 	case 4: 
-	// 	{
-	// 		// resize E
-	// 		E = Eigen::MatrixXd::Zero(12,6);
-			
-	// 		// compute the point to point vectors
-	// 		Eigen::Vector3d e12 = positions_in_world[1] - positions_in_world[0];
-	// 		Eigen::Vector3d e13 = positions_in_world[2] - positions_in_world[0];
-	// 		Eigen::Vector3d e14 = positions_in_world[3] - positions_in_world[0];
-	// 		Eigen::Vector3d e23 = positions_in_world[2] - positions_in_world[1];
-	// 		Eigen::Vector3d e24 = positions_in_world[3] - positions_in_world[1];
-	// 		Eigen::Vector3d e34 = positions_in_world[3] - positions_in_world[2];
-
-	// 		e12.normalize();
-	// 		e13.normalize();
-	// 		e14.normalize();
-	// 		e23.normalize();
-	// 		e24.normalize();
-	// 		e34.normalize();
-
-	// 		// fill in E matrix
-	// 		E.block<3,1>(0,0) = -e12;
-	// 		E.block<3,1>(3,0) = e12;
-	// 		E.block<3,1>(0,1) = -e13;
-	// 		E.block<3,1>(6,1) = e13;
-	// 		E.block<3,1>(0,2) = -e14;
-	// 		E.block<3,1>(9,2) = e14;
-	// 		E.block<3,1>(3,3) = -e23;
-	// 		E.block<3,1>(6,3) = e23;
-	// 		E.block<3,1>(3,4) = -e24;
-	// 		E.block<3,1>(9,4) = e24;
-	// 		E.block<3,1>(6,5) = -e34;
-	// 		E.block<3,1>(9,5) = e34;
-
-
-	// 		// create Ebar
-	// 		Eigen::MatrixXd Ebar = (E.transpose()*E).inverse() * E.transpose();
-
-	// 		switch(k)
-	// 		{
-	// 			case 0:
-	// 			{
-	// 				// populate G
-	// 				G = Eigen::MatrixXd::Zero(12,12);
-	// 				G.block<6,12>(0,0) = Wf;
-	// 				G.block<6,12>(6,0) = Ebar;
-	// 				break;
-	// 			}
-	// 			case 1: 
-	// 			{
-	// 				// compute I
-	// 				Eigen::MatrixXd I = Eigen::MatrixXd::Identity(3,3);
-
-	// 				// populate G
-	// 				G = Eigen::MatrixXd::Zero(15,15);
-	// 				G.block<6,12>(0,0) = Wf;
-	// 				G.block<6,3>(0,12) = Wm;
-	// 				G.block<6,12>(6,0) = Ebar;
-	// 				G.block<3,3>(12,12) = I;
-	// 				break;
-	// 			}
-	// 			case 2: 
-	// 			{
-	// 				// compute I
-	// 				Eigen::MatrixXd I = Eigen::MatrixXd::Identity(6,6);
-
-	// 				// populate G
-	// 				G = Eigen::MatrixXd::Zero(18,18);
-	// 				G.block<6,12>(0,0) = Wf;
-	// 				G.block<6,6>(0,12) = Wm;
-	// 				G.block<6,12>(6,0) = Ebar;
-	// 				G.block<6,6>(12,12) = I;
-	// 				break;
-	// 			}
-	// 			case 3: 
-	// 			{
-	// 				// compute I
-	// 				Eigen::MatrixXd I = Eigen::MatrixXd::Identity(9,9);
-
-	// 				// populate G
-	// 				G = Eigen::MatrixXd::Zero(21,21);
-	// 				G.block<6,12>(0,0) = Wf;
-	// 				G.block<6,9>(0,12) = Wm;
-	// 				G.block<6,12>(6,0) = Ebar;
-	// 				G.block<9,9>(12,12) = I;
-	// 				break;
-	// 			}
-	// 			case 4: 
-	// 			{
-	// 				// compute I
-	// 				Eigen::MatrixXd I = Eigen::MatrixXd::Identity(12,12);
-
-	// 				// populate G
-	// 				G = Eigen::MatrixXd::Zero(24,24);
-	// 				G.block<6,12>(0,0) = Wf;
-	// 				G.block<6,12>(0,12) = Wm;
-	// 				G.block<6,12>(6,0) = Ebar;
-	// 				G.block<12,12>(12,12) = I;
-	// 				break;
-	// 			}
-
-	// 			default: 
-	// 			throw std::runtime_error("Should not arrive here (number of contact points is 4, number of surface contacts incoherent)\n");
-
-	// 		}
-	// 		break;
-
-	// 	}
-
-	// 	default:
-	// 	throw std::runtime_error("Should not arrive here (number of contact points is not 2, 3 or 4) \n");
-
-	// }
-
-// }
 
 void Sai2Model::graspMatrix(Eigen::MatrixXd& G,
 	Eigen::Matrix3d& R,
@@ -1565,41 +1172,6 @@ void Sai2Model::graspMatrix(Eigen::MatrixXd& G,
 
 }
 
-// void Sai2Model::GraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
-//                      Eigen::Matrix3d& R,
-//                      Eigen::Vector3d& geometric_center,
-//                      const std::vector<std::string> link_names,
-//                      const std::vector<Eigen::Vector3d> pos_in_links,
-//                      const std::vector<ContactNature> contact_natures)
-// {
-// 	// number of contact points
-// 	int n = link_names.size();
-// 	if(n < 2)
-// 	{
-// 		throw std::invalid_argument("invalid number of contact points (2 points min)\n");
-// 	}
-// 	if(n > 4)
-// 	{
-// 		throw std::invalid_argument("invalid number of contact points (4 points max)\n");
-// 	}
-// 	if((pos_in_links.size() != n) || (contact_natures.size() != n))
-// 	{
-// 		throw std::invalid_argument("input vectors for the link names, pos in links and contact natures don't have the same size\n");
-// 	}
-
-// 	geometric_center.setZero();
-
-// 	for(int i=0; i<n; i++)
-// 	{
-// 		Eigen::Vector3d pi;
-// 		position(pi, link_names[i], pos_in_links[i]);
-// 		geometric_center += pi;
-// 	}
-// 	geometric_center = geometric_center/(double)n;
-
-// 	GraspMatrix(G, R, link_names, pos_in_links, contact_natures, geometric_center);
-// }
-
 void Sai2Model::graspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
                      Eigen::Matrix3d& R,
                      Eigen::Vector3d& geometric_center)
@@ -1646,6 +1218,49 @@ void Sai2Model::displayLinks()
 		std::cout << "link : " << it->first << "\t id : " << it->second << std::endl;
 	}
 	std::cout << std::endl;
+}
+
+
+// TODO : Untested
+static void orientationError(Eigen::Vector3d& delta_phi,
+		              const Eigen::Matrix3d& desired_orientation,
+		              const Eigen::Matrix3d& current_orientation)
+{
+	// check that the matrices are valid rotations
+	Eigen::Matrix3d Q1 = desired_orientation*desired_orientation.transpose() - Eigen::Matrix3d::Identity();
+	Eigen::Matrix3d Q2 = current_orientation*current_orientation.transpose() - Eigen::Matrix3d::Identity();
+	if(Q1.norm() > 0.0001 || Q2.norm() > 0.0001)
+	{
+		throw std::invalid_argument("Invalid rotation matrices in Sai2Model::orientationError");
+		return;
+	}
+	else
+	{
+		Eigen::Vector3d rc1 = current_orientation.block<3,1>(0,0);
+		Eigen::Vector3d rc2 = current_orientation.block<3,1>(0,1);
+		Eigen::Vector3d rc3 = current_orientation.block<3,1>(0,2);
+		Eigen::Vector3d rd1 = desired_orientation.block<3,1>(0,0);
+		Eigen::Vector3d rd2 = desired_orientation.block<3,1>(0,1);
+		Eigen::Vector3d rd3 = desired_orientation.block<3,1>(0,2);
+		delta_phi = -1.0/2.0*(rc1.cross(rd1) + rc2.cross(rd2) + rc3.cross(rd3));
+	}
+}
+
+static void orientationError(Eigen::Vector3d& delta_phi,
+		              const Eigen::Quaterniond& desired_orientation,
+		              const Eigen::Quaterniond& current_orientation)
+{
+	Eigen::Quaterniond inv_dlambda = desired_orientation*current_orientation.conjugate();
+	delta_phi = 2.0*inv_dlambda.vec();
+}
+
+static Eigen::Matrix3d CrossProductOperator(const Eigen::Vector3d& v)
+{
+    Eigen::Matrix3d v_hat;
+    v_hat << 0, -v(2), v(1),
+            v(2), 0, -v(0),
+            -v(1), v(0), 0;
+    return v_hat;
 }
 
 } /* namespace Model */

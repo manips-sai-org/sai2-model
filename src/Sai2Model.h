@@ -318,26 +318,7 @@ public:
      */
     void comJacobian(Eigen::MatrixXd& Jv_com);
 
-     /**
-     * @brief Gives orientation error from rotation matrices
-     * @param delta_phi Vector on which the orientation error will be written
-     * @param desired_orientation desired orientation rotation matrix
-     * @param current_orientation current orientation matrix
-     */
-    void orientationError(Eigen::Vector3d& delta_phi,
-                          const Eigen::Matrix3d& desired_orientation,
-                          const Eigen::Matrix3d& current_orientation);
 
-
-    /**
-     * @brief Gives orientation error from quaternions
-     * @param delta_phi Vector on which the orientation error will be written
-     * @param desired_orientation desired orientation quaternion
-     * @param current_orientation current orientation quaternion
-     */
-    void orientationError(Eigen::Vector3d& delta_phi,
-                          const Eigen::Quaterniond& desired_orientation,
-                          const Eigen::Quaterniond& current_orientation);
 
     /**
      * @brief Computes the operational space matrix corresponding to a given Jacobian
@@ -563,6 +544,36 @@ protected:
     std::map<std::string,int> _link_names_map;
 };
 
-} /* namespace Model */
+
+///-------------------------- stand alone helper functions
+
+
+ /**
+ * @brief Gives orientation error from rotation matrices
+ * @param delta_phi Vector on which the orientation error will be written
+ * @param desired_orientation desired orientation rotation matrix
+ * @param current_orientation current orientation matrix
+ */
+static void orientationError(Eigen::Vector3d& delta_phi,
+                      const Eigen::Matrix3d& desired_orientation,
+                      const Eigen::Matrix3d& current_orientation);
+
+
+/**
+ * @brief Gives orientation error from quaternions
+ * @param delta_phi Vector on which the orientation error will be written
+ * @param desired_orientation desired orientation quaternion
+ * @param current_orientation current orientation quaternion
+ */
+static void orientationError(Eigen::Vector3d& delta_phi,
+                      const Eigen::Quaterniond& desired_orientation,
+                      const Eigen::Quaterniond& current_orientation);
+
+
+/// \brief compute the cross product operator of a 3d vector
+static Eigen::Matrix3d CrossProductOperator(const Eigen::Vector3d& v);
+
+
+} /* namespace Sai2Model */
 
 #endif /* RBDLMODEL_H_ */
