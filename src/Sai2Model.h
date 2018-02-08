@@ -554,7 +554,7 @@ protected:
  * @param desired_orientation desired orientation rotation matrix
  * @param current_orientation current orientation matrix
  */
-static void orientationError(Eigen::Vector3d& delta_phi,
+void orientationError(Eigen::Vector3d& delta_phi,
                       const Eigen::Matrix3d& desired_orientation,
                       const Eigen::Matrix3d& current_orientation);
 
@@ -565,13 +565,13 @@ static void orientationError(Eigen::Vector3d& delta_phi,
  * @param desired_orientation desired orientation quaternion
  * @param current_orientation current orientation quaternion
  */
-static void orientationError(Eigen::Vector3d& delta_phi,
+void orientationError(Eigen::Vector3d& delta_phi,
                       const Eigen::Quaterniond& desired_orientation,
                       const Eigen::Quaterniond& current_orientation);
 
 
 /// \brief compute the cross product operator of a 3d vector
-static Eigen::Matrix3d CrossProductOperator(const Eigen::Vector3d& v);
+Eigen::Matrix3d CrossProductOperator(const Eigen::Vector3d& v);
 
 
 } /* namespace Sai2Model */

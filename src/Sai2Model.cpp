@@ -1222,7 +1222,7 @@ void Sai2Model::displayLinks()
 
 
 // TODO : Untested
-static void orientationError(Eigen::Vector3d& delta_phi,
+void orientationError(Eigen::Vector3d& delta_phi,
 		              const Eigen::Matrix3d& desired_orientation,
 		              const Eigen::Matrix3d& current_orientation)
 {
@@ -1246,7 +1246,7 @@ static void orientationError(Eigen::Vector3d& delta_phi,
 	}
 }
 
-static void orientationError(Eigen::Vector3d& delta_phi,
+void orientationError(Eigen::Vector3d& delta_phi,
 		              const Eigen::Quaterniond& desired_orientation,
 		              const Eigen::Quaterniond& current_orientation)
 {
@@ -1254,7 +1254,7 @@ static void orientationError(Eigen::Vector3d& delta_phi,
 	delta_phi = 2.0*inv_dlambda.vec();
 }
 
-static Eigen::Matrix3d CrossProductOperator(const Eigen::Vector3d& v)
+Eigen::Matrix3d CrossProductOperator(const Eigen::Vector3d& v)
 {
     Eigen::Matrix3d v_hat;
     v_hat << 0, -v(2), v(1),
