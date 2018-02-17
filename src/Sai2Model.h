@@ -188,7 +188,7 @@ public:
      * @param T Transformation matrix to which the result is computed
      * @param link_name name of the link where to compute the transformation matrix
      */
-    void transform_in_world_frame(Eigen::Affine3d& T,
+    void transformInWorld(Eigen::Affine3d& T,
                            const std::string& link_name);
 
     /**
@@ -196,7 +196,7 @@ public:
      * @param T Transformation matrix to which the result is computed
      * @param link_name name of the link where to compute the transformation matrix
      */
-    void transform_in_world_frame(Eigen::Affine3d& T,
+    void transformInWorld(Eigen::Affine3d& T,
                            const std::string& link_name,
                            const Eigen::Vector3d& pos_in_body);
 
@@ -216,7 +216,7 @@ public:
      * @param link_name name of the link in which is the point where to compute the position
      * @param pos_in_link the position of the point in the link, in local link frame
      */
-    void position_in_world_frame(Eigen::Vector3d& pos,
+    void positionInWorld(Eigen::Vector3d& pos,
                           const std::string& link_name,
                           const Eigen::Vector3d& pos_in_link);
 
@@ -253,7 +253,7 @@ public:
      * @param rot Rotation matrix to which the result is written
      * @param link_name name of the link for which to compute the rotation
      */
-    void rotation_in_world_frame(Eigen::Matrix3d& rot,
+    void rotationInWorld(Eigen::Matrix3d& rot,
                           const std::string& link_name);
 
     /**

@@ -417,7 +417,7 @@ void Sai2Model::transform(Eigen::Affine3d& T,
 	T.translation() = CalcBodyToBaseCoordinates(*_rbdl_model, _q, link_id, pos_in_body, false);
 }
 
-void Sai2Model::transform_in_world_frame(Eigen::Affine3d& T,
+void Sai2Model::transformInWorld(Eigen::Affine3d& T,
  const std::string& link_name)
 {
 	unsigned int link_id = linkId(link_name);
@@ -427,7 +427,7 @@ void Sai2Model::transform_in_world_frame(Eigen::Affine3d& T,
 	T = _base_position_in_world*T;
 }
 
-void Sai2Model::transform_in_world_frame(Eigen::Affine3d& T,
+void Sai2Model::transformInWorld(Eigen::Affine3d& T,
  const std::string& link_name,
  const Eigen::Vector3d& pos_in_body)
 {
@@ -444,7 +444,7 @@ void Sai2Model::position(Eigen::Vector3d& pos,
 	pos = CalcBodyToBaseCoordinates(*_rbdl_model, _q, linkId(link_name), pos_in_link, false);
 }
 
-void Sai2Model::position_in_world_frame(Eigen::Vector3d& pos,
+void Sai2Model::positionInWorld(Eigen::Vector3d& pos,
 	const std::string& link_name,
 	const Eigen::Vector3d& pos_in_link)
 {
@@ -475,7 +475,7 @@ void Sai2Model::rotation(Eigen::Matrix3d& rot,
 	rot = CalcBodyWorldOrientation(*_rbdl_model, _q, linkId(link_name), false).transpose();
 }
 
-void Sai2Model::rotation_in_world_frame(Eigen::Matrix3d& rot,
+void Sai2Model::rotationInWorld(Eigen::Matrix3d& rot,
 	const std::string& link_name)
 {
 	rot = CalcBodyWorldOrientation(*_rbdl_model, _q, linkId(link_name), false).transpose();
