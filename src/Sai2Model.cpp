@@ -502,14 +502,16 @@ void Sai2Model::angularAcceleration(Eigen::Vector3d& aaccel,
 
 unsigned int Sai2Model::linkId(const std::string& link_name)
 {
-	auto iter = _rbdl_model->mBodyNameMap.find(link_name);
-	unsigned int body_id = iter->second;
-
-	if (iter == _rbdl_model->mBodyNameMap.end()) {
-	std::cout << "link ["+link_name+"] does not exists\n";
+	int link_id = -1;
+	if(_link_names_map.find(link_name) == _link_names_map.end()) 
+	{
+		std::cout << "link ["+link_name+"] does not exists\n";
+		throw std::runtime_error("link does not exist");
+	} else 
+	{
+		link_id = _link_names_map[link_name];
 	}
-
-	return body_id;
+	return link_id;
 }
 
 int Sai2Model::jointId(const std::string& joint_name)
@@ -518,6 +520,7 @@ int Sai2Model::jointId(const std::string& joint_name)
 	if(_joint_names_map.find(joint_name) == _joint_names_map.end())
 	{
 		std::cout << "joint ["+joint_name+"] does not exists\n";
+		throw std::runtime_error("joint does not exist");
 	}
 	else
 	{
@@ -575,7 +578,6 @@ void Sai2Model::comPosition(Eigen::Vector3d& robot_com)
 void Sai2Model::comJacobian(Eigen::MatrixXd& Jv_com) {
 	Jv_com.setZero(3, _dof);
 	Eigen::MatrixXd link_Jv;
-	link_Jv.setZero(3, _dof);
 	double mass;
 	double robot_mass = 0.0;
 	Eigen::Vector3d center_of_mass_local;
@@ -589,12 +591,13 @@ void Sai2Model::comJacobian(Eigen::MatrixXd& Jv_com) {
 		center_of_mass_local = b.mCenterOfMass;
 		inertia = b.mInertia;
 
+		link_Jv.setZero(3, _dof);
 		CalcPointJacobian(*_rbdl_model, _q, i, center_of_mass_local, link_Jv, false);
 
 		Jv_com += link_Jv*mass;
 		robot_mass += mass;
 	}
-	Jv_com = Jv_com/robot_mass; //TODO: this is obviously incorrect for Jw. Need to fix by implementing the parallel axis theorem.
+	Jv_com = Jv_com/robot_mass;
 }
 
 

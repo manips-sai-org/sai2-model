@@ -536,7 +536,7 @@ public:
     /// \brief Transform from world coordinates to robot base coordinates
     Eigen::Affine3d _base_position_in_world;
 
-protected:
+// protected:
     /// \brief map from joint names to joint id
     std::map<std::string,int> _joint_names_map;
 
