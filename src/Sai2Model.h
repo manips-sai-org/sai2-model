@@ -154,7 +154,7 @@ public:
      * @param T Transformation matrix to which the result is computed
      * @param link_name name of the link where to compute the transformation matrix
      */
-    void transform_in_world_frame(Eigen::Affine3d& T,
+    void transformInWorld(Eigen::Affine3d& T,
                            const std::string& link_name);
 
     /**
@@ -162,7 +162,7 @@ public:
      * @param T Transformation matrix to which the result is computed
      * @param link_name name of the link where to compute the transformation matrix
      */
-    void transform_in_world_frame(Eigen::Affine3d& T,
+    void transformInWorld(Eigen::Affine3d& T,
                            const std::string& link_name,
                            const Eigen::Vector3d& pos_in_body);
 
@@ -182,7 +182,7 @@ public:
      * @param link_name name of the link in which is the point where to compute the position
      * @param pos_in_link the position of the point in the link, in local link frame
      */
-    void position_in_world_frame(Eigen::Vector3d& pos,
+    void positionInWorld(Eigen::Vector3d& pos,
                           const std::string& link_name,
                           const Eigen::Vector3d& pos_in_link);
 
@@ -219,7 +219,7 @@ public:
      * @param rot Rotation matrix to which the result is written
      * @param link_name name of the link for which to compute the rotation
      */
-    void rotation_in_world_frame(Eigen::Matrix3d& rot,
+    void rotationInWorld(Eigen::Matrix3d& rot,
                           const std::string& link_name);
 
     /**
@@ -273,26 +273,6 @@ public:
                      const std::string& link_name);
 
 
-     /**
-     * @brief Gives orientation error from rotation matrices
-     * @param delta_phi Vector on which the orientation error will be written
-     * @param desired_orientation desired orientation rotation matrix
-     * @param current_orientation current orientation matrix
-     */
-    void orientationError(Eigen::Vector3d& delta_phi,
-                          const Eigen::Matrix3d& desired_orientation,
-                          const Eigen::Matrix3d& current_orientation);
-
-
-    /**
-     * @brief Gives orientation error from quaternions
-     * @param delta_phi Vector on which the orientation error will be written
-     * @param desired_orientation desired orientation quaternion
-     * @param current_orientation current orientation quaternion
-     */
-    void orientationError(Eigen::Vector3d& delta_phi,
-                          const Eigen::Quaterniond& desired_orientation,
-                          const Eigen::Quaterniond& current_orientation);
 
     /**
      * @brief Computes the operational space matrix corresponding to a given Jacobian
@@ -450,6 +430,28 @@ protected:
     std::map<std::string,int> _joint_names_map;
 
 };
+
+ /**
+ * @brief Gives orientation error from rotation matrices
+ * @param delta_phi Vector on which the orientation error will be written
+ * @param desired_orientation desired orientation rotation matrix
+ * @param current_orientation current orientation matrix
+ */
+void orientationError(Eigen::Vector3d& delta_phi,
+                      const Eigen::Matrix3d& desired_orientation,
+                      const Eigen::Matrix3d& current_orientation);
+
+
+/**
+ * @brief Gives orientation error from quaternions
+ * @param delta_phi Vector on which the orientation error will be written
+ * @param desired_orientation desired orientation quaternion
+ * @param current_orientation current orientation quaternion
+ */
+void orientationError(Eigen::Vector3d& delta_phi,
+                      const Eigen::Quaterniond& desired_orientation,
+                      const Eigen::Quaterniond& current_orientation);
+
 
 } /* namespace Model */
 

@@ -417,7 +417,7 @@ void Sai2Model::transform(Eigen::Affine3d& T,
 	T.translation() = CalcBodyToBaseCoordinates(*_rbdl_model, _q, link_id, pos_in_body, false);
 }
 
-void Sai2Model::transform_in_world_frame(Eigen::Affine3d& T,
+void Sai2Model::transformInWorld(Eigen::Affine3d& T,
  const std::string& link_name)
 {
 	unsigned int link_id = linkId(link_name);
@@ -427,7 +427,7 @@ void Sai2Model::transform_in_world_frame(Eigen::Affine3d& T,
 	T = _base_position_in_world*T;
 }
 
-void Sai2Model::transform_in_world_frame(Eigen::Affine3d& T,
+void Sai2Model::transformInWorld(Eigen::Affine3d& T,
  const std::string& link_name,
  const Eigen::Vector3d& pos_in_body)
 {
@@ -444,7 +444,7 @@ void Sai2Model::position(Eigen::Vector3d& pos,
 	pos = CalcBodyToBaseCoordinates(*_rbdl_model, _q, linkId(link_name), pos_in_link, false);
 }
 
-void Sai2Model::position_in_world_frame(Eigen::Vector3d& pos,
+void Sai2Model::positionInWorld(Eigen::Vector3d& pos,
 	const std::string& link_name,
 	const Eigen::Vector3d& pos_in_link)
 {
@@ -475,7 +475,7 @@ void Sai2Model::rotation(Eigen::Matrix3d& rot,
 	rot = CalcBodyWorldOrientation(*_rbdl_model, _q, linkId(link_name), false).transpose();
 }
 
-void Sai2Model::rotation_in_world_frame(Eigen::Matrix3d& rot,
+void Sai2Model::rotationInWorld(Eigen::Matrix3d& rot,
 	const std::string& link_name)
 {
 	rot = CalcBodyWorldOrientation(*_rbdl_model, _q, linkId(link_name), false).transpose();
@@ -548,38 +548,6 @@ void Sai2Model::getLinkMass(double& mass,
 	center_of_mass = b.mCenterOfMass;
 }
 
-// TODO : Untested
-void Sai2Model::orientationError(Eigen::Vector3d& delta_phi,
-		              const Eigen::Matrix3d& desired_orientation,
-		              const Eigen::Matrix3d& current_orientation)
-{
-	// check that the matrices are valid rotations
-	Eigen::Matrix3d Q1 = desired_orientation*desired_orientation.transpose() - Eigen::Matrix3d::Identity();
-	Eigen::Matrix3d Q2 = current_orientation*current_orientation.transpose() - Eigen::Matrix3d::Identity();
-	if(Q1.norm() > 0.0001 || Q2.norm() > 0.0001)
-	{
-		throw std::invalid_argument("Invalid rotation matrices in Sai2Model::orientationError");
-		return;
-	}
-	else
-	{
-		Eigen::Vector3d rc1 = current_orientation.block<3,1>(0,0);
-		Eigen::Vector3d rc2 = current_orientation.block<3,1>(0,1);
-		Eigen::Vector3d rc3 = current_orientation.block<3,1>(0,2);
-		Eigen::Vector3d rd1 = desired_orientation.block<3,1>(0,0);
-		Eigen::Vector3d rd2 = desired_orientation.block<3,1>(0,1);
-		Eigen::Vector3d rd3 = desired_orientation.block<3,1>(0,2);
-		delta_phi = -1.0/2.0*(rc1.cross(rd1) + rc2.cross(rd2) + rc3.cross(rd3));
-	}
-}
-
-void Sai2Model::orientationError(Eigen::Vector3d& delta_phi,
-		              const Eigen::Quaterniond& desired_orientation,
-		              const Eigen::Quaterniond& current_orientation)
-{
-	Eigen::Quaterniond inv_dlambda = desired_orientation*current_orientation.conjugate();
-	delta_phi = 2.0*inv_dlambda.vec();
-}
 
 // TODO : Untested
 void Sai2Model::taskInertiaMatrix(Eigen::MatrixXd& Lambda,
@@ -1154,6 +1122,39 @@ void Sai2Model::GraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
 	geometric_center = geometric_center/(double)n;
 
 	GraspMatrix(G, R, link_names, pos_in_links, contact_natures, geometric_center);
+}
+
+// TODO : Untested
+void orientationError(Eigen::Vector3d& delta_phi,
+		              const Eigen::Matrix3d& desired_orientation,
+		              const Eigen::Matrix3d& current_orientation)
+{
+	// check that the matrices are valid rotations
+	Eigen::Matrix3d Q1 = desired_orientation*desired_orientation.transpose() - Eigen::Matrix3d::Identity();
+	Eigen::Matrix3d Q2 = current_orientation*current_orientation.transpose() - Eigen::Matrix3d::Identity();
+	if(Q1.norm() > 0.0001 || Q2.norm() > 0.0001)
+	{
+		throw std::invalid_argument("Invalid rotation matrices in orientationError");
+		return;
+	}
+	else
+	{
+		Eigen::Vector3d rc1 = current_orientation.block<3,1>(0,0);
+		Eigen::Vector3d rc2 = current_orientation.block<3,1>(0,1);
+		Eigen::Vector3d rc3 = current_orientation.block<3,1>(0,2);
+		Eigen::Vector3d rd1 = desired_orientation.block<3,1>(0,0);
+		Eigen::Vector3d rd2 = desired_orientation.block<3,1>(0,1);
+		Eigen::Vector3d rd3 = desired_orientation.block<3,1>(0,2);
+		delta_phi = -1.0/2.0*(rc1.cross(rd1) + rc2.cross(rd2) + rc3.cross(rd3));
+	}
+}
+
+void orientationError(Eigen::Vector3d& delta_phi,
+		              const Eigen::Quaterniond& desired_orientation,
+		              const Eigen::Quaterniond& current_orientation)
+{
+	Eigen::Quaterniond inv_dlambda = desired_orientation*current_orientation.conjugate();
+	delta_phi = 2.0*inv_dlambda.vec();
 }
 
 
