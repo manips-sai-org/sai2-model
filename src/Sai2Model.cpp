@@ -1132,9 +1132,20 @@ void orientationError(Eigen::Vector3d& delta_phi,
 	// check that the matrices are valid rotations
 	Eigen::Matrix3d Q1 = desired_orientation*desired_orientation.transpose() - Eigen::Matrix3d::Identity();
 	Eigen::Matrix3d Q2 = current_orientation*current_orientation.transpose() - Eigen::Matrix3d::Identity();
+
 	if(Q1.norm() > 0.0001 || Q2.norm() > 0.0001)
 	{
 		throw std::invalid_argument("Invalid rotation matrices in orientationError");
+		return;
+	}
+	if(desired_orientation.determinant() < 0)
+	{
+		throw std::invalid_argument("desired orientation represents a left hand basis");
+		return;
+	}
+	if(current_orientation.determinant() < 0)
+	{
+		throw std::invalid_argument("current orientation represents a left hand basis");
 		return;
 	}
 	else
@@ -1153,9 +1164,29 @@ void orientationError(Eigen::Vector3d& delta_phi,
 		              const Eigen::Quaterniond& desired_orientation,
 		              const Eigen::Quaterniond& current_orientation)
 {
-	Eigen::Quaterniond inv_dlambda = desired_orientation*current_orientation.conjugate();
-	delta_phi = 2.0*inv_dlambda.vec();
-}
+	// Eigen::MatrixXd lambda_conj = Eigen::MatrixXd::Zero(3,4);
+	// Eigen::VectorXd lambda_des = Eigen::VectorXd::Zero(4);
 
+	// double x = current_orientation.x();
+	// double y = current_orientation.y();
+	// double z = current_orientation.z();
+	// double w = current_orientation.w();
+	// double xd = desired_orientation.x();
+	// double yd = desired_orientation.y();
+	// double zd = desired_orientation.z();
+	// double wd = desired_orientation.w();
+
+	// lambda_conj << -x, w, -z, y,
+	// 				-y, z, w, -x,
+	// 				-z, -y, x, w;
+
+	// lambda_des << wd, xd, yd, zd;
+
+	// delta_phi = -2.0*lambda_conj*lambda_des;
+
+	Eigen::Quaterniond inv_dlambda = desired_orientation.conjugate()*current_orientation;
+	delta_phi = 2.0*inv_dlambda.vec();
+
+}
 
 } /* namespace Model */
