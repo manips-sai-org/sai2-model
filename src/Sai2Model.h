@@ -403,18 +403,24 @@ public:
                                         if line contact, the free rotation should be around the X axis
      * @param constraints_in_rotation   selection matrix of constrained directions of moment in local frame
      */
-    void addContact(const std::string link, 
+    void addEnvironmentalContact(const std::string link, 
                     const Eigen::Vector3d pos_in_link,
                     const int constraints_in_rotation = 0,
                     const Eigen::Matrix3d orientation = Eigen::Matrix3d::Identity());
 
+    void addManipulationContact(const std::string link, 
+                    const Eigen::Vector3d pos_in_link,
+                    const int constraints_in_rotation = 0,
+                    const Eigen::Matrix3d orientation = Eigen::Matrix3d::Identity());
 
     /**
      * @brief deletes the contact at a given link
      *
      * @param link_name       the link at which we want to delete the contact
      */
-    void deleteContact(const std::string link_name);
+    void deleteEnvironmentalContact(const std::string link_name);
+
+    void deleteManipulationContact(const std::string link_name);
 
     /**
      * @brief Computes the grasp matrix in the cases where there are 
@@ -456,7 +462,8 @@ public:
      */
     void graspMatrix(Eigen::MatrixXd& G,
                      Eigen::Matrix3d& R,
-                     const Eigen::Vector3d center_point);
+                     const Eigen::Vector3d center_point,
+                     const std::vector<ContactModel>& _contacts);
 
     /**
      * @brief Computes the grasp matrix in the cases where there are 
@@ -485,6 +492,23 @@ public:
      * @param geometric_center    The position (in world frame) of the geometric center (found and returned by the function) on which we resolve the resultant forces and moments
      */
     void graspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
+                     Eigen::Matrix3d& R,
+                     Eigen::Vector3d& geometric_center,
+                     const std::vector<ContactModel>& _contacts);
+
+    void manipulationGraspMatrix(Eigen::MatrixXd& G,
+                     Eigen::Matrix3d& R,
+                     const Eigen::Vector3d center_point);
+
+    void manipulationGraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
+                     Eigen::Matrix3d& R,
+                     Eigen::Vector3d& geometric_center);
+
+    void environmentalGraspMatrix(Eigen::MatrixXd& G,
+                     Eigen::Matrix3d& R,
+                     const Eigen::Vector3d center_point);
+
+    void environmentalGraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
                      Eigen::Matrix3d& R,
                      Eigen::Vector3d& geometric_center);
 
@@ -516,8 +540,11 @@ public:
     /// \brief Inverse of the mass matrix
     Eigen::MatrixXd _M_inv;
 
-    /// \brief List of active contacts on the robot
-    std::vector<ContactModel> _contacts;
+    /// \brief List of active contacts between robot and environment
+    std::vector<ContactModel> _environmental_contacts;
+
+    /// \brief List of active contacts between robot end effectors and manipulated objects
+    std::vector<ContactModel> _manipulation_contacts;
 
 public:
     /// \brief compute the cross product operator of a 3d vector

@@ -781,30 +781,52 @@ void Sai2Model::operationalSpaceMatrices(Eigen::MatrixXd& Lambda, Eigen::MatrixX
 	}
 }
 
-void Sai2Model::addContact(const std::string link, 
+void Sai2Model::addEnvironmentalContact(const std::string link, 
                 const Eigen::Vector3d pos_in_link,
                 const int constraints_in_rotation,
                 const Eigen::Matrix3d orientation)
 {
-	_contacts.push_back(ContactModel(link, pos_in_link, constraints_in_rotation, orientation));
+	_environmental_contacts.push_back(ContactModel(link, pos_in_link, constraints_in_rotation, orientation));
 }
 
-void Sai2Model::deleteContact(const std::string link_name)
+void Sai2Model::deleteEnvironmentalContact(const std::string link_name)
 {
 	std::vector<ContactModel> new_contacts;
-	for(std::vector<ContactModel>::iterator it = _contacts.begin(); it!=_contacts.end(); ++it)
+	for(std::vector<ContactModel>::iterator it = _environmental_contacts.begin(); it!=_environmental_contacts.end(); ++it)
 	{
 		if(it->_link_name != link_name)
 		{
 			new_contacts.push_back(*it);
 		}
 	}
-	_contacts = new_contacts;
+	_environmental_contacts = new_contacts;
+}
+
+void Sai2Model::addManipulationContact(const std::string link, 
+                const Eigen::Vector3d pos_in_link,
+                const int constraints_in_rotation,
+                const Eigen::Matrix3d orientation)
+{
+	_manipulation_contacts.push_back(ContactModel(link, pos_in_link, constraints_in_rotation, orientation));
+}
+
+void Sai2Model::deleteManipulationContact(const std::string link_name)
+{
+	std::vector<ContactModel> new_contacts;
+	for(std::vector<ContactModel>::iterator it = _manipulation_contacts.begin(); it!=_manipulation_contacts.end(); ++it)
+	{
+		if(it->_link_name != link_name)
+		{
+			new_contacts.push_back(*it);
+		}
+	}
+	_manipulation_contacts = new_contacts;
 }
 
 void Sai2Model::graspMatrix(Eigen::MatrixXd& G,
 	Eigen::Matrix3d& R,
-	const Eigen::Vector3d center_point)
+	const Eigen::Vector3d center_point,
+	const std::vector<ContactModel>& _contacts)
 {
 	G = Eigen::MatrixXd::Zero(1,1);
 	R = Eigen::Matrix3d::Identity();
@@ -823,7 +845,7 @@ void Sai2Model::graspMatrix(Eigen::MatrixXd& G,
 	// TODO : support line contact
 	// number of surface contacts (that can apply a moment)
 	int k=0;
-	for(std::vector<ContactModel>::iterator it = _contacts.begin(); it != _contacts.end(); ++it)
+	for(std::vector<ContactModel>::const_iterator it = _contacts.begin(); it != _contacts.end(); ++it)
 	{
 		if(it->_constrained_rotations == 1)
 		{
@@ -1177,7 +1199,8 @@ void Sai2Model::graspMatrix(Eigen::MatrixXd& G,
 
 void Sai2Model::graspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
                      Eigen::Matrix3d& R,
-                     Eigen::Vector3d& geometric_center)
+                     Eigen::Vector3d& geometric_center,
+                     const std::vector<ContactModel>& _contacts)
 {
 	// number of contact points
 	int n = _contacts.size();
@@ -1200,10 +1223,39 @@ void Sai2Model::graspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
 	}
 	geometric_center = geometric_center/(double)n;
 
-	graspMatrix(G, R, geometric_center);
+	graspMatrix(G, R, geometric_center , _contacts);
 }
 
-void Sai2Model::displayJoints()
+
+void Sai2Model::manipulationGraspMatrix(Eigen::MatrixXd& G,
+                 Eigen::Matrix3d& R,
+                 const Eigen::Vector3d center_point)
+{
+	graspMatrix(G , R , center_point , _manipulation_contacts);
+}
+
+void Sai2Model::manipulationGraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
+                 Eigen::Matrix3d& R,
+                 Eigen::Vector3d& geometric_center)
+{
+	graspMatrix(G , R , geometric_center , _manipulation_contacts);
+}
+
+void Sai2Model::environmentalGraspMatrix(Eigen::MatrixXd& G,
+                 Eigen::Matrix3d& R,
+                 const Eigen::Vector3d center_point)
+{
+	graspMatrix(G , R, center_point , _environmental_contacts);
+}
+
+void Sai2Model::environmentalGraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
+                 Eigen::Matrix3d& R,
+                 Eigen::Vector3d& geometric_center)
+{
+	graspMatrix(G , R, geometric_center , _environmental_contacts);
+}
+
+void Sai2Model::Sai2Model::displayJoints()
 {
 	std::cout << "\nRobot Joints :" << std::endl;
 	for(std::map<std::string,int>::iterator it = _joint_names_map.begin(); it!=_joint_names_map.end(); ++it)
