@@ -46,6 +46,8 @@ Sai2Model::Sai2Model (const std::string path_to_model_file,
     _M.setIdentity(_dof,_dof);
     _M_inv.setIdentity(_dof,_dof);
 
+    _world_gravity = world_gravity;
+
 	updateModel();
 }
 

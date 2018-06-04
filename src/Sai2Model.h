@@ -540,6 +540,9 @@ public:
     /// \brief Inverse of the mass matrix
     Eigen::MatrixXd _M_inv;
 
+    /// \brief gravity in base frame
+    Eigen::Vector3d _world_gravity;
+
     /// \brief List of active contacts between robot and environment
     std::vector<ContactModel> _environmental_contacts;
 
