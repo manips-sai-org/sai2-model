@@ -424,29 +424,6 @@ public:
 
     /**
      * @brief Computes the grasp matrix in the cases where there are 
-     * 2, 3 or 4 contact points.
-     * the external forces and moments are assumed to be in world frame
-     * for 2 contact points, the output quantities are given in local frame, and the description of the local frame is given by R
-     * for 3 and 4 contacts, the output quantities are given in world frame
-     * the convention for the output is the following order : support forces, support moments, internal tensions, internal moments
-     * the internal tensions are given in the order 1-2, 1-3, 2-3 in the 3 contact case
-     * and 1-2, 1-3, 1-4, 2-3, 2-4, 3-4 in the 4 contact case.
-     * @param G  :  The grasp matrix that is going to be populated
-     * @param R : the rotation matrix between the world frame and the frame attached to the object (useful when 2 contacts only)
-     * @param link_names  :  a vector of the names of the links where the contact occur
-     * @param pos_in_links  :  a vector of the position of the contact in each link
-     * @param contact_natures  :  a vector containing the nature of each contact (we only consider point contact and surface contact)
-     * @param center_point  :  The position (in world frame) of the point on which we resolve the resultant forces and moments
-     */
-    // void GraspMatrix(Eigen::MatrixXd& G,
-    //                  Eigen::Matrix3d& R,
-    //                  const std::vector<std::string> link_names,
-    //                  const std::vector<Eigen::Vector3d> pos_in_links,
-    //                  const std::vector<ContactNature> contact_natures,
-    //                  const Eigen::Vector3d center_point);
-
-    /**
-     * @brief Computes the grasp matrix in the cases where there are 
      * 2, 3 or 4 contacts in the _contact member vector.
      * the external forces and moments are assumed to be in world frame
      * for 2 contact points, the output resultant (first 6 lines) is given in world frame, 
@@ -464,24 +441,6 @@ public:
                      Eigen::Matrix3d& R,
                      const Eigen::Vector3d center_point,
                      const std::vector<ContactModel>& _contacts);
-
-    /**
-     * @brief Computes the grasp matrix in the cases where there are 
-     * 2, 3 or 4 contact points.
-     * the external forces and moments are assumed to be in world frame
-     * @param G  :  The grasp matrix that is going to be populated
-     * @param R : the rotation matrix between the world frame and the frame attached to the object (useful when 2 contacts only)
-     * @param geometric_center  :  The position (in world frame) of the geometric center (found and returned by the function) on which we resolve the resultant forces and moments
-     * @param link_names  :  a vector of the names of the links where the contact occur
-     * @param pos_in_links  :  a vector of the position of the contact in each link
-     * @param contact_natures  :  a vector containing the nature of each contact (we only consider point contact and surface contact)
-     */
-    // void GraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
-    //                  Eigen::Matrix3d& R,
-    //                  Eigen::Vector3d& geometric_center,
-    //                  const std::vector<std::string> link_names,
-    //                  const std::vector<Eigen::Vector3d> pos_in_links,
-    //                  const std::vector<ContactNature> contact_natures);
 
     /**
      * @brief Computes the grasp matrix in the cases where there are 

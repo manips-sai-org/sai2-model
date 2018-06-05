@@ -351,10 +351,7 @@ void Sai2Model::J_0(Eigen::MatrixXd& J,
 	const std::string& link_name,
 	const Eigen::Vector3d& pos_in_link)
 {
-	if (J.rows()!=6 || J.cols()!=_dof) // resize to the right format
-	{
-		J.setZero(6,_dof);
-	}
+	J.setZero(6,_dof);
 	Eigen::MatrixXd J_temp = Eigen::MatrixXd::Zero(6,_dof);
 	CalcPointJacobian6D (*_rbdl_model, _q, linkId(link_name), pos_in_link, J_temp, false);
 
@@ -367,10 +364,7 @@ void Sai2Model::J(Eigen::MatrixXd& J,
 	const std::string& link_name,
 	const Eigen::Vector3d& pos_in_link)
 {
-	if (J.rows()!=6 || J.cols()!=_dof) // resize to the right format
-	{
-		J.setZero(6,_dof);
-	}
+	J.setZero(6,_dof);
 	CalcPointJacobian6D (*_rbdl_model, _q, linkId(link_name), pos_in_link, J, false);
 }
 
@@ -380,11 +374,7 @@ void Sai2Model::Jv(Eigen::MatrixXd& J,
 	const std::string& link_name,
 	const Eigen::Vector3d& pos_in_link)
 {
-	if (J.rows()!=3 || J.cols()!=_dof)
-	{
-		J.setZero(3,_dof);
-	}
-
+	J.setZero(3,_dof);
 	CalcPointJacobian(*_rbdl_model, _q, linkId(link_name), pos_in_link, J, false);
 }
 
