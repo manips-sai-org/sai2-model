@@ -208,7 +208,7 @@ public:
      */
     void position(Eigen::Vector3d& pos,
                           const std::string& link_name,
-                          const Eigen::Vector3d& pos_in_link);
+                          const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
 
     /**
      * @brief Position from world origin to point in link, in world coordinates
@@ -218,7 +218,7 @@ public:
      */
     void positionInWorld(Eigen::Vector3d& pos,
                           const std::string& link_name,
-                          const Eigen::Vector3d& pos_in_link);
+                          const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
 
     /**
      * @brief Velocity of point in link, in base coordinates
@@ -228,7 +228,7 @@ public:
      */
     void linearVelocity(Eigen::Vector3d& vel,
                           const std::string& link_name,
-                          const Eigen::Vector3d& pos_in_link);
+                          const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
 
     /**
      * @brief Acceleration of point in link, in base coordinates
@@ -238,7 +238,7 @@ public:
      */
     void linearAcceleration(Eigen::Vector3d& accel,
                               const std::string& link_name,
-                              const Eigen::Vector3d& pos_in_link);
+                              const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
 
     /**
      * @brief Rotation of a link with respect to base frame
