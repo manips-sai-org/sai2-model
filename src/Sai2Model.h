@@ -15,6 +15,40 @@ namespace Sai2Model
 
 enum ContactNature {PointContact, SurfaceContact};
 
+class ContactModel
+{
+    friend class Sai2Model;
+// private:
+public:
+    ContactModel();
+    ContactModel(const std::string link_name, 
+                 const Eigen::Vector3d pos, 
+                 const int constained_rot,
+                 const Eigen::Matrix3d orientation)
+    {
+        _link_name = link_name;
+        _contact_position = pos;
+        _constrained_rotations = constained_rot;
+        _contact_orientation = orientation;
+    }
+    ~ContactModel(){}
+
+public:
+
+    /// \brief name of the link at which the contact occurs
+    std::string _link_name;
+
+    /// \brief the position of the contact in the link. if possible, it should be the geometrical center of the contact zone 
+    // (center of the line if line contact, center of surface if surface contact, contact point if point contact)
+    Eigen::Vector3d _contact_position;
+
+    /// \brief orientation of contact. Assumes the constrained direction is z. If there is a line contact, assumes the free rotation is along the x axis
+    Eigen::Matrix3d _contact_orientation;
+
+    /// \brief number of constrained rotations for the contact. 0 means point contact, 1 means line contact with line aligned with contact frame X axis, 2 means plane contact
+    int _constrained_rotations;
+};
+
 class Sai2Model
 {
 public:
@@ -174,7 +208,7 @@ public:
      */
     void position(Eigen::Vector3d& pos,
                           const std::string& link_name,
-                          const Eigen::Vector3d& pos_in_link);
+                          const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
 
     /**
      * @brief Position from world origin to point in link, in world coordinates
@@ -184,7 +218,7 @@ public:
      */
     void positionInWorld(Eigen::Vector3d& pos,
                           const std::string& link_name,
-                          const Eigen::Vector3d& pos_in_link);
+                          const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
 
     /**
      * @brief Velocity of point in link, in base coordinates
@@ -194,7 +228,7 @@ public:
      */
     void linearVelocity(Eigen::Vector3d& vel,
                           const std::string& link_name,
-                          const Eigen::Vector3d& pos_in_link);
+                          const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
 
     /**
      * @brief Acceleration of point in link, in base coordinates
@@ -204,7 +238,7 @@ public:
      */
     void linearAcceleration(Eigen::Vector3d& accel,
                               const std::string& link_name,
-                              const Eigen::Vector3d& pos_in_link);
+                              const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
 
     /**
      * @brief Rotation of a link with respect to base frame
@@ -272,6 +306,21 @@ public:
                      Eigen::Vector3d& center_of_mass,
                      const std::string& link_name);
 
+<<<<<<< HEAD
+=======
+    /**
+     * @brief returns the position of the center of mass of the robot in robot base frame
+     * @param robot_com the returned center of mass position
+     */
+    void comPosition(Eigen::Vector3d& robot_com);
+
+    /**
+     * @brief returns the center of mass velocity Jacobian of the robot in robot base frame
+     * @param Jv_com the returned center of mass full jacobian
+     */
+    void comJacobian(Eigen::MatrixXd& Jv_com);
+
+>>>>>>> mika/devel
 
 
     /**
@@ -347,51 +396,96 @@ public:
                                     const Eigen::MatrixXd& task_jacobian,
                                     const Eigen::MatrixXd& N_prec);
 
-   
+    /**
+     * @brief adds a contact at the desired link and location
+     *
+     * @param link                      link at which the contact happens
+     * @param pos_in_link               position of the contact in the link in local coordinates
+     * @param orientation               orientation of the contact frame in the link frame. 
+                                        Z axis needs to be aligned with the constrained direction of motion (surface normal)
+                                        if line contact, the free rotation should be around the X axis
+     * @param constraints_in_rotation   selection matrix of constrained directions of moment in local frame
+     */
+    void addEnvironmentalContact(const std::string link, 
+                    const Eigen::Vector3d pos_in_link,
+                    const int constraints_in_rotation = 0,
+                    const Eigen::Matrix3d orientation = Eigen::Matrix3d::Identity());
+
+    void addManipulationContact(const std::string link, 
+                    const Eigen::Vector3d pos_in_link,
+                    const int constraints_in_rotation = 0,
+                    const Eigen::Matrix3d orientation = Eigen::Matrix3d::Identity());
+
+    /**
+     * @brief deletes the contact at a given link
+     *
+     * @param link_name       the link at which we want to delete the contact
+     */
+    void deleteEnvironmentalContact(const std::string link_name);
+
+    void deleteManipulationContact(const std::string link_name);
+
     /**
      * @brief Computes the grasp matrix in the cases where there are 
-     * 2, 3 or 4 contact points.
+     * 2, 3 or 4 contacts in the _contact member vector.
      * the external forces and moments are assumed to be in world frame
-     * for 2 contact points, the output quantities are given in local frame, and the description of the local frame is given by R
+     * for 2 contact points, the output resultant (first 6 lines) is given in world frame, 
+     *                   and the output internal tension and moments are given in local frame, 
+     *                   and the description of the local frame is given by R
      * for 3 and 4 contacts, the output quantities are given in world frame
      * the convention for the output is the following order : support forces, support moments, internal tensions, internal moments
      * the internal tensions are given in the order 1-2, 1-3, 2-3 in the 3 contact case
      * and 1-2, 1-3, 1-4, 2-3, 2-4, 3-4 in the 4 contact case.
-     * @param G  :  The grasp matrix that is going to be populated
-     * @param R : the rotation matrix between the world frame and the frame attached to the object (useful when 2 contacts only)
-     * @param link_names  :  a vector of the names of the links where the contact occur
-     * @param pos_in_links  :  a vector of the position of the contact in each link
-     * @param contact_natures  :  a vector containing the nature of each contact (we only consider point contact and surface contact)
-     * @param center_point  :  The position (in world frame) of the point on which we resolve the resultant forces and moments
+     * @param G                 The grasp matrix that is going to be populated
+     * @param R                 the rotation matrix between the world frame and the frame attached to the object (useful when 2 contacts only)
+     * @param center_point      The position (in world frame) of the point on which we resolve the resultant forces and moments
      */
-    void GraspMatrix(Eigen::MatrixXd& G,
+    void graspMatrix(Eigen::MatrixXd& G,
                      Eigen::Matrix3d& R,
-                     const std::vector<std::string> link_names,
-                     const std::vector<Eigen::Vector3d> pos_in_links,
-                     const std::vector<ContactNature> contact_natures,
-                     const Eigen::Vector3d center_point);
+                     const Eigen::Vector3d center_point,
+                     const std::vector<ContactModel>& _contacts);
 
     /**
      * @brief Computes the grasp matrix in the cases where there are 
-     * 2, 3 or 4 contact points.
-     * @param G  :  The grasp matrix that is going to be populated
-     * @param R : the rotation matrix between the world frame and the frame attached to the object (useful when 2 contacts only)
-     * @param geopetric_center  :  The position (in world frame) of the geometric center (found and returned by the function) on which we resolve the resultant forces and moments
-     * @param link_names  :  a vector of the names of the links where the contact occur
-     * @param pos_in_links  :  a vector of the position of the contact in each link
-     * @param contact_natures  :  a vector containing the nature of each contact (we only consider point contact and surface contact)
+     * 2, 3 or 4 contact points. The resultant is given at the geometric center of the virtual linkage.
+     * the external forces and moments are assumed to be in world frame
+     * @param G                   The grasp matrix that is going to be populated
+     * @param R                   the rotation matrix between the world frame and the frame attached to the object (useful when 2 contacts only)
+     * @param geometric_center    The position (in world frame) of the geometric center (found and returned by the function) on which we resolve the resultant forces and moments
      */
-    void GraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
+    void graspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
                      Eigen::Matrix3d& R,
                      Eigen::Vector3d& geometric_center,
-                     const std::vector<std::string> link_names,
-                     const std::vector<Eigen::Vector3d> pos_in_links,
-                     const std::vector<ContactNature> contact_natures);
+                     const std::vector<ContactModel>& _contacts);
 
+    void manipulationGraspMatrix(Eigen::MatrixXd& G,
+                     Eigen::Matrix3d& R,
+                     const Eigen::Vector3d center_point);
+
+    void manipulationGraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
+                     Eigen::Matrix3d& R,
+                     Eigen::Vector3d& geometric_center);
+
+    void environmentalGraspMatrix(Eigen::MatrixXd& G,
+                     Eigen::Matrix3d& R,
+                     const Eigen::Vector3d center_point);
+
+    void environmentalGraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
+                     Eigen::Matrix3d& R,
+                     Eigen::Vector3d& geometric_center);
+
+    /**
+     * @brief displays the joints of the robot with the corresponding numbers
+     */
+    void displayJoints();
+
+    /**
+     * @brief displays the links of the robot with the corresponding numbers
+     */
+    void displayLinks();
 
     /// \brief internal rbdl model
     RigidBodyDynamics::Model* _rbdl_model;
-
 
     /// \brief Joint positions
     Eigen::VectorXd _q;
@@ -407,6 +501,15 @@ public:
 
     /// \brief Inverse of the mass matrix
     Eigen::MatrixXd _M_inv;
+
+    /// \brief gravity in base frame
+    Eigen::Vector3d _world_gravity;
+
+    /// \brief List of active contacts between robot and environment
+    std::vector<ContactModel> _environmental_contacts;
+
+    /// \brief List of active contacts between robot end effectors and manipulated objects
+    std::vector<ContactModel> _manipulation_contacts;
 
 public:
     /// \brief compute the cross product operator of a 3d vector
@@ -425,12 +528,21 @@ public:
     /// \brief Transform from world coordinates to robot base coordinates
     Eigen::Affine3d _base_position_in_world;
 
-protected:
+// protected:
     /// \brief map from joint names to joint id
     std::map<std::string,int> _joint_names_map;
 
+    /// \brief map from link names to link id
+    std::map<std::string,int> _link_names_map;
 };
 
+<<<<<<< HEAD
+=======
+
+///-------------------------- stand alone helper functions
+
+
+>>>>>>> mika/devel
  /**
  * @brief Gives orientation error from rotation matrices
  * @param delta_phi Vector on which the orientation error will be written
@@ -453,6 +565,14 @@ void orientationError(Eigen::Vector3d& delta_phi,
                       const Eigen::Quaterniond& current_orientation);
 
 
+<<<<<<< HEAD
 } /* namespace Model */
+=======
+/// \brief compute the cross product operator of a 3d vector
+Eigen::Matrix3d CrossProductOperator(const Eigen::Vector3d& v);
+
+
+} /* namespace Sai2Model */
+>>>>>>> mika/devel
 
 #endif /* RBDLMODEL_H_ */
