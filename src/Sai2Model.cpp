@@ -1331,38 +1331,31 @@ void orientationError(Eigen::Vector3d& delta_phi,
 
 }
 
-// TODO : Untested
-void orientationError(Eigen::Vector3d& delta_phi,
-		              const Eigen::Matrix3d& desired_orientation,
-		              const Eigen::Matrix3d& current_orientation)
-{
-	// check that the matrices are valid rotations
-	Eigen::Matrix3d Q1 = desired_orientation*desired_orientation.transpose() - Eigen::Matrix3d::Identity();
-	Eigen::Matrix3d Q2 = current_orientation*current_orientation.transpose() - Eigen::Matrix3d::Identity();
-	if(Q1.norm() > 0.0001 || Q2.norm() > 0.0001)
-	{
-		throw std::invalid_argument("Invalid rotation matrices in Sai2Model::orientationError");
-		return;
-	}
-	else
-	{
-		Eigen::Vector3d rc1 = current_orientation.block<3,1>(0,0);
-		Eigen::Vector3d rc2 = current_orientation.block<3,1>(0,1);
-		Eigen::Vector3d rc3 = current_orientation.block<3,1>(0,2);
-		Eigen::Vector3d rd1 = desired_orientation.block<3,1>(0,0);
-		Eigen::Vector3d rd2 = desired_orientation.block<3,1>(0,1);
-		Eigen::Vector3d rd3 = desired_orientation.block<3,1>(0,2);
-		delta_phi = -1.0/2.0*(rc1.cross(rd1) + rc2.cross(rd2) + rc3.cross(rd3));
-	}
-}
+// // TODO : Untested
+// void orientationError(Eigen::Vector3d& delta_phi,
+// 		              const Eigen::Matrix3d& desired_orientation,
+// 		              const Eigen::Matrix3d& current_orientation)
+// {
+// 	// check that the matrices are valid rotations
+// 	Eigen::Matrix3d Q1 = desired_orientation*desired_orientation.transpose() - Eigen::Matrix3d::Identity();
+// 	Eigen::Matrix3d Q2 = current_orientation*current_orientation.transpose() - Eigen::Matrix3d::Identity();
+// 	if(Q1.norm() > 0.0001 || Q2.norm() > 0.0001)
+// 	{
+// 		throw std::invalid_argument("Invalid rotation matrices in Sai2Model::orientationError");
+// 		return;
+// 	}
+// 	else
+// 	{
+// 		Eigen::Vector3d rc1 = current_orientation.block<3,1>(0,0);
+// 		Eigen::Vector3d rc2 = current_orientation.block<3,1>(0,1);
+// 		Eigen::Vector3d rc3 = current_orientation.block<3,1>(0,2);
+// 		Eigen::Vector3d rd1 = desired_orientation.block<3,1>(0,0);
+// 		Eigen::Vector3d rd2 = desired_orientation.block<3,1>(0,1);
+// 		Eigen::Vector3d rd3 = desired_orientation.block<3,1>(0,2);
+// 		delta_phi = -1.0/2.0*(rc1.cross(rd1) + rc2.cross(rd2) + rc3.cross(rd3));
+// 	}
+// }
 
-void orientationError(Eigen::Vector3d& delta_phi,
-		              const Eigen::Quaterniond& desired_orientation,
-		              const Eigen::Quaterniond& current_orientation)
-{
-	Eigen::Quaterniond inv_dlambda = desired_orientation*current_orientation.conjugate();
-	delta_phi = 2.0*inv_dlambda.vec();
-}
 
 Eigen::Matrix3d CrossProductOperator(const Eigen::Vector3d& v)
 {

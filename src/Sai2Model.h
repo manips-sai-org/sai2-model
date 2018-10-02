@@ -306,8 +306,6 @@ public:
                      Eigen::Vector3d& center_of_mass,
                      const std::string& link_name);
 
-<<<<<<< HEAD
-=======
     /**
      * @brief returns the position of the center of mass of the robot in robot base frame
      * @param robot_com the returned center of mass position
@@ -319,9 +317,6 @@ public:
      * @param Jv_com the returned center of mass full jacobian
      */
     void comJacobian(Eigen::MatrixXd& Jv_com);
-
->>>>>>> mika/devel
-
 
     /**
      * @brief Computes the operational space matrix corresponding to a given Jacobian
@@ -536,13 +531,6 @@ public:
     std::map<std::string,int> _link_names_map;
 };
 
-<<<<<<< HEAD
-=======
-
-///-------------------------- stand alone helper functions
-
-
->>>>>>> mika/devel
  /**
  * @brief Gives orientation error from rotation matrices
  * @param delta_phi Vector on which the orientation error will be written
@@ -565,14 +553,10 @@ void orientationError(Eigen::Vector3d& delta_phi,
                       const Eigen::Quaterniond& current_orientation);
 
 
-<<<<<<< HEAD
-} /* namespace Model */
-=======
 /// \brief compute the cross product operator of a 3d vector
 Eigen::Matrix3d CrossProductOperator(const Eigen::Vector3d& v);
 
 
 } /* namespace Sai2Model */
->>>>>>> mika/devel
 
 #endif /* RBDLMODEL_H_ */
