@@ -11,8 +11,9 @@ const string robot_fname = "resources/rrbot.urdf";
 int main (int argc, char ** argv) {
 	cout << "Loading robot file: " << robot_fname << endl;
 
+	Eigen::Affine3d T_world_robot = Eigen::Affine3d::Identity();
 	// Sai2Model::Sai2Model* robot = new Sai2Model::Sai2Model(robot_fname, false);
-	Sai2Model::Sai2Model* robot = new Sai2Model::Sai2Model(robot_fname, false, Eigen::Vector3d(0.0,3.0,0.0));
+	Sai2Model::Sai2Model* robot = new Sai2Model::Sai2Model(robot_fname, false, T_world_robot , Eigen::Vector3d(0.0,3.0,0.0));
 	int dof = robot->dof();
 
 	const string ee_link = "link1";
