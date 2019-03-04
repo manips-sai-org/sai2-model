@@ -55,8 +55,8 @@ public:
     // Sai2Model ();
     Sai2Model (const std::string path_to_model_file, 
                bool verbose=true, 
-               const Eigen::Vector3d world_gravity=Eigen::Vector3d(0.0,0.0,-9.81),
-               const Eigen::Affine3d position_in_world=Eigen::Affine3d::Identity());
+               const Eigen::Affine3d T_world_robot = Eigen::Affine3d::Identity(),
+               const Eigen::Vector3d world_gravity = Eigen::Vector3d(0.0,0.0,-9.81));
     ~Sai2Model ();
 
 
@@ -231,12 +231,32 @@ public:
                           const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
 
     /**
+     * @brief Velocity of point in link, in world coordinates
+     * @param vel Vector of velocities to which the result is written
+     * @param link_name name of the link in which is the point where to compute the velocity
+     * @param pos_in_link the position of the point in the link, in local link frame
+     */
+    void linearVelocityInWorld(Eigen::Vector3d& vel,
+                          const std::string& link_name,
+                          const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
+
+    /**
      * @brief Acceleration of point in link, in base coordinates
      * @param accel Vector of accelerations to which the result is written
      * @param link_name name of the link in which is the point where to compute the acceleration
      * @param pos_in_link the position of the point in the link, in local link frame
      */
     void linearAcceleration(Eigen::Vector3d& accel,
+                              const std::string& link_name,
+                              const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
+
+    /**
+     * @brief Acceleration of point in link, in world coordinates
+     * @param accel Vector of accelerations to which the result is written
+     * @param link_name name of the link in which is the point where to compute the acceleration
+     * @param pos_in_link the position of the point in the link, in local link frame
+     */
+    void linearAccelerationInWorld(Eigen::Vector3d& accel,
                               const std::string& link_name,
                               const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
 
@@ -265,11 +285,27 @@ public:
                                  const std::string& link_name);
 
     /**
+     * @brief Angular velocity of a link with respect to base world frame
+     * @param avel Vector to which the result is written
+     * @param link_name name of the link for which to compute the angular velocity
+     */
+    void angularVelocityInWorld(Eigen::Vector3d& avel,
+                                 const std::string& link_name);
+
+    /**
      * @brief Angular acceleration of a link with respect to base frame
      * @param aaccel Vector to which the result is written
      * @param link_name name of the link for which to compute the angular acceleration
      */
     void angularAcceleration(Eigen::Vector3d& aaccel,
+                                     const std::string& link_name);
+
+    /**
+     * @brief Angular acceleration of a link with respect to world frame
+     * @param aaccel Vector to which the result is written
+     * @param link_name name of the link for which to compute the angular acceleration
+     */
+    void angularAccelerationInWorld(Eigen::Vector3d& aaccel,
                                      const std::string& link_name);
 
     /**
@@ -420,38 +456,7 @@ public:
 
     void deleteManipulationContact(const std::string link_name);
 
-    /**
-     * @brief Computes the grasp matrix in the cases where there are 
-     * 2, 3 or 4 contacts in the _contact member vector.
-     * the external forces and moments are assumed to be in world frame
-     * for 2 contact points, the output resultant (first 6 lines) is given in world frame, 
-     *                   and the output internal tension and moments are given in local frame, 
-     *                   and the description of the local frame is given by R
-     * for 3 and 4 contacts, the output quantities are given in world frame
-     * the convention for the output is the following order : support forces, support moments, internal tensions, internal moments
-     * the internal tensions are given in the order 1-2, 1-3, 2-3 in the 3 contact case
-     * and 1-2, 1-3, 1-4, 2-3, 2-4, 3-4 in the 4 contact case.
-     * @param G                 The grasp matrix that is going to be populated
-     * @param R                 the rotation matrix between the world frame and the frame attached to the object (useful when 2 contacts only)
-     * @param center_point      The position (in world frame) of the point on which we resolve the resultant forces and moments
-     */
-    void graspMatrix(Eigen::MatrixXd& G,
-                     Eigen::Matrix3d& R,
-                     const Eigen::Vector3d center_point,
-                     const std::vector<ContactModel>& _contacts);
 
-    /**
-     * @brief Computes the grasp matrix in the cases where there are 
-     * 2, 3 or 4 contact points. The resultant is given at the geometric center of the virtual linkage.
-     * the external forces and moments are assumed to be in world frame
-     * @param G                   The grasp matrix that is going to be populated
-     * @param R                   the rotation matrix between the world frame and the frame attached to the object (useful when 2 contacts only)
-     * @param geometric_center    The position (in world frame) of the geometric center (found and returned by the function) on which we resolve the resultant forces and moments
-     */
-    void graspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
-                     Eigen::Matrix3d& R,
-                     Eigen::Vector3d& geometric_center,
-                     const std::vector<ContactModel>& _contacts);
 
     void manipulationGraspMatrix(Eigen::MatrixXd& G,
                      Eigen::Matrix3d& R,
@@ -521,7 +526,7 @@ public:
     int _dof;
 
     /// \brief Transform from world coordinates to robot base coordinates
-    Eigen::Affine3d _base_position_in_world;
+    Eigen::Affine3d _T_world_robot;
 
 // protected:
     /// \brief map from joint names to joint id
@@ -556,6 +561,40 @@ void orientationError(Eigen::Vector3d& delta_phi,
 /// \brief compute the cross product operator of a 3d vector
 Eigen::Matrix3d CrossProductOperator(const Eigen::Vector3d& v);
 
+/**
+ * @brief Computes the grasp matrix in the cases where there are 
+ * 2, 3 or 4 contacts in the _contact member vector.
+ * the external forces and moments are assumed to be in world frame
+ * for 2 contact points, the output resultant (first 6 lines) is given in world frame, 
+ *                   and the output internal tension and moments are given in local frame, 
+ *                   and the description of the local frame is given by R
+ * for 3 and 4 contacts, the output quantities are given in world frame
+ * the convention for the output is the following order : support forces, support moments, internal tensions, internal moments
+ * the internal tensions are given in the order 1-2, 1-3, 2-3 in the 3 contact case
+ * and 1-2, 1-3, 1-4, 2-3, 2-4, 3-4 in the 4 contact case.
+ * @param G                 The grasp matrix that is going to be populated
+ * @param R                 the rotation matrix between the world frame and the frame attached to the object (useful when 2 contacts only)
+ * @param center_point      The position (in world frame) of the point on which we resolve the resultant forces and moments
+ */
+void graspMatrix(Eigen::MatrixXd& G,
+                 Eigen::Matrix3d& R,
+                 const Eigen::Vector3d center_point,
+                 const std::vector<Eigen::Vector3d>& contact_locations,
+                 const std::vector<int> constrained_rotations);
+
+/**
+ * @brief Computes the grasp matrix in the cases where there are 
+ * 2, 3 or 4 contact points. The resultant is given at the geometric center of the virtual linkage.
+ * the external forces and moments are assumed to be in world frame
+ * @param G                   The grasp matrix that is going to be populated
+ * @param R                   the rotation matrix between the world frame and the frame attached to the object (useful when 2 contacts only)
+ * @param geometric_center    The position (in world frame) of the geometric center (found and returned by the function) on which we resolve the resultant forces and moments
+ */
+void graspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
+                 Eigen::Matrix3d& R,
+                 Eigen::Vector3d& geometric_center,
+                 const std::vector<Eigen::Vector3d>& contact_locations,
+                 const std::vector<int> constrained_rotations);
 
 } /* namespace Sai2Model */
 
