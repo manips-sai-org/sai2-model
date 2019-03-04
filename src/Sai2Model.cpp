@@ -452,6 +452,13 @@ void Sai2Model::linearVelocity(Eigen::Vector3d& vel,
 	vel = CalcPointVelocity(*_rbdl_model,_q,_dq,linkId(link_name),pos_in_link,false);
 }
 
+void Sai2Model::linearVelocityInWorld(Eigen::Vector3d& vel,
+	const std::string& link_name,
+	const Eigen::Vector3d& pos_in_link)
+{
+	vel = CalcPointVelocity(*_rbdl_model,_q,_dq,linkId(link_name),pos_in_link,false);
+	vel = _T_world_robot.linear()*vel;
+}
 
 void Sai2Model::linearAcceleration(Eigen::Vector3d& accel,
 	const std::string& link_name,
@@ -460,6 +467,13 @@ void Sai2Model::linearAcceleration(Eigen::Vector3d& accel,
 	accel = CalcPointAcceleration(*_rbdl_model,_q,_dq,_ddq,linkId(link_name),pos_in_link,false);
 }
 
+void Sai2Model::linearAccelerationInWorld(Eigen::Vector3d& accel,
+	const std::string& link_name,
+	const Eigen::Vector3d& pos_in_link)
+{
+	accel = CalcPointAcceleration(*_rbdl_model,_q,_dq,_ddq,linkId(link_name),pos_in_link,false);
+	accel = _T_world_robot.linear()*accel;
+}
 
 void Sai2Model::rotation(Eigen::Matrix3d& rot,
 	const std::string& link_name)
@@ -482,6 +496,14 @@ void Sai2Model::angularVelocity(Eigen::Vector3d& avel,
 	avel = v_tmp.head(3);
 }
 
+void Sai2Model::angularVelocityInWorld(Eigen::Vector3d& avel,
+ const std::string& link_name)
+{
+	Eigen::VectorXd v_tmp = Eigen::VectorXd::Zero(6);
+	v_tmp = CalcPointVelocity6D(*_rbdl_model,_q,_dq,linkId(link_name),Eigen::Vector3d::Zero(),false);
+	avel = v_tmp.head(3);
+	avel = _T_world_robot.linear()*avel;
+}
 
 void Sai2Model::angularAcceleration(Eigen::Vector3d& aaccel,
  const std::string& link_name)
@@ -491,6 +513,14 @@ void Sai2Model::angularAcceleration(Eigen::Vector3d& aaccel,
 	aaccel = a_tmp.head(3);
 }
 
+void Sai2Model::angularAccelerationInWorld(Eigen::Vector3d& aaccel,
+ const std::string& link_name)
+{
+	Eigen::VectorXd a_tmp = Eigen::VectorXd::Zero(6);
+	a_tmp = CalcPointAcceleration6D(*_rbdl_model,_q,_dq,_ddq,linkId(link_name),Eigen::Vector3d::Zero(),false);
+	aaccel = a_tmp.head(3);
+	aaccel = _T_world_robot.linear()*aaccel;
+}
 
 unsigned int Sai2Model::linkId(const std::string& link_name)
 {

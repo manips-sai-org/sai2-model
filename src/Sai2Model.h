@@ -231,12 +231,32 @@ public:
                           const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
 
     /**
+     * @brief Velocity of point in link, in world coordinates
+     * @param vel Vector of velocities to which the result is written
+     * @param link_name name of the link in which is the point where to compute the velocity
+     * @param pos_in_link the position of the point in the link, in local link frame
+     */
+    void linearVelocityInWorld(Eigen::Vector3d& vel,
+                          const std::string& link_name,
+                          const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
+
+    /**
      * @brief Acceleration of point in link, in base coordinates
      * @param accel Vector of accelerations to which the result is written
      * @param link_name name of the link in which is the point where to compute the acceleration
      * @param pos_in_link the position of the point in the link, in local link frame
      */
     void linearAcceleration(Eigen::Vector3d& accel,
+                              const std::string& link_name,
+                              const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
+
+    /**
+     * @brief Acceleration of point in link, in world coordinates
+     * @param accel Vector of accelerations to which the result is written
+     * @param link_name name of the link in which is the point where to compute the acceleration
+     * @param pos_in_link the position of the point in the link, in local link frame
+     */
+    void linearAccelerationInWorld(Eigen::Vector3d& accel,
                               const std::string& link_name,
                               const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
 
@@ -265,11 +285,27 @@ public:
                                  const std::string& link_name);
 
     /**
+     * @brief Angular velocity of a link with respect to base world frame
+     * @param avel Vector to which the result is written
+     * @param link_name name of the link for which to compute the angular velocity
+     */
+    void angularVelocityInWorld(Eigen::Vector3d& avel,
+                                 const std::string& link_name);
+
+    /**
      * @brief Angular acceleration of a link with respect to base frame
      * @param aaccel Vector to which the result is written
      * @param link_name name of the link for which to compute the angular acceleration
      */
     void angularAcceleration(Eigen::Vector3d& aaccel,
+                                     const std::string& link_name);
+
+    /**
+     * @brief Angular acceleration of a link with respect to world frame
+     * @param aaccel Vector to which the result is written
+     * @param link_name name of the link for which to compute the angular acceleration
+     */
+    void angularAccelerationInWorld(Eigen::Vector3d& aaccel,
                                      const std::string& link_name);
 
     /**
