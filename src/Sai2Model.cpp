@@ -74,6 +74,11 @@ void Sai2Model::updateDynamics()
 	_M_inv = _M.inverse();
 }
 
+void Sai2Model::updateInverseInertia()
+{
+	_M_inv = _M.inverse();
+}
+
 void Sai2Model::updateModel()
 {
 	updateKinematics();
@@ -132,13 +137,18 @@ void Sai2Model::gravityVector(Eigen::VectorXd& g,
 
 void Sai2Model::coriolisForce(Eigen::VectorXd& b)
 {
-	// actually returns v + g. Need to substract the gravity from it
+	// returns v + g. Need to substract the gravity from it
 	NonlinearEffects(*_rbdl_model,_q,_dq,b);
 
 	Eigen::VectorXd g = Eigen::VectorXd::Zero(_dof);
 	gravityVector(g);
 
 	b -= g;
+}
+
+void Sai2Model::coriolisPlusGravity(Eigen::VectorXd& h)
+{
+	NonlinearEffects(*_rbdl_model,_q,_dq,h);
 }
 
 void Sai2Model::modifiedNewtonEuler(Eigen::VectorXd& u, 
