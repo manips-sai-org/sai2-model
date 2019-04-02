@@ -4,15 +4,14 @@ PROJECT (SAI2-MODEL)
 SET (PROJECT_VERSION 0.1.0) #major version is zero for now since api will certainly change in future
 
 SET(CMAKE_CXX_FLAGS "-std=c++11 -I/usr/include -I/usr/local/include")
-SET(CMAKE_BUILD_TYPE "Debug")
 
-# # set default build to release with debug info. mimic'ed from RBDL project.
-# IF(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-# 	MESSAGE(STATUS "Setting build type to 'RelWithDebInfo' as none was specified.")
-# 	# Set the default build, and also the possible values of build type for cmake-gui
-# 	SET(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Choose the type of build." FORCE)
-# 	SET_PROPERTY(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
-# ENDIF()
+# set default build to release with debug info. mimic'ed from RBDL project.
+IF(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+	MESSAGE(STATUS "Setting build type to 'RelWithDebInfo' as none was specified.")
+	# Set the default build, and also the possible values of build type for cmake-gui
+	SET(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Choose the type of build." FORCE)
+	SET_PROPERTY(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+ENDIF()
 
 # include Eigen
 set(EIGEN3_INCLUDE_DIR $ENV{EIGEN3_INCLUDE_DIR})
@@ -23,7 +22,6 @@ if(NOT EIGEN3_INCLUDE_DIR)
 		set(EIGEN3_INCLUDE_DIR /usr/include/eigen3)
 	endif()
 endif()
-# include_directories(${EIGEN3_INCLUDE_DIR})
 
 # include RBDL
 set(RBDL_LOCAL_DIR ${PROJECT_SOURCE_DIR}/rbdl)
