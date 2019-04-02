@@ -4,8 +4,17 @@ This is SAI2 robot model library for robot kinematics and dynamics.
 It uses [RBDL](https://rbdl.bitbucket.io/) and adds function to facilitate the implementation of the whole body control framework from Stanford Robotics Lab.
 
 ## Dependencies
-sai2-model depends on eigen3 amd sai2-urdfreader.
-You can get sai2-urdfreader [there](https://github.com/manips-sai-org/sai2-urdfreader)
+sai2-model depends on eigen3 and sai2-urdfreader.
+You can get sai2-urdfreader [there](https://github.com/manips-sai-org/sai2-urdfreader).
+
+To install eigen3 on Ubuntu :
+```
+sudo apt-get install libeigen3-dev
+```
+on Mac :
+```
+brew install eigen
+```
 
 ## Build instructions 
 You can use the provided install script for automatic install
