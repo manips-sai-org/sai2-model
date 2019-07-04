@@ -3,11 +3,11 @@
 cd rbdl
 mkdir build
 cd build
-cmake .. && make -j8
+cmake -DRBDL_BUILD_ADDON_URDFREADER=ON -DCMAKE_BUILD_TYPE=Release .. && make -j8
 
 cd ../..
 mkdir build
 cd build
-cmake .. && make -j8
+cmake -DCMAKE_BUILD_TYPE=Release .. && make -j8
 
 cd ..
