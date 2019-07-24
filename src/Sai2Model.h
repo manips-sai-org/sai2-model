@@ -89,6 +89,15 @@ public:
     int dof();
 
     /**
+     * @brief      returns the number of values required for robot joint
+     *             positions description. equals dof unless spherical or floating
+     *             joints are present.
+     * 
+     * @return     number of values required for robot joint positions description
+     */
+    int q_size();
+
+    /**
      * @brief      Gives the joint gravity torques vector of the last updated
      *             configuration using the model world gravity
      *
@@ -618,7 +627,7 @@ public:
     /// \brief internal rbdl model
     RigidBodyDynamics::Model* _rbdl_model;
 
-    /// \brief Joint positions
+    /// \brief Joint positions. Note: _q size can differ from dof() since spherical joints use quaternions.
     Eigen::VectorXd _q;
 
     /// \brief Joint velocities
@@ -661,6 +670,9 @@ public:
 
     /// \brief number of Dof of robot
     int _dof;
+
+    /// \brief number of values required for robot joint positions description
+    int _q_size;
 
     /// \brief Transform from world coordinates to robot base coordinates
     Eigen::Affine3d _T_world_robot;

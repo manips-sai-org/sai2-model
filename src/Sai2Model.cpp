@@ -38,9 +38,20 @@ Sai2Model::Sai2Model (const std::string path_to_model_file,
 	// set the number of degrees of freedom
 	_dof = _rbdl_model->dof_count;
 
+	// set the size of q vector
+	_q_size = _rbdl_model->q_size;
+
 	// TODO : support other initial joint configuration
     // resize state vectors
-    _q.setZero(_dof);
+
+    _q.setZero(_q_size);
+    // special case handle spherical joints. See rbdl/Joint class for details.
+    for (uint i = 0; i < _joint_names_map.size(); ++i) {
+    	if (_rbdl_model->mJoints[i].mJointType == RigidBodyDynamics::JointTypeSpherical) {
+    		_rbdl_model->SetQuaternion(i, RigidBodyDynamics::Math::Quaternion(), _q);
+    	}
+    }
+
     _dq.setZero(_dof);
     _ddq.setZero(_dof);
     _M.setIdentity(_dof,_dof);
@@ -88,6 +99,11 @@ void Sai2Model::updateModel()
 int Sai2Model::dof()
 {
 	return _dof;
+}
+
+int Sai2Model::q_size()
+{
+	return _q_size;
 }
 
 void Sai2Model::gravityVector(Eigen::VectorXd& g)

@@ -165,6 +165,8 @@ bool construct_model (Model* rbdl_model, ModelPtr urdf_model, std::map<std::stri
 			rbdl_joint = Joint (SpatialVector (urdf_joint->axis.x, urdf_joint->axis.y, urdf_joint->axis.z, 0., 0., 0.));
 		} else if (urdf_joint->type == urdf::Joint::PRISMATIC) {
 			rbdl_joint = Joint (SpatialVector (0., 0., 0., urdf_joint->axis.x, urdf_joint->axis.y, urdf_joint->axis.z));
+		} else if (urdf_joint->type == urdf::Joint::SPHERICAL) {
+			rbdl_joint = Joint (JointTypeSpherical);
 		} else if (urdf_joint->type == urdf::Joint::FIXED) {
 			rbdl_joint = Joint (JointTypeFixed);
 		} else if (urdf_joint->type == urdf::Joint::FLOATING) {
