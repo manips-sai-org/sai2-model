@@ -144,7 +144,6 @@ bool construct_model (Model* rbdl_model, ModelPtr urdf_model, std::map<std::stri
 		LinkPtr urdf_parent = link_map[urdf_joint->parent_link_name];
 		LinkPtr urdf_child = link_map[urdf_joint->child_link_name];
 		joint_names_map[urdf_joint->name] = j;
-		link_names_map[urdf_child->name] = j+1;
 
 		// determine where to add the current joint and child body
 		unsigned int rbdl_parent_id = 0;
@@ -264,6 +263,7 @@ bool construct_model (Model* rbdl_model, ModelPtr urdf_model, std::map<std::stri
 		} else {
 			rbdl_model->AddBody (rbdl_parent_id, rbdl_joint_frame, rbdl_joint, rbdl_body, urdf_child->name);
 		}
+		link_names_map[urdf_child->name] = rbdl_model->GetBodyId (urdf_child->name.c_str());
 	}
 
 	return true;
