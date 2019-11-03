@@ -51,7 +51,7 @@ Sai2Model::Sai2Model (const string path_to_model_file,
 
     _q.setZero(_q_size);
     // special case handle spherical joints. See rbdl/Joint class for details.
-    for (uint i = 0; i < _joint_names_map.size(); ++i) {
+    for (uint i = 0; i < _rbdl_model->mJoints.size(); ++i) {
     	if (_rbdl_model->mJoints[i].mJointType == RigidBodyDynamics::JointTypeSpherical) {
     		_rbdl_model->SetQuaternion(i, RigidBodyDynamics::Math::Quaternion(), _q);
     	}
