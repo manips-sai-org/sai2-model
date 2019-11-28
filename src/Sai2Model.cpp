@@ -14,6 +14,9 @@
 
 #include <stdexcept>
 
+using namespace std;
+using namespace Eigen;
+
 namespace Sai2Model
 {
 
@@ -415,6 +418,89 @@ void Sai2Model::Jw(Eigen::MatrixXd& J,
 	J = J_temp.topRows<3>();
 }
 
+void Sai2Model::computeIK3d(VectorXd& q_result, 
+                const vector<string>& link_names,
+                const vector<Vector3d>& point_positions_in_links,
+                const vector<Vector3d>& desired_point_positions_in_robot_frame)
+{
+	if(link_names.size() != point_positions_in_links.size() || link_names.size() != desired_point_positions_in_robot_frame.size())
+	{
+		throw runtime_error("size of the 3 input vectors do not match in Sai2Model::computeIK3d\n");
+	}
+
+	std::vector<unsigned int> link_ids;
+	vector<RigidBodyDynamics::Math::Vector3d> body_point;
+	vector<RigidBodyDynamics::Math::Vector3d> target_pos;
+	for(int i=0 ; i<link_names.size() ; i++)
+	{
+		link_ids.push_back(linkId(link_names[i]));
+		body_point.push_back(point_positions_in_links[i]);
+		target_pos.push_back(desired_point_positions_in_robot_frame[i]);
+	}
+
+	InverseKinematics(*_rbdl_model, _q, link_ids, body_point, target_pos, q_result);   // ends up modifying the internal model so we need to re update the kinematics with the previous q value to keep it unchanged
+	updateKinematics();
+}
+
+void Sai2Model::computeIK3d_JL(VectorXd& q_result, 
+                const vector<string>& link_names,
+                const vector<Vector3d>& point_positions_in_links,
+                const vector<Vector3d>& desired_point_positions_in_robot_frame,
+                const VectorXd q_min,
+                const VectorXd q_max,
+                const VectorXd weights
+                )
+{
+	if(link_names.size() != point_positions_in_links.size() || link_names.size() != desired_point_positions_in_robot_frame.size())
+	{
+		throw runtime_error("size of the 3 input vectors do not match in Sai2Model::computeIK3d\n");
+	}
+
+	std::vector<unsigned int> link_ids;
+	vector<RigidBodyDynamics::Math::Vector3d> body_point;
+	vector<RigidBodyDynamics::Math::Vector3d> target_pos;
+	for(int i=0 ; i<link_names.size() ; i++)
+	{
+		link_ids.push_back(linkId(link_names[i]));
+		body_point.push_back(point_positions_in_links[i]);
+		target_pos.push_back(desired_point_positions_in_robot_frame[i]);
+	}
+
+	InverseKinematics_JL(*_rbdl_model, _q, q_min, q_max, weights, link_ids, body_point, target_pos, q_result, 1.0e-12, 0.0001, 500);   // ends up modifying the internal model so we need to re update the kinematics with the previous q value to keep it unchanged
+	updateKinematics();
+}
+
+void Sai2Model::computeIK6d(VectorXd& q_result, 
+                const vector<string>& link_names,
+                const vector<Affine3d>& frame_in_links,
+                const vector<Affine3d>& desired_frame_locations_in_robot_frame)
+{
+	if(link_names.size() != frame_in_links.size() || link_names.size() != desired_frame_locations_in_robot_frame.size())
+	{
+		throw runtime_error("size of the 3 input vectors do not match in Sai2Model::computeIK6d\n");
+	}
+
+	std::vector<unsigned int> link_ids;
+	std::vector<RigidBodyDynamics::Math::Vector3d> point_pos;
+	std::vector<RigidBodyDynamics::Math::Vector3d> desired_point_pos;
+	for(int i=0 ; i<link_names.size() ; i++)
+	{
+		link_ids.push_back(linkId(link_names[i]));
+		link_ids.push_back(linkId(link_names[i]));
+		link_ids.push_back(linkId(link_names[i]));
+
+		point_pos.push_back(frame_in_links[i]*Vector3d::Zero());
+		point_pos.push_back(frame_in_links[i]*Vector3d::UnitX());
+		point_pos.push_back(frame_in_links[i]*Vector3d::UnitY());
+
+		desired_point_pos.push_back(desired_frame_locations_in_robot_frame[i]*Vector3d::Zero());
+		desired_point_pos.push_back(desired_frame_locations_in_robot_frame[i]*Vector3d::UnitX());
+		desired_point_pos.push_back(desired_frame_locations_in_robot_frame[i]*Vector3d::UnitY());
+	}
+
+	InverseKinematics(*_rbdl_model, _q, link_ids, point_pos, desired_point_pos, q_result);  // ends up modifying the internal model so we need to re update the kinematics with the previous q value to keep it unchanged
+	updateKinematics();
+}
 
 
 void Sai2Model::transform(Eigen::Affine3d& T,

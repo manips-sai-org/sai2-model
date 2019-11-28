@@ -10,6 +10,9 @@
 
 #include <rbdl/Model.h>
 
+using namespace std;
+using namespace Eigen;
+
 namespace Sai2Model
 {
 
@@ -213,6 +216,25 @@ public:
     void Jw(Eigen::MatrixXd& J,
                     const std::string& link_name);
 
+
+    void computeIK3d(VectorXd& q_result, 
+                    const vector<string>& link_names,
+                    const vector<Vector3d>& point_positions_in_links,
+                    const vector<Vector3d>& desired_point_positions_in_robot_frame);
+
+    void computeIK3d_JL(VectorXd& q_result, 
+                    const vector<string>& link_names,
+                    const vector<Vector3d>& point_positions_in_links,
+                    const vector<Vector3d>& desired_point_positions_in_robot_frame,
+                    const VectorXd q_min,
+                    const VectorXd q_max,
+                    const VectorXd weights
+                    );
+
+    void computeIK6d(VectorXd& q_result, 
+                    const vector<string>& link_names,
+                    const vector<Affine3d>& frame_in_links,
+                    const vector<Affine3d>& desired_frame_locations_in_robot_frame);
 
     /**
      * @brief      transformation from base to link, in base coordinates.
