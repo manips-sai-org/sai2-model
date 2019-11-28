@@ -385,6 +385,34 @@ void Sai2Model::J_0(Eigen::MatrixXd& J,
 	J << J_temp.block(3,0,3,_dof),
 		 J_temp.block(0,0,3,_dof);
 }
+void Sai2Model::J_0WorldFrame(Eigen::MatrixXd& J,
+	const std::string& link_name,
+	const Eigen::Vector3d& pos_in_link)
+{
+	J.setZero(6,_dof);
+	Eigen::MatrixXd J_temp = Eigen::MatrixXd::Zero(6,_dof);
+	CalcPointJacobian6D (*_rbdl_model, _q, linkId(link_name), pos_in_link, J_temp, false);
+
+	// RBDL gives Jw as the top 3 rows and Jv as the bottom part. We need to swap it here
+	J << _T_world_robot.linear() * J_temp.block(3,0,3,_dof),
+		 _T_world_robot.linear() * J_temp.block(0,0,3,_dof);
+}
+void Sai2Model::J_0LocalFrame(Eigen::MatrixXd& J,
+	const std::string& link_name,
+	const Eigen::Vector3d& pos_in_link,
+	const Eigen::Matrix3d& rot_in_link)
+{
+	J.setZero(6,_dof);
+	Eigen::MatrixXd J_temp = Eigen::MatrixXd::Zero(6,_dof);
+	CalcPointJacobian6D (*_rbdl_model, _q, linkId(link_name), pos_in_link, J_temp, false);
+
+	Eigen::Matrix3d link_rot = CalcBodyWorldOrientation(*_rbdl_model, _q, linkId(link_name), false).transpose();
+
+	// RBDL gives Jw as the top 3 rows and Jv as the bottom part. We need to swap it here
+	J << rot_in_link.transpose() * link_rot.transpose() * J_temp.block(3,0,3,_dof),
+		 rot_in_link.transpose() * link_rot.transpose() * J_temp.block(0,0,3,_dof);
+}
+
 
 void Sai2Model::J(Eigen::MatrixXd& J,
 	const std::string& link_name,
@@ -393,8 +421,29 @@ void Sai2Model::J(Eigen::MatrixXd& J,
 	J.setZero(6,_dof);
 	CalcPointJacobian6D (*_rbdl_model, _q, linkId(link_name), pos_in_link, J, false);
 }
+void Sai2Model::JWorldFrame(Eigen::MatrixXd& J,
+	const std::string& link_name,
+	const Eigen::Vector3d& pos_in_link)
+{
+	J.setZero(6,_dof);
+	CalcPointJacobian6D (*_rbdl_model, _q, linkId(link_name), pos_in_link, J, false);
 
+	J.block(0,0,3,_dof) = _T_world_robot.linear() * J.block(0,0,3,_dof);
+	J.block(3,0,3,_dof) = _T_world_robot.linear() * J.block(3,0,3,_dof);
+}
+void Sai2Model::JLocalFrame(Eigen::MatrixXd& J,
+	const std::string& link_name,
+	const Eigen::Vector3d& pos_in_link,
+	const Eigen::Matrix3d& rot_in_link)
+{
+	J.setZero(6,_dof);
+	CalcPointJacobian6D (*_rbdl_model, _q, linkId(link_name), pos_in_link, J, false);
 
+	Eigen::Matrix3d link_rot = CalcBodyWorldOrientation(*_rbdl_model, _q, linkId(link_name), false).transpose();
+	
+	J.block(0,0,3,_dof) = rot_in_link.transpose() * link_rot.transpose() * J.block(0,0,3,_dof);
+	J.block(3,0,3,_dof) = rot_in_link.transpose() * link_rot.transpose() * J.block(3,0,3,_dof);
+}
 
 void Sai2Model::Jv(Eigen::MatrixXd& J,
 	const std::string& link_name,
@@ -402,6 +451,27 @@ void Sai2Model::Jv(Eigen::MatrixXd& J,
 {
 	J.setZero(3,_dof);
 	CalcPointJacobian(*_rbdl_model, _q, linkId(link_name), pos_in_link, J, false);
+}
+void Sai2Model::JvWorldFrame(Eigen::MatrixXd& J,
+	const std::string& link_name,
+	const Eigen::Vector3d& pos_in_link)
+{
+	J.setZero(3,_dof);
+	CalcPointJacobian(*_rbdl_model, _q, linkId(link_name), pos_in_link, J, false);
+
+	J = _T_world_robot.linear() * J;
+}
+void Sai2Model::JvLocalFrame(Eigen::MatrixXd& J,
+	const std::string& link_name,
+	const Eigen::Vector3d& pos_in_link,
+	const Eigen::Matrix3d& rot_in_link)
+{
+	J.setZero(3,_dof);
+	CalcPointJacobian(*_rbdl_model, _q, linkId(link_name), pos_in_link, J, false);
+
+	Eigen::Matrix3d link_rot = CalcBodyWorldOrientation(*_rbdl_model, _q, linkId(link_name), false).transpose();
+
+	J = rot_in_link.transpose() * link_rot.transpose() * J;
 }
 
 
@@ -414,44 +484,42 @@ void Sai2Model::Jw(Eigen::MatrixXd& J,
 	CalcPointJacobian6D (*_rbdl_model, _q, linkId(link_name), Eigen::Vector3d::Zero(), J_temp, false);
 	J = J_temp.topRows<3>();
 }
-
-
-
-void Sai2Model::transform(Eigen::Affine3d& T,
+void Sai2Model::JwWorldFrame(Eigen::MatrixXd& J,
  const std::string& link_name)
 {
-	unsigned int link_id = linkId(link_name);
-	Eigen::Vector3d pos_in_body(0,0,0);
-	T.linear() = CalcBodyWorldOrientation(*_rbdl_model, _q, link_id, false).transpose();
-	T.translation() = CalcBodyToBaseCoordinates(*_rbdl_model, _q, link_id, pos_in_body, false);
+	// compute the full jacobian at the center of the link and take rotational part
+	Eigen::MatrixXd J_temp = Eigen::MatrixXd::Zero(6,_dof);
+	CalcPointJacobian6D (*_rbdl_model, _q, linkId(link_name), Eigen::Vector3d::Zero(), J_temp, false);
+	J = _T_world_robot.linear() * J_temp.topRows<3>();
+}
+void Sai2Model::JwLocalFrame(Eigen::MatrixXd& J,
+ const std::string& link_name,
+ const Eigen::Matrix3d& rot_in_link)
+{
+	// compute the full jacobian at the center of the link and take rotational part
+	Eigen::MatrixXd J_temp = Eigen::MatrixXd::Zero(6,_dof);
+	CalcPointJacobian6D (*_rbdl_model, _q, linkId(link_name), Eigen::Vector3d::Zero(), J_temp, false);
+	
+	Eigen::Matrix3d link_rot = CalcBodyWorldOrientation(*_rbdl_model, _q, linkId(link_name), false).transpose();
+
+	J = rot_in_link.transpose() * link_rot.transpose() * J_temp.topRows<3>();
 }
 
 void Sai2Model::transform(Eigen::Affine3d& T,
  const std::string& link_name,
- const Eigen::Vector3d& pos_in_body)
+ const Eigen::Vector3d& pos_in_link,
+ const Eigen::Matrix3d& rot_in_link)
 {
 	unsigned int link_id = linkId(link_name);
-	T.linear() = CalcBodyWorldOrientation(*_rbdl_model, _q, link_id, false).transpose();
-	T.translation() = CalcBodyToBaseCoordinates(*_rbdl_model, _q, link_id, pos_in_body, false);
+	T.linear() = CalcBodyWorldOrientation(*_rbdl_model, _q, link_id, false).transpose() * rot_in_link;
+	T.translation() = CalcBodyToBaseCoordinates(*_rbdl_model, _q, link_id, pos_in_link, false);
 }
-
-void Sai2Model::transformInWorld(Eigen::Affine3d& T,
- const std::string& link_name)
-{
-	unsigned int link_id = linkId(link_name);
-	Eigen::Vector3d pos_in_body(0,0,0);
-	T.linear() = CalcBodyWorldOrientation(*_rbdl_model, _q, link_id, false).transpose();
-	T.translation() = CalcBodyToBaseCoordinates(*_rbdl_model, _q, link_id, pos_in_body, false);
-	T = _T_world_robot*T;
-}
-
 void Sai2Model::transformInWorld(Eigen::Affine3d& T,
  const std::string& link_name,
- const Eigen::Vector3d& pos_in_body)
+ const Eigen::Vector3d& pos_in_link,
+ const Eigen::Matrix3d& rot_in_link)
 {
-	unsigned int link_id = linkId(link_name);
-	T.linear() = CalcBodyWorldOrientation(*_rbdl_model, _q, link_id, false).transpose();
-	T.translation() = CalcBodyToBaseCoordinates(*_rbdl_model, _q, link_id, pos_in_body, false);
+	transform(T, link_name, pos_in_link, rot_in_link);
 	T = _T_world_robot*T;
 }
 
@@ -468,7 +536,6 @@ void Sai2Model::positionInWorld(Eigen::Vector3d& pos,
 {
 	pos = CalcBodyToBaseCoordinates(*_rbdl_model, _q, linkId(link_name), pos_in_link, false);
 	pos = _T_world_robot*pos;
-
 }
 
 void Sai2Model::linearVelocity(Eigen::Vector3d& vel,
@@ -477,7 +544,6 @@ void Sai2Model::linearVelocity(Eigen::Vector3d& vel,
 {
 	vel = CalcPointVelocity(*_rbdl_model,_q,_dq,linkId(link_name),pos_in_link,false);
 }
-
 void Sai2Model::linearVelocityInWorld(Eigen::Vector3d& vel,
 	const std::string& link_name,
 	const Eigen::Vector3d& pos_in_link)
@@ -492,7 +558,6 @@ void Sai2Model::linearAcceleration(Eigen::Vector3d& accel,
 {
 	accel = CalcPointAcceleration(*_rbdl_model,_q,_dq,_ddq,linkId(link_name),pos_in_link,false);
 }
-
 void Sai2Model::linearAccelerationInWorld(Eigen::Vector3d& accel,
 	const std::string& link_name,
 	const Eigen::Vector3d& pos_in_link)
@@ -502,16 +567,18 @@ void Sai2Model::linearAccelerationInWorld(Eigen::Vector3d& accel,
 }
 
 void Sai2Model::rotation(Eigen::Matrix3d& rot,
-	const std::string& link_name)
+	const std::string& link_name,
+	const Eigen::Matrix3d& rot_in_link)
 {
 	rot = CalcBodyWorldOrientation(*_rbdl_model, _q, linkId(link_name), false).transpose();
+	rot = rot * rot_in_link;
 }
-
 void Sai2Model::rotationInWorld(Eigen::Matrix3d& rot,
-	const std::string& link_name)
+	const std::string& link_name,
+	const Eigen::Matrix3d& rot_in_link)
 {
 	rot = CalcBodyWorldOrientation(*_rbdl_model, _q, linkId(link_name), false).transpose();
-	rot = _T_world_robot.linear()*rot;
+	rot = _T_world_robot.linear() * rot * rot_in_link;
 }
 
 void Sai2Model::angularVelocity(Eigen::Vector3d& avel,
@@ -521,7 +588,6 @@ void Sai2Model::angularVelocity(Eigen::Vector3d& avel,
 	v_tmp = CalcPointVelocity6D(*_rbdl_model,_q,_dq,linkId(link_name),Eigen::Vector3d::Zero(),false);
 	avel = v_tmp.head(3);
 }
-
 void Sai2Model::angularVelocityInWorld(Eigen::Vector3d& avel,
  const std::string& link_name)
 {
@@ -538,7 +604,6 @@ void Sai2Model::angularAcceleration(Eigen::Vector3d& aaccel,
 	a_tmp = CalcPointAcceleration6D(*_rbdl_model,_q,_dq,_ddq,linkId(link_name),Eigen::Vector3d::Zero(),false);
 	aaccel = a_tmp.head(3);
 }
-
 void Sai2Model::angularAccelerationInWorld(Eigen::Vector3d& aaccel,
  const std::string& link_name)
 {
@@ -830,12 +895,11 @@ void Sai2Model::operationalSpaceMatrices(Eigen::MatrixXd& Lambda, Eigen::MatrixX
 
 void Sai2Model::addEnvironmentalContact(const std::string link, 
                 const Eigen::Vector3d pos_in_link,
-                const int constraints_in_rotation,
-                const Eigen::Matrix3d orientation)
+                const Eigen::Matrix3d orientation,
+                const int constraints_in_rotation)
 {
-	_environmental_contacts.push_back(ContactModel(link, pos_in_link, constraints_in_rotation, orientation));
+	_environmental_contacts.push_back(ContactModel(link, pos_in_link, orientation, constraints_in_rotation));
 }
-
 void Sai2Model::deleteEnvironmentalContact(const std::string link_name)
 {
 	std::vector<ContactModel> new_contacts;
@@ -851,10 +915,10 @@ void Sai2Model::deleteEnvironmentalContact(const std::string link_name)
 
 void Sai2Model::addManipulationContact(const std::string link, 
                 const Eigen::Vector3d pos_in_link,
-                const int constraints_in_rotation,
-                const Eigen::Matrix3d orientation)
+                const Eigen::Matrix3d orientation,
+                const int constraints_in_rotation)
 {
-	_manipulation_contacts.push_back(ContactModel(link, pos_in_link, constraints_in_rotation, orientation));
+	_manipulation_contacts.push_back(ContactModel(link, pos_in_link, orientation, constraints_in_rotation));
 }
 
 void Sai2Model::deleteManipulationContact(const std::string link_name)
@@ -879,14 +943,123 @@ void Sai2Model::manipulationGraspMatrix(Eigen::MatrixXd& G,
 	for(int i = 0 ; i < _manipulation_contacts.size() ; i++)
 	{
 		Eigen::Vector3d pi;
+		position(pi, _manipulation_contacts[i]._link_name, _manipulation_contacts[i]._contact_position);
+		contact_locations.push_back(pi);
+		constrained_rotations.push_back(_manipulation_contacts[i]._constrained_rotations);
+	}
+	graspMatrix(G , R , center_point , contact_locations, constrained_rotations);
+}
+void Sai2Model::manipulationGraspMatrixInWorld(Eigen::MatrixXd& G,
+                 Eigen::Matrix3d& R,
+                 const Eigen::Vector3d center_point)
+{
+	std::vector<Eigen::Vector3d> contact_locations;
+	std::vector<int> constrained_rotations;
+	for(int i = 0 ; i < _manipulation_contacts.size() ; i++)
+	{
+		Eigen::Vector3d pi;
 		positionInWorld(pi, _manipulation_contacts[i]._link_name, _manipulation_contacts[i]._contact_position);
 		contact_locations.push_back(pi);
 		constrained_rotations.push_back(_manipulation_contacts[i]._constrained_rotations);
 	}
 	graspMatrix(G , R , center_point , contact_locations, constrained_rotations);
 }
+void Sai2Model::manipulationGraspMatrixLocalContactForces(Eigen::MatrixXd& G,
+                 Eigen::Matrix3d& R,
+                 const Eigen::Vector3d center_point)
+{
+	std::vector<Eigen::Vector3d> contact_locations;
+	std::vector<int> constrained_rotations;
+	for(int i = 0 ; i < _manipulation_contacts.size() ; i++)
+	{
+		Eigen::Vector3d pi;
+		position(pi, _manipulation_contacts[i]._link_name, _manipulation_contacts[i]._contact_position);
+		contact_locations.push_back(pi);
+		constrained_rotations.push_back(_manipulation_contacts[i]._constrained_rotations);
+	}
+	graspMatrix(G , R , center_point , contact_locations, constrained_rotations);
+
+	int n = _manipulation_contacts.size();
+	int k = 0;
+	for(int i=0 ; i<n ; i++)
+	{
+		if(_manipulation_contacts[i]._constrained_rotations >= 2)
+		{
+			k++;
+		}
+	}
+
+	int k_tmp = 0;
+	for(int i = 0 ; i<n ; i++)
+	{
+		Eigen::Matrix3d R_tmp = Eigen::Matrix3d::Identity();
+		rotation(R_tmp, _manipulation_contacts[i]._link_name, _manipulation_contacts[i]._contact_orientation);
+
+		G.block(0, 3*i, 3*(n+k), 3) = G.block(0, 3*i, 3*(n+k), 3) * R_tmp;
+		if(_manipulation_contacts[i]._constrained_rotations >= 2)
+		{
+			G.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
+			k_tmp++;
+		}
+	}
+}
+void Sai2Model::manipulationGraspMatrixLocalContactForcesToWorld(Eigen::MatrixXd& G,
+                 Eigen::Matrix3d& R,
+                 const Eigen::Vector3d center_point)
+{
+	std::vector<Eigen::Vector3d> contact_locations;
+	std::vector<int> constrained_rotations;
+	for(int i = 0 ; i < _manipulation_contacts.size() ; i++)
+	{
+		Eigen::Vector3d pi;
+		positionInWorld(pi, _manipulation_contacts[i]._link_name, _manipulation_contacts[i]._contact_position);
+		contact_locations.push_back(pi);
+		constrained_rotations.push_back(_manipulation_contacts[i]._constrained_rotations);
+	}
+	graspMatrix(G , R , center_point , contact_locations, constrained_rotations);
+
+	int n = _manipulation_contacts.size();
+	int k = 0;
+	for(int i=0 ; i<n ; i++)
+	{
+		if(_manipulation_contacts[i]._constrained_rotations >= 2)
+		{
+			k++;
+		}
+	}
+
+	int k_tmp = 0;
+	for(int i = 0 ; i<n ; i++)
+	{
+		Eigen::Matrix3d R_tmp = Eigen::Matrix3d::Identity();
+		rotationInWorld(R_tmp, _manipulation_contacts[i]._link_name, _manipulation_contacts[i]._contact_orientation);
+
+		G.block(0, 3*i, 3*(n+k), 3) = G.block(0, 3*i, 3*(n+k), 3) * R_tmp;
+		if(_manipulation_contacts[i]._constrained_rotations >= 2)
+		{
+			G.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
+			k_tmp++;
+		}
+	}	
+}
+
 
 void Sai2Model::manipulationGraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
+                 Eigen::Matrix3d& R,
+                 Eigen::Vector3d& geometric_center)
+{
+	std::vector<Eigen::Vector3d> contact_locations;
+	std::vector<int> constrained_rotations;
+	for(int i = 0 ; i < _manipulation_contacts.size() ; i++)
+	{
+		Eigen::Vector3d pi;
+		position(pi, _manipulation_contacts[i]._link_name, _manipulation_contacts[i]._contact_position);
+		contact_locations.push_back(pi);
+		constrained_rotations.push_back(_manipulation_contacts[i]._constrained_rotations);
+	}
+	graspMatrixAtGeometricCenter(G , R , geometric_center , contact_locations, constrained_rotations);
+}
+void Sai2Model::manipulationGraspMatrixAtGeometricCenterInWorld(Eigen::MatrixXd& G,
                  Eigen::Matrix3d& R,
                  Eigen::Vector3d& geometric_center)
 {
@@ -899,10 +1072,104 @@ void Sai2Model::manipulationGraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
 		contact_locations.push_back(pi);
 		constrained_rotations.push_back(_manipulation_contacts[i]._constrained_rotations);
 	}
-	graspMatrixAtGeometricCenter(G , R , geometric_center , contact_locations, constrained_rotations);
+	graspMatrixAtGeometricCenter(G , R , geometric_center , contact_locations, constrained_rotations);	
+}
+void Sai2Model::manipulationGraspMatrixAtGeometricCenterLocalContactForces(Eigen::MatrixXd& G,
+                 Eigen::Matrix3d& R,
+                 Eigen::Vector3d& geometric_center)
+{
+	std::vector<Eigen::Vector3d> contact_locations;
+	std::vector<int> constrained_rotations;
+	for(int i = 0 ; i < _manipulation_contacts.size() ; i++)
+	{
+		Eigen::Vector3d pi;
+		position(pi, _manipulation_contacts[i]._link_name, _manipulation_contacts[i]._contact_position);
+		contact_locations.push_back(pi);
+		constrained_rotations.push_back(_manipulation_contacts[i]._constrained_rotations);
+	}
+	graspMatrixAtGeometricCenter(G , R , geometric_center , contact_locations, constrained_rotations);	
+
+	int n = _manipulation_contacts.size();
+	int k = 0;
+	for(int i=0 ; i<n ; i++)
+	{
+		if(_manipulation_contacts[i]._constrained_rotations >= 2)
+		{
+			k++;
+		}
+	}
+
+	int k_tmp = 0;
+	for(int i = 0 ; i<n ; i++)
+	{
+		Eigen::Matrix3d R_tmp = Eigen::Matrix3d::Identity();
+		rotation(R_tmp, _manipulation_contacts[i]._link_name, _manipulation_contacts[i]._contact_orientation);
+
+		G.block(0, 3*i, 3*(n+k), 3) = G.block(0, 3*i, 3*(n+k), 3) * R_tmp;
+		if(_manipulation_contacts[i]._constrained_rotations >= 2)
+		{
+			G.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
+			k_tmp++;
+		}
+	}
+}
+void Sai2Model::manipulationGraspMatrixAtGeometricCenterLocalContactForcesToWorld(Eigen::MatrixXd& G,
+                 Eigen::Matrix3d& R,
+                 Eigen::Vector3d& geometric_center)
+{
+	std::vector<Eigen::Vector3d> contact_locations;
+	std::vector<int> constrained_rotations;
+	for(int i = 0 ; i < _manipulation_contacts.size() ; i++)
+	{
+		Eigen::Vector3d pi;
+		positionInWorld(pi, _manipulation_contacts[i]._link_name, _manipulation_contacts[i]._contact_position);
+		contact_locations.push_back(pi);
+		constrained_rotations.push_back(_manipulation_contacts[i]._constrained_rotations);
+	}
+	graspMatrixAtGeometricCenter(G , R , geometric_center , contact_locations, constrained_rotations);	
+
+	int n = _manipulation_contacts.size();
+	int k = 0;
+	for(int i=0 ; i<n ; i++)
+	{
+		if(_manipulation_contacts[i]._constrained_rotations >= 2)
+		{
+			k++;
+		}
+	}
+
+	int k_tmp = 0;
+	for(int i = 0 ; i<n ; i++)
+	{
+		Eigen::Matrix3d R_tmp = Eigen::Matrix3d::Identity();
+		rotationInWorld(R_tmp, _manipulation_contacts[i]._link_name, _manipulation_contacts[i]._contact_orientation);
+
+		G.block(0, 3*i, 3*(n+k), 3) = G.block(0, 3*i, 3*(n+k), 3) * R_tmp;
+		if(_manipulation_contacts[i]._constrained_rotations >= 2)
+		{
+			G.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
+			k_tmp++;
+		}
+	}
 }
 
+
 void Sai2Model::environmentalGraspMatrix(Eigen::MatrixXd& G,
+                 Eigen::Matrix3d& R,
+                 const Eigen::Vector3d center_point)
+{
+	std::vector<Eigen::Vector3d> contact_locations;
+	std::vector<int> constrained_rotations;
+	for(int i = 0 ; i < _environmental_contacts.size() ; i++)
+	{
+		Eigen::Vector3d pi;
+		position(pi, _environmental_contacts[i]._link_name, _environmental_contacts[i]._contact_position);
+		contact_locations.push_back(pi);
+		constrained_rotations.push_back(_environmental_contacts[i]._constrained_rotations);
+	}
+	graspMatrix(G , R , center_point , contact_locations, constrained_rotations);
+}
+void Sai2Model::environmentalGraspMatrixInWorld(Eigen::MatrixXd& G,
                  Eigen::Matrix3d& R,
                  const Eigen::Vector3d center_point)
 {
@@ -917,8 +1184,101 @@ void Sai2Model::environmentalGraspMatrix(Eigen::MatrixXd& G,
 	}
 	graspMatrix(G , R , center_point , contact_locations, constrained_rotations);
 }
+void Sai2Model::environmentalGraspMatrixLocalContactForces(Eigen::MatrixXd& G,
+                 Eigen::Matrix3d& R,
+                 const Eigen::Vector3d center_point)
+{
+	std::vector<Eigen::Vector3d> contact_locations;
+	std::vector<int> constrained_rotations;
+	for(int i = 0 ; i < _environmental_contacts.size() ; i++)
+	{
+		Eigen::Vector3d pi;
+		position(pi, _environmental_contacts[i]._link_name, _environmental_contacts[i]._contact_position);
+		contact_locations.push_back(pi);
+		constrained_rotations.push_back(_environmental_contacts[i]._constrained_rotations);
+	}
+	graspMatrix(G , R , center_point , contact_locations, constrained_rotations);
+
+	int n = _environmental_contacts.size();
+	int k = 0;
+	for(int i=0 ; i<n ; i++)
+	{
+		if(_environmental_contacts[i]._constrained_rotations >= 2)
+		{
+			k++;
+		}
+	}
+
+	int k_tmp = 0;
+	for(int i = 0 ; i<n ; i++)
+	{
+		Eigen::Matrix3d R_tmp = Eigen::Matrix3d::Identity();
+		rotation(R_tmp, _environmental_contacts[i]._link_name, _environmental_contacts[i]._contact_orientation);
+
+		G.block(0, 3*i, 3*(n+k), 3) = G.block(0, 3*i, 3*(n+k), 3) * R_tmp;
+		if(_environmental_contacts[i]._constrained_rotations >= 2)
+		{
+			G.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
+			k_tmp++;
+		}
+	}
+}
+void Sai2Model::environmentalGraspMatrixLocalContactForcesToWorld(Eigen::MatrixXd& G,
+                 Eigen::Matrix3d& R,
+                 const Eigen::Vector3d center_point)
+{
+	std::vector<Eigen::Vector3d> contact_locations;
+	std::vector<int> constrained_rotations;
+	for(int i = 0 ; i < _environmental_contacts.size() ; i++)
+	{
+		Eigen::Vector3d pi;
+		positionInWorld(pi, _environmental_contacts[i]._link_name, _environmental_contacts[i]._contact_position);
+		contact_locations.push_back(pi);
+		constrained_rotations.push_back(_environmental_contacts[i]._constrained_rotations);
+	}
+	graspMatrix(G , R , center_point , contact_locations, constrained_rotations);
+
+	int n = _environmental_contacts.size();
+	int k = 0;
+	for(int i=0 ; i<n ; i++)
+	{
+		if(_environmental_contacts[i]._constrained_rotations >= 2)
+		{
+			k++;
+		}
+	}
+
+	int k_tmp = 0;
+	for(int i = 0 ; i<n ; i++)
+	{
+		Eigen::Matrix3d R_tmp = Eigen::Matrix3d::Identity();
+		rotationInWorld(R_tmp, _environmental_contacts[i]._link_name, _environmental_contacts[i]._contact_orientation);
+
+		G.block(0, 3*i, 3*(n+k), 3) = G.block(0, 3*i, 3*(n+k), 3) * R_tmp;
+		if(_environmental_contacts[i]._constrained_rotations >= 2)
+		{
+			G.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
+			k_tmp++;
+		}
+	}
+}
 
 void Sai2Model::environmentalGraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
+                 Eigen::Matrix3d& R,
+                 Eigen::Vector3d& geometric_center)
+{
+	std::vector<Eigen::Vector3d> contact_locations;
+	std::vector<int> constrained_rotations;
+	for(int i = 0 ; i < _environmental_contacts.size() ; i++)
+	{
+		Eigen::Vector3d pi;
+		position(pi, _environmental_contacts[i]._link_name, _environmental_contacts[i]._contact_position);
+		contact_locations.push_back(pi);
+		constrained_rotations.push_back(_environmental_contacts[i]._constrained_rotations);
+	}
+	graspMatrixAtGeometricCenter(G , R , geometric_center , contact_locations, constrained_rotations);
+}
+void Sai2Model::environmentalGraspMatrixAtGeometricCenterInWorld(Eigen::MatrixXd& G,
                  Eigen::Matrix3d& R,
                  Eigen::Vector3d& geometric_center)
 {
@@ -932,7 +1292,88 @@ void Sai2Model::environmentalGraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
 		constrained_rotations.push_back(_environmental_contacts[i]._constrained_rotations);
 	}
 	graspMatrixAtGeometricCenter(G , R , geometric_center , contact_locations, constrained_rotations);
+
 }
+void Sai2Model::environmentalGraspMatrixAtGeometricCenterLocalContactForces(Eigen::MatrixXd& G,
+                 Eigen::Matrix3d& R,
+                 Eigen::Vector3d& geometric_center)
+{
+	std::vector<Eigen::Vector3d> contact_locations;
+	std::vector<int> constrained_rotations;
+	for(int i = 0 ; i < _environmental_contacts.size() ; i++)
+	{
+		Eigen::Vector3d pi;
+		position(pi, _environmental_contacts[i]._link_name, _environmental_contacts[i]._contact_position);
+		contact_locations.push_back(pi);
+		constrained_rotations.push_back(_environmental_contacts[i]._constrained_rotations);
+	}
+
+	graspMatrixAtGeometricCenter(G , R , geometric_center , contact_locations, constrained_rotations);
+
+	int n = _environmental_contacts.size();
+	int k = 0;
+	for(int i=0 ; i<n ; i++)
+	{
+		if(_environmental_contacts[i]._constrained_rotations >= 2)
+		{
+			k++;
+		}
+	}
+
+	int k_tmp = 0;
+	for(int i = 0 ; i<n ; i++)
+	{
+		Eigen::Matrix3d R_tmp = Eigen::Matrix3d::Identity();
+		rotation(R_tmp, _environmental_contacts[i]._link_name, _environmental_contacts[i]._contact_orientation);
+
+		G.block(0, 3*i, 3*(n+k), 3) = G.block(0, 3*i, 3*(n+k), 3) * R_tmp;
+		if(_environmental_contacts[i]._constrained_rotations >= 2)
+		{
+			G.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
+			k_tmp++;
+		}
+	}
+}
+void Sai2Model::environmentalGraspMatrixAtGeometricCenterLocalContactForcesToWorld(Eigen::MatrixXd& G,
+                 Eigen::Matrix3d& R,
+                 Eigen::Vector3d& geometric_center)
+{
+	std::vector<Eigen::Vector3d> contact_locations;
+	std::vector<int> constrained_rotations;
+	for(int i = 0 ; i < _environmental_contacts.size() ; i++)
+	{
+		Eigen::Vector3d pi;
+		positionInWorld(pi, _environmental_contacts[i]._link_name, _environmental_contacts[i]._contact_position);
+		contact_locations.push_back(pi);
+		constrained_rotations.push_back(_environmental_contacts[i]._constrained_rotations);
+	}
+	graspMatrixAtGeometricCenter(G , R , geometric_center , contact_locations, constrained_rotations);
+
+	int n = _environmental_contacts.size();
+	int k = 0;
+	for(int i=0 ; i<n ; i++)
+	{
+		if(_environmental_contacts[i]._constrained_rotations >= 2)
+		{
+			k++;
+		}
+	}
+
+	int k_tmp = 0;
+	for(int i = 0 ; i<n ; i++)
+	{
+		Eigen::Matrix3d R_tmp = Eigen::Matrix3d::Identity();
+		rotationInWorld(R_tmp, _environmental_contacts[i]._link_name, _environmental_contacts[i]._contact_orientation);
+
+		G.block(0, 3*i, 3*(n+k), 3) = G.block(0, 3*i, 3*(n+k), 3) * R_tmp;
+		if(_environmental_contacts[i]._constrained_rotations >= 2)
+		{
+			G.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
+			k_tmp++;
+		}
+	}	
+}
+
 
 void Sai2Model::Sai2Model::displayJoints()
 {
@@ -1083,12 +1524,7 @@ void graspMatrix(Eigen::MatrixXd& G,
 
 			// find R
 			Eigen::Vector3d x = e12;
-			// std::cout << "new x : " << x.transpose() << std::endl;
-			// std::cout << "new x cross world x : " << (x.cross(Eigen::Vector3d(1,0,0))).transpose() << std::endl;
-			// std::cout << "new x cross world x norm : " << (x.cross(Eigen::Vector3d(1,0,0))).norm() << std::endl;
-			// std::cout << "abs : " << std::abs((x.cross(Eigen::Vector3d(1,0,0))).norm()) << std::endl;
-			// std::cout << std::endl;
-			if(std::abs((x.cross(Eigen::Vector3d(1,0,0))).norm()) < 1e-3) // new x is aligned with world x
+			if(std::abs((x.cross(Eigen::Vector3d(1,0,0))).norm()) < 1e-3) // local x is aligned with world x
 			{
 				if(x.dot(Eigen::Vector3d(1,0,0)) > 0) // same direction
 				{
