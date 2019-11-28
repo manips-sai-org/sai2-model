@@ -355,6 +355,22 @@ RBDL_DLLAPI
       unsigned int max_iter = 50
       );
 
+RBDL_DLLAPI
+  bool InverseKinematics_JL (
+      Model &model,
+      const Math::VectorNd &Qinit,
+      const Math::VectorNd &Qmin,
+      const Math::VectorNd &Qmax,
+      const Math::VectorNd &Weights,
+      const std::vector<unsigned int>& body_id,
+      const std::vector<Math::Vector3d>& body_point,
+      const std::vector<Math::Vector3d>& target_pos,
+      Math::VectorNd &Qres,
+      double step_tol = 1.0e-12,
+      double lambda = 0.01,
+      unsigned int max_iter = 50
+      );
+
 /** @} */
 
 }

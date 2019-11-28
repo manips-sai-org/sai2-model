@@ -708,4 +708,131 @@ RBDL_DLLAPI bool InverseKinematics (
   return false;
 }
 
+RBDL_DLLAPI bool InverseKinematics_JL (
+    Model &model,
+    const VectorNd &Qinit,
+    const VectorNd &Qmin,
+    const VectorNd &Qmax,
+    const VectorNd &Weights,
+    const std::vector<unsigned int>& body_id,
+    const std::vector<Vector3d>& body_point,
+    const std::vector<Vector3d>& target_pos,
+    VectorNd &Qres,
+    double step_tol,
+    double lambda,
+    unsigned int max_iter) {
+  int N = model.q_size;
+  assert (Qinit.size() == model.q_size);
+  assert (Qmin.size() == model.q_size);
+  assert (Qmax.size() == model.q_size);
+  assert (Weights.size() == model.q_size);
+  assert (body_id.size() == body_point.size());
+  assert (body_id.size() == target_pos.size());
+
+  MatrixNd J = MatrixNd::Zero(3 * body_id.size(), model.qdot_size);
+  VectorNd e = VectorNd::Zero(3 * body_id.size());
+
+  Qres = Qinit;
+
+  MatrixNd W_matrix = MatrixNd::Zero(model.qdot_size, model.qdot_size);
+  for(int k=0 ; k<model.qdot_size ; k++)
+  {
+    W_matrix(k,k) = Weights(k);
+  }
+
+    // clamp the values to min and max.
+        for (int i = 0; i < N; i++ ) {
+            if( Qres(i) < Qmin(i)) Qres(i) = Qmin(i);
+            if( Qres(i) > Qmax(i)) Qres(i) = Qmax(i);
+          }
+
+  for (unsigned int ik_iter = 0; ik_iter < max_iter; ik_iter++) {
+    UpdateKinematicsCustom (model, &Qres, NULL, NULL);
+
+    for (unsigned int k = 0; k < body_id.size(); k++) {
+      MatrixNd G (MatrixNd::Zero(3, model.qdot_size));
+      CalcPointJacobian (model, Qres, body_id[k], body_point[k], G, false);
+      Vector3d point_base = 
+        CalcBodyToBaseCoordinates (model, Qres, body_id[k], body_point[k], false);
+      LOG << "current_pos = " << point_base.transpose() << std::endl;
+
+      for (unsigned int i = 0; i < 3; i++) {
+        for (unsigned int j = 0; j < model.qdot_size; j++) {
+          unsigned int row = k * 3 + i;
+          LOG << "i = " << i << " j = " << j << " k = " << k << " row = " 
+            << row << " col = " << j << std::endl;
+          J(row, j) = G (i,j);
+        }
+
+        e[k * 3 + i] = target_pos[k][i] - point_base[i];
+      }
+    }
+
+    LOG << "J = " << J << std::endl;
+    LOG << "e = " << e.transpose() << std::endl;
+
+    // abort if we are getting "close"
+    if (e.norm() < step_tol) {
+      LOG << "Reached target close enough after " << ik_iter << " steps" << std::endl;
+      return true;
+    }
+
+    MatrixNd JJTe_lambda2_I = 
+      J * W_matrix * J.transpose() 
+      + lambda*lambda * MatrixNd::Identity(e.size(), e.size());
+
+    // MatrixNd JJTe_lambda2_I = J * J.transpose();// + lambda*lambda * W_matrix;
+
+    // std::cout << "\n" << W_matrix << "\n" << std::endl;
+    // std::cout << "\n" << JJTe_lambda2_I << "\n" << std::endl;
+
+    VectorNd z (body_id.size() * 3);
+#ifndef RBDL_USE_SIMPLE_MATH
+    z = JJTe_lambda2_I.colPivHouseholderQr().solve (e);
+#else
+    bool solve_successful = LinSolveGaussElimPivot (JJTe_lambda2_I, e, z);
+    assert (solve_successful);
+#endif
+
+    LOG << "z = " << z << std::endl;
+
+    VectorNd delta_theta = J.transpose() * z;
+    LOG << "change = " << delta_theta << std::endl;
+
+    Qres = Qres + delta_theta;
+    LOG << "Qres = " << Qres.transpose() << std::endl;
+
+    // clamp the values to min and max.
+        for (int i = 0; i < N; i++ ) {
+            if( Qres(i) < Qmin(i)) Qres(i) = Qmin(i);
+            if( Qres(i) > Qmax(i)) Qres(i) = Qmax(i);
+          }
+
+    if (delta_theta.norm() < step_tol) {
+      LOG << "reached convergence after " << ik_iter << " steps" << std::endl;
+      return true;
+    }
+
+    VectorNd test_1 (z.size());
+    VectorNd test_res (z.size());
+
+    test_1.setZero();
+
+    for (unsigned int i = 0; i < z.size(); i++) {
+      test_1[i] = 1.;
+
+      VectorNd test_delta = J.transpose() * test_1;
+
+      test_res[i] = test_delta.squaredNorm();
+
+      test_1[i] = 0.;
+    }
+
+    LOG << "test_res = " << test_res.transpose() << std::endl;
+  }
+
+  return false;
+}
+
+
 }
