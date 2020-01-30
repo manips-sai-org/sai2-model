@@ -611,6 +611,45 @@ void Sai2Model::transformInWorld(Eigen::Affine3d& T,
 	T = _T_world_robot*T;
 }
 
+void Sai2Model::velocity6d(Eigen::VectorXd& vel6d,
+                        const std::string link_name,
+                        const Eigen::Vector3d& pos_in_link)
+{
+	vel6d.setZero(6);
+	Eigen::VectorXd v_tmp = Eigen::VectorXd::Zero(6);
+	v_tmp = CalcPointVelocity6D(*_rbdl_model,_q,_dq,linkId(link_name),pos_in_link,false);
+	vel6d << v_tmp.tail(3), v_tmp.head(3);
+}
+
+void Sai2Model::velocity6dInWorld(Eigen::VectorXd& vel6d,
+                        const std::string link_name,
+                        const Eigen::Vector3d& pos_in_link)
+{
+	vel6d.setZero(6);
+	Eigen::VectorXd v_tmp = Eigen::VectorXd::Zero(6);
+	v_tmp = CalcPointVelocity6D(*_rbdl_model,_q,_dq,linkId(link_name),pos_in_link,false);
+	vel6d << _T_world_robot.linear() * v_tmp.tail(3), _T_world_robot.linear() * v_tmp.head(3);	
+}
+
+void Sai2Model::acceleration6d(Eigen::VectorXd& accel6d,
+                        const std::string link_name,
+                        const Eigen::Vector3d& pos_in_link)
+{
+	accel6d.setZero(6);
+	Eigen::VectorXd a_tmp = Eigen::VectorXd::Zero(6);
+	a_tmp = CalcPointAcceleration6D(*_rbdl_model,_q,_dq,_ddq,linkId(link_name),pos_in_link,false);
+	accel6d << a_tmp.tail(3), a_tmp.head(3);
+}
+void Sai2Model::acceleration6dInWorld(Eigen::VectorXd& accel6d,
+                        const std::string link_name,
+                        const Eigen::Vector3d& pos_in_link)
+{
+	accel6d.setZero(6);
+	Eigen::VectorXd a_tmp = Eigen::VectorXd::Zero(6);
+	a_tmp = CalcPointAcceleration6D(*_rbdl_model,_q,_dq,_ddq,linkId(link_name),pos_in_link,false);
+	accel6d << _T_world_robot.linear() * a_tmp.tail(3), _T_world_robot.linear() * a_tmp.head(3);
+}
+
 void Sai2Model::position(Eigen::Vector3d& pos,
 	const std::string& link_name,
 	const Eigen::Vector3d& pos_in_link)
@@ -670,33 +709,37 @@ void Sai2Model::rotationInWorld(Eigen::Matrix3d& rot,
 }
 
 void Sai2Model::angularVelocity(Eigen::Vector3d& avel,
- const std::string& link_name)
+ const std::string& link_name,
+ const Eigen::Vector3d& pos_in_link)
 {
 	Eigen::VectorXd v_tmp = Eigen::VectorXd::Zero(6);
-	v_tmp = CalcPointVelocity6D(*_rbdl_model,_q,_dq,linkId(link_name),Eigen::Vector3d::Zero(),false);
+	v_tmp = CalcPointVelocity6D(*_rbdl_model,_q,_dq,linkId(link_name),pos_in_link,false);
 	avel = v_tmp.head(3);
 }
 void Sai2Model::angularVelocityInWorld(Eigen::Vector3d& avel,
- const std::string& link_name)
+ const std::string& link_name,
+ const Eigen::Vector3d& pos_in_link)
 {
 	Eigen::VectorXd v_tmp = Eigen::VectorXd::Zero(6);
-	v_tmp = CalcPointVelocity6D(*_rbdl_model,_q,_dq,linkId(link_name),Eigen::Vector3d::Zero(),false);
+	v_tmp = CalcPointVelocity6D(*_rbdl_model,_q,_dq,linkId(link_name),pos_in_link,false);
 	avel = v_tmp.head(3);
 	avel = _T_world_robot.linear()*avel;
 }
 
 void Sai2Model::angularAcceleration(Eigen::Vector3d& aaccel,
- const std::string& link_name)
+ const std::string& link_name,
+ const Eigen::Vector3d& pos_in_link)
 {
 	Eigen::VectorXd a_tmp = Eigen::VectorXd::Zero(6);
-	a_tmp = CalcPointAcceleration6D(*_rbdl_model,_q,_dq,_ddq,linkId(link_name),Eigen::Vector3d::Zero(),false);
+	a_tmp = CalcPointAcceleration6D(*_rbdl_model,_q,_dq,_ddq,linkId(link_name),pos_in_link,false);
 	aaccel = a_tmp.head(3);
 }
 void Sai2Model::angularAccelerationInWorld(Eigen::Vector3d& aaccel,
- const std::string& link_name)
+ const std::string& link_name,
+ const Eigen::Vector3d& pos_in_link)
 {
 	Eigen::VectorXd a_tmp = Eigen::VectorXd::Zero(6);
-	a_tmp = CalcPointAcceleration6D(*_rbdl_model,_q,_dq,_ddq,linkId(link_name),Eigen::Vector3d::Zero(),false);
+	a_tmp = CalcPointAcceleration6D(*_rbdl_model,_q,_dq,_ddq,linkId(link_name),pos_in_link,false);
 	aaccel = a_tmp.head(3);
 	aaccel = _T_world_robot.linear()*aaccel;
 }
@@ -1608,7 +1651,7 @@ void graspMatrix(Eigen::MatrixXd& G,
 			E.block<3,1>(3,0) = e12;
 
 			// create Ebar
-			Eigen::MatrixXd Ebar = (E.transpose()*E).inverse() * E.transpose();
+			Eigen::MatrixXd Ebar = 0.5 * E.transpose();
 
 			// find R
 			Eigen::Vector3d x = e12;

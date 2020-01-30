@@ -282,6 +282,20 @@ public:
                            const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero(),
                            const Eigen::Matrix3d& rot_in_link = Eigen::Matrix3d::Identity());
 
+    void velocity6d(Eigen::VectorXd& vel6d,
+                            const std::string link_name,
+                            const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
+    void velocity6dInWorld(Eigen::VectorXd& vel6d,
+                            const std::string link_name,
+                            const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
+
+    void acceleration6d(Eigen::VectorXd& vel6d,
+                            const std::string link_name,
+                            const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
+    void acceleration6dInWorld(Eigen::VectorXd& vel6d,
+                            const std::string link_name,
+                            const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
+
     /**
      * @brief      Position from base to point in link, in base coordinates
      *             (defalut) or world coordinates
@@ -363,9 +377,11 @@ public:
      * @param[in]  rot_in_link  Local frame of interest expressed in link frame
      */
     void angularVelocity(Eigen::Vector3d& avel,
-                                 const std::string& link_name);
+                                 const std::string& link_name,
+                                 const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
     void angularVelocityInWorld(Eigen::Vector3d& avel,
-                                 const std::string& link_name);
+                                 const std::string& link_name,
+                                 const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
 
     /**
      * @brief      Angular Acceleration of a link (possibly a local frame
@@ -378,9 +394,11 @@ public:
      * @param[in]  rot_in_link  Local frame of interest expressed in link frame
      */
     void angularAcceleration(Eigen::Vector3d& aaccel,
-                                     const std::string& link_name);
+                                     const std::string& link_name,
+                                     const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
     void angularAccelerationInWorld(Eigen::Vector3d& aaccel,
-                                     const std::string& link_name);
+                                     const std::string& link_name,
+                                     const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
 
     /**
      * @brief      Gives the link id for a given name with the right indexing
