@@ -13,53 +13,65 @@
 using namespace std;
 using namespace Eigen;
 
+namespace Eigen
+{
+typedef Matrix< bool, 6, 1 > Vector6bool;
+}
+
 namespace Sai2Model
 {
 
-enum ContactNature {PointContact, SurfaceContact};
+enum ContactType {PointContact, SurfaceContact};
 
 class ContactModel
 {
     friend class Sai2Model;
 // private:
+// protected:
 public:
     ContactModel();
-    ContactModel(const std::string link_name, 
-                 const Eigen::Vector3d pos, 
-                 const Eigen::Matrix3d orientation,
-                 const int constained_rot)
+    ContactModel(const string link_name, 
+                 const Vector3d pos, 
+                 const Matrix3d orientation,
+                 const ContactType contact_type)
+                 // const Vector6bool active_directions)
     {
         _link_name = link_name;
         _contact_position = pos;
         _contact_orientation = orientation;
-        _constrained_rotations = constained_rot;
+        _contact_type = contact_type;
+        // _active_directions = active_directions;
     }
     ~ContactModel(){}
 
-public:
+// protected:
+// public:
 
     /// \brief name of the link at which the contact occurs
-    std::string _link_name;
+    string _link_name;
 
     /// \brief the position of the contact in the link. if possible, it should be the geometrical center of the contact zone 
     // (center of the line if line contact, center of surface if surface contact, contact point if point contact)
-    Eigen::Vector3d _contact_position;
+    Vector3d _contact_position;
 
     /// \brief orientation of contact. Assumes the constrained direction is z. If there is a line contact, assumes the free rotation is along the x axis
-    Eigen::Matrix3d _contact_orientation;
+    Matrix3d _contact_orientation;
 
     /// \brief number of constrained rotations for the contact. 0 means point contact, 1 means line contact with line aligned with contact frame X axis, 2 means plane contact
-    int _constrained_rotations;
+    ContactType _contact_type;
+
+    /// \brief the directions to be actively controlled in the order [fx, fy, fz, mx, my, mz] in local frame
+    // Vector6bool _active_directions;
 };
 
 class Sai2Model
 {
 public:
     // Sai2Model ();
-    Sai2Model (const std::string path_to_model_file, 
-               bool verbose=true, 
-               const Eigen::Affine3d T_world_robot = Eigen::Affine3d::Identity(),
-               const Eigen::Vector3d world_gravity = Eigen::Vector3d(0.0,0.0,-9.81));
+    Sai2Model (const string path_to_model_file, 
+               bool verbose = true, 
+               const Affine3d T_world_robot = Affine3d::Identity(),
+               const Vector3d world_gravity = Vector3d(0.0,0.0,-9.81));
     ~Sai2Model ();
 
 
@@ -107,7 +119,7 @@ public:
      * @param      g     Vector to which the joint gravity torques will be
      *                   written
      */
-    void gravityVector(Eigen::VectorXd& g);
+    void gravityVector(VectorXd& g);
 
 
     /**
@@ -118,8 +130,8 @@ public:
      *                      written
      * @param      gravity  the 3d gravity vector of the world in base frame
      */
-    void gravityVector(Eigen::VectorXd& g,
-                               const Eigen::Vector3d& gravity);
+    void gravityVector(VectorXd& g,
+                               const Vector3d& gravity);
 
     /**
      * @brief      Gives the joint coriolis and centrifugal forces of the last
@@ -128,7 +140,7 @@ public:
      * @param      b     Vector to which the joint coriolis and centrifugal
      *                   forces will be written
      */
-    void coriolisForce(Eigen::VectorXd& b);
+    void coriolisForce(VectorXd& b);
 
     /**
      * @brief      Computes the nonlinear effects for the last updated
@@ -137,7 +149,7 @@ public:
      * @param      h     vector to which the centrifugal + coriolis + gravity
      *                   forces will be written
      */
-    void coriolisPlusGravity(Eigen::VectorXd& h);
+    void coriolisPlusGravity(VectorXd& h);
 
     /**
      * @brief      Computes the modified Newton-Euler Algorithm as described in
@@ -155,13 +167,13 @@ public:
      * @param      dqa               auxiliary joint velocity
      * @param      ddq               joint acceleration
      */
-    void modifiedNewtonEuler(Eigen::VectorXd& tau, 
+    void modifiedNewtonEuler(VectorXd& tau, 
                                 const bool consider_gravity,
-                                const Eigen::VectorXd& q,
-                                const Eigen::VectorXd& dq,
-                                const Eigen::VectorXd& dqa,
-                                const Eigen::VectorXd& ddq);
-    void factorizedChristoffelMatrix(Eigen::MatrixXd& C);
+                                const VectorXd& q,
+                                const VectorXd& dq,
+                                const VectorXd& dqa,
+                                const VectorXd& ddq);
+    void factorizedChristoffelMatrix(MatrixXd& C);
 
     /**
      * @brief      Full jacobian for link, relative to base (id=0) in the form
@@ -174,16 +186,16 @@ public:
      * @param      pos_in_link  the position of the point in the link where the
      *                          jacobian is computed (in local link frame)
      */
-    void J_0(Eigen::MatrixXd& J,
-                   const std::string& link_name,
-                   const Eigen::Vector3d& pos_in_link);
-    void J_0WorldFrame(Eigen::MatrixXd& J,
-                   const std::string& link_name,
-                   const Eigen::Vector3d& pos_in_link);
-    void J_0LocalFrame(Eigen::MatrixXd& J,
-                   const std::string& link_name,
-                   const Eigen::Vector3d& pos_in_link,
-                   const Eigen::Matrix3d& rot_in_link = Eigen::Matrix3d::Identity());
+    void J_0(MatrixXd& J,
+                   const string& link_name,
+                   const Vector3d& pos_in_link = Vector3d::Zero());
+    void J_0WorldFrame(MatrixXd& J,
+                   const string& link_name,
+                   const Vector3d& pos_in_link = Vector3d::Zero());
+    void J_0LocalFrame(MatrixXd& J,
+                   const string& link_name,
+                   const Vector3d& pos_in_link = Vector3d::Zero(),
+                   const Matrix3d& rot_in_link = Matrix3d::Identity());
 
     /**
      * @brief      Full jacobian for link, relative to base (id=0) in the form
@@ -196,16 +208,16 @@ public:
      * @param      pos_in_link  the position of the point in the link where the
      *                          jacobian is computed (in local link frame)
      */
-    void J(Eigen::MatrixXd& J,
-                   const std::string& link_name,
-                   const Eigen::Vector3d& pos_in_link);
-    void JWorldFrame(Eigen::MatrixXd& J,
-                   const std::string& link_name,
-                   const Eigen::Vector3d& pos_in_link);
-    void JLocalFrame(Eigen::MatrixXd& J,
-                   const std::string& link_name,
-                   const Eigen::Vector3d& pos_in_link,
-                   const Eigen::Matrix3d& rot_in_link = Eigen::Matrix3d::Identity());
+    void J(MatrixXd& J,
+                   const string& link_name,
+                   const Vector3d& pos_in_link = Vector3d::Zero());
+    void JWorldFrame(MatrixXd& J,
+                   const string& link_name,
+                   const Vector3d& pos_in_link = Vector3d::Zero());
+    void JLocalFrame(MatrixXd& J,
+                   const string& link_name,
+                   const Vector3d& pos_in_link = Vector3d::Zero(),
+                   const Matrix3d& rot_in_link = Matrix3d::Identity());
 
     /**
      * @brief      Velocity jacobian for point on link, relative to base (id=0)
@@ -217,16 +229,16 @@ public:
      * @param      pos_in_link  the position of the point in the link where the
      *                          jacobian is computed (in local link frame)
      */
-    void Jv(Eigen::MatrixXd& J,
-                    const std::string& link_name,
-                    const Eigen::Vector3d& pos_in_link);
-    void JvWorldFrame(Eigen::MatrixXd& J,
-                    const std::string& link_name,
-                    const Eigen::Vector3d& pos_in_link);
-    void JvLocalFrame(Eigen::MatrixXd& J,
-                    const std::string& link_name,
-                    const Eigen::Vector3d& pos_in_link,
-                    const Eigen::Matrix3d& rot_in_link = Eigen::Matrix3d::Identity());
+    void Jv(MatrixXd& J,
+                    const string& link_name,
+                    const Vector3d& pos_in_link = Vector3d::Zero());
+    void JvWorldFrame(MatrixXd& J,
+                    const string& link_name,
+                    const Vector3d& pos_in_link = Vector3d::Zero());
+    void JvLocalFrame(MatrixXd& J,
+                    const string& link_name,
+                    const Vector3d& pos_in_link = Vector3d::Zero(),
+                    const Matrix3d& rot_in_link = Matrix3d::Identity());
     /**
      * @brief      Angular velocity jacobian for link, relative to base (id=0)
      *             expressed in base frame (default), world frame or local frame
@@ -234,13 +246,13 @@ public:
      * @param      J          Matrix to which the jacobian will be written
      * @param      link_name  the name of the link where to compute the jacobian
      */
-    void Jw(Eigen::MatrixXd& J,
-                    const std::string& link_name);
-    void JwWorldFrame(Eigen::MatrixXd& J,
-                    const std::string& link_name);
-    void JwLocalFrame(Eigen::MatrixXd& J,
-                    const std::string& link_name,
-                    const Eigen::Matrix3d& rot_in_link = Eigen::Matrix3d::Identity());
+    void Jw(MatrixXd& J,
+                    const string& link_name);
+    void JwWorldFrame(MatrixXd& J,
+                    const string& link_name);
+    void JwLocalFrame(MatrixXd& J,
+                    const string& link_name,
+                    const Matrix3d& rot_in_link = Matrix3d::Identity());
 
 
     void computeIK3d(VectorXd& q_result, 
@@ -273,28 +285,28 @@ public:
      * @param      pos_in_link  The position in local body coordinates
      * @param[in]  rot_in_link  The rot local body coordinates
      */
-    void transform(Eigen::Affine3d& T,
-                           const std::string& link_name,
-                           const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero(),
-                           const Eigen::Matrix3d& rot_in_link = Eigen::Matrix3d::Identity());
-    void transformInWorld(Eigen::Affine3d& T,
-                           const std::string& link_name,
-                           const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero(),
-                           const Eigen::Matrix3d& rot_in_link = Eigen::Matrix3d::Identity());
+    void transform(Affine3d& T,
+                           const string& link_name,
+                           const Vector3d& pos_in_link = Vector3d::Zero(),
+                           const Matrix3d& rot_in_link = Matrix3d::Identity());
+    void transformInWorld(Affine3d& T,
+                           const string& link_name,
+                           const Vector3d& pos_in_link = Vector3d::Zero(),
+                           const Matrix3d& rot_in_link = Matrix3d::Identity());
 
-    void velocity6d(Eigen::VectorXd& vel6d,
-                            const std::string link_name,
-                            const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
-    void velocity6dInWorld(Eigen::VectorXd& vel6d,
-                            const std::string link_name,
-                            const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
+    void velocity6d(VectorXd& vel6d,
+                            const string link_name,
+                            const Vector3d& pos_in_link = Vector3d::Zero());
+    void velocity6dInWorld(VectorXd& vel6d,
+                            const string link_name,
+                            const Vector3d& pos_in_link = Vector3d::Zero());
 
-    void acceleration6d(Eigen::VectorXd& vel6d,
-                            const std::string link_name,
-                            const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
-    void acceleration6dInWorld(Eigen::VectorXd& vel6d,
-                            const std::string link_name,
-                            const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
+    void acceleration6d(VectorXd& vel6d,
+                            const string link_name,
+                            const Vector3d& pos_in_link = Vector3d::Zero());
+    void acceleration6dInWorld(VectorXd& vel6d,
+                            const string link_name,
+                            const Vector3d& pos_in_link = Vector3d::Zero());
 
     /**
      * @brief      Position from base to point in link, in base coordinates
@@ -307,12 +319,12 @@ public:
      * @param      pos_in_link  the position of the point in the link, in local
      *                          link frame
      */
-    void position(Eigen::Vector3d& pos,
-                          const std::string& link_name,
-                          const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
-    void positionInWorld(Eigen::Vector3d& pos,
-                          const std::string& link_name,
-                          const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
+    void position(Vector3d& pos,
+                          const string& link_name,
+                          const Vector3d& pos_in_link = Vector3d::Zero());
+    void positionInWorld(Vector3d& pos,
+                          const string& link_name,
+                          const Vector3d& pos_in_link = Vector3d::Zero());
 
     /**
      * @brief      Velocity of point in link, in base coordinates (defalut) or
@@ -325,12 +337,12 @@ public:
      * @param      pos_in_link  the position of the point in the link, in local
      *                          link frame
      */
-    void linearVelocity(Eigen::Vector3d& vel,
-                          const std::string& link_name,
-                          const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
-    void linearVelocityInWorld(Eigen::Vector3d& vel,
-                          const std::string& link_name,
-                          const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
+    void linearVelocity(Vector3d& vel,
+                          const string& link_name,
+                          const Vector3d& pos_in_link = Vector3d::Zero());
+    void linearVelocityInWorld(Vector3d& vel,
+                          const string& link_name,
+                          const Vector3d& pos_in_link = Vector3d::Zero());
 
     /**
      * @brief      Acceleration of point in link, in base coordinates (defalut)
@@ -343,12 +355,12 @@ public:
      * @param      pos_in_link  the position of the point in the link, in local
      *                          link frame
      */
-    void linearAcceleration(Eigen::Vector3d& accel,
-                              const std::string& link_name,
-                              const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
-    void linearAccelerationInWorld(Eigen::Vector3d& accel,
-                              const std::string& link_name,
-                              const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
+    void linearAcceleration(Vector3d& accel,
+                              const string& link_name,
+                              const Vector3d& pos_in_link = Vector3d::Zero());
+    void linearAccelerationInWorld(Vector3d& accel,
+                              const string& link_name,
+                              const Vector3d& pos_in_link = Vector3d::Zero());
 
     /**
      * @brief      Rotation of a link (possibly a local frame expressed in link
@@ -359,12 +371,12 @@ public:
      *                          rotation
      * @param[in]  rot_in_link  Local frame of interest expressed in link frame
      */
-    void rotation(Eigen::Matrix3d& rot,
-                          const std::string& link_name,
-                          const Eigen::Matrix3d& rot_in_link = Eigen::Matrix3d::Identity());
-    void rotationInWorld(Eigen::Matrix3d& rot,
-                          const std::string& link_name,
-                          const Eigen::Matrix3d& rot_in_link = Eigen::Matrix3d::Identity());
+    void rotation(Matrix3d& rot,
+                          const string& link_name,
+                          const Matrix3d& rot_in_link = Matrix3d::Identity());
+    void rotationInWorld(Matrix3d& rot,
+                          const string& link_name,
+                          const Matrix3d& rot_in_link = Matrix3d::Identity());
 
     /**
      * @brief      Angular Velocity of a link (possibly a local frame expressed
@@ -376,12 +388,12 @@ public:
      *                          rotation
      * @param[in]  rot_in_link  Local frame of interest expressed in link frame
      */
-    void angularVelocity(Eigen::Vector3d& avel,
-                                 const std::string& link_name,
-                                 const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
-    void angularVelocityInWorld(Eigen::Vector3d& avel,
-                                 const std::string& link_name,
-                                 const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
+    void angularVelocity(Vector3d& avel,
+                                 const string& link_name,
+                                 const Vector3d& pos_in_link = Vector3d::Zero());
+    void angularVelocityInWorld(Vector3d& avel,
+                                 const string& link_name,
+                                 const Vector3d& pos_in_link = Vector3d::Zero());
 
     /**
      * @brief      Angular Acceleration of a link (possibly a local frame
@@ -393,12 +405,12 @@ public:
      *                          rotation
      * @param[in]  rot_in_link  Local frame of interest expressed in link frame
      */
-    void angularAcceleration(Eigen::Vector3d& aaccel,
-                                     const std::string& link_name,
-                                     const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
-    void angularAccelerationInWorld(Eigen::Vector3d& aaccel,
-                                     const std::string& link_name,
-                                     const Eigen::Vector3d& pos_in_link = Eigen::Vector3d::Zero());
+    void angularAcceleration(Vector3d& aaccel,
+                                     const string& link_name,
+                                     const Vector3d& pos_in_link = Vector3d::Zero());
+    void angularAccelerationInWorld(Vector3d& aaccel,
+                                     const string& link_name,
+                                     const Vector3d& pos_in_link = Vector3d::Zero());
 
     /**
      * @brief      Gives the link id for a given name with the right indexing
@@ -408,7 +420,7 @@ public:
      *
      * @return     the link number
      */
-    unsigned int linkId(const std::string& link_name);
+    unsigned int linkId(const string& link_name);
 
     /**
      * @brief      Gives the joint id for a given name with the right indexing
@@ -418,7 +430,7 @@ public:
      *
      * @return     the joint number
      */
-    int jointId(const std::string& joint_name);
+    int jointId(const string& joint_name);
 
     /**
      * @brief      Gives the mass properties of a given link
@@ -430,9 +442,9 @@ public:
      * @param      link_name       the name of the considered link
      */
     void getLinkMass(double& mass,
-                     Eigen::Vector3d& center_of_mass,
-                     Eigen::Matrix3d& inertia,
-                     const std::string& link_name);
+                     Vector3d& center_of_mass,
+                     Matrix3d& inertia,
+                     const string& link_name);
 
     /**
      * @brief      Gives the mass properties of a given link
@@ -443,8 +455,8 @@ public:
      * @param      link_name       the name of the considered link
      */
     void getLinkMass(double& mass,
-                     Eigen::Vector3d& center_of_mass,
-                     const std::string& link_name);
+                     Vector3d& center_of_mass,
+                     const string& link_name);
 
     /**
      * @brief      returns the position of the center of mass of the robot in
@@ -452,7 +464,7 @@ public:
      *
      * @param      robot_com  the returned center of mass position
      */
-    void comPosition(Eigen::Vector3d& robot_com);
+    void comPosition(Vector3d& robot_com);
 
     /**
      * @brief      returns the center of mass velocity Jacobian of the robot in
@@ -460,7 +472,7 @@ public:
      *
      * @param      Jv_com  the returned center of mass full jacobian
      */
-    void comJacobian(Eigen::MatrixXd& Jv_com);
+    void comJacobian(MatrixXd& Jv_com);
 
     /**
      * @brief      Computes the operational space matrix corresponding to a
@@ -471,8 +483,8 @@ public:
      * @param      task_jacobian  The jacobian of the task for which we want the
      *                            op space mass matrix
      */
-    void taskInertiaMatrix(Eigen::MatrixXd& Lambda,
-                           const Eigen::MatrixXd& task_jacobian);
+    void taskInertiaMatrix(MatrixXd& Lambda,
+                           const MatrixXd& task_jacobian);
 
     /**
      * @brief      Computes the operational space matrix robust to singularities
@@ -482,8 +494,8 @@ public:
      * @param      task_jacobian  The jacobian of the task for which we want the
      *                            op space mass matrix
      */
-    void taskInertiaMatrixWithPseudoInv(Eigen::MatrixXd& Lambda,
-                           const Eigen::MatrixXd& task_jacobian);
+    void taskInertiaMatrixWithPseudoInv(MatrixXd& Lambda,
+                           const MatrixXd& task_jacobian);
 
     /**
      * @brief      Computes the dynamically consistent inverse of the jacobian
@@ -493,8 +505,8 @@ public:
      *                            inverse will be written
      * @param[in]  task_jacobian  The task jacobian
      */
-    void dynConsistentInverseJacobian(Eigen::MatrixXd& Jbar,
-                                      const Eigen::MatrixXd& task_jacobian);
+    void dynConsistentInverseJacobian(MatrixXd& Jbar,
+                                      const MatrixXd& task_jacobian);
 
 
     /**
@@ -506,8 +518,8 @@ public:
      *                            written
      * @param[in]  task_jacobian  The task jacobian
      */
-    void nullspaceMatrix(Eigen::MatrixXd& N,
-                             const Eigen::MatrixXd& task_jacobian);
+    void nullspaceMatrix(MatrixXd& N,
+                             const MatrixXd& task_jacobian);
 
     /**
      * @brief      Computes the nullspace matrix of the task, consistent with
@@ -519,9 +531,9 @@ public:
      * @param[in]  task_jacobian  The task jacobian
      * @param[in]  N_prec         The previous nullspace matrix
      */
-    void nullspaceMatrix(Eigen::MatrixXd& N,
-                             const Eigen::MatrixXd& task_jacobian,
-                             const Eigen::MatrixXd& N_prec);
+    void nullspaceMatrix(MatrixXd& N,
+                             const MatrixXd& task_jacobian,
+                             const MatrixXd& N_prec);
 
     /**
      * @brief      Computes the operational spce matrices (task inertia,
@@ -537,8 +549,8 @@ public:
      *                            written
      * @param[in]  task_jacobian  Task jacobian
      */
-    void operationalSpaceMatrices(Eigen::MatrixXd& Lambda, Eigen::MatrixXd& Jbar, Eigen::MatrixXd& N,
-                                    const Eigen::MatrixXd& task_jacobian);
+    void operationalSpaceMatrices(MatrixXd& Lambda, MatrixXd& Jbar, MatrixXd& N,
+                                    const MatrixXd& task_jacobian);
 
     /**
      * @brief      Computes the operational spce matrices (task inertia,
@@ -555,47 +567,57 @@ public:
      * @param[in]  task_jacobian  Task jacobian
      * @param[in]  N_prec         Previous nullspace matrix
      */
-    void operationalSpaceMatrices(Eigen::MatrixXd& Lambda, Eigen::MatrixXd& Jbar, Eigen::MatrixXd& N,
-                                    const Eigen::MatrixXd& task_jacobian,
-                                    const Eigen::MatrixXd& N_prec);
+    void operationalSpaceMatrices(MatrixXd& Lambda, MatrixXd& Jbar, MatrixXd& N,
+                                    const MatrixXd& task_jacobian,
+                                    const MatrixXd& N_prec);
 
 
 
     /**
      @brief      Adds an environmental contact to the desired link at the
-                 desired contact frame
+                 desired contact frame. There can only be one contact per link
     
-     @param[in]  link                     link at which the contact happens
-     @param[in]  pos_in_link              position of the contact in the link in
-                                          local link frame
-     @param[in]  orientation              orientation of the contact frame in
-                                          the link frame. Z axis needs to be
-                                          aligned with the constrained direction
-                                          of motion (surface normal) if line
-                                          contact, the free rotation should be
-                                          around the X axis
-     @param[in]  constraints_in_rotation  The constraints in rotation. 0 = point
-                                          contact, 1 = line contact, 2 = plane
-                                          contact
+     @param[in]  link               link at which the contact happens
+     @param[in]  pos_in_link        position of the contact in the link in local
+                                    link frame
+     @param[in]  orientation        orientation of the contact frame in the link
+                                    frame. Z axis needs to be aligned with the
+                                    constrained direction of motion (surface
+                                    normal) if line contact, the free rotation
+                                    should be around the X axis
+     @param[in]  contact_type       The contact type (surface or point)
+     @param[in]  active_directions  The active directions of contact (used for
+                                    environemntal contacts only to compute the
+                                    free floating model)
     */
-    void addEnvironmentalContact(const std::string link, 
-                    const Eigen::Vector3d pos_in_link,
-                    const Eigen::Matrix3d orientation = Eigen::Matrix3d::Identity(),
-                    const int constraints_in_rotation = 2);
-    void addManipulationContact(const std::string link, 
-                    const Eigen::Vector3d pos_in_link,
-                    const Eigen::Matrix3d orientation = Eigen::Matrix3d::Identity(),
-                    const int constraints_in_rotation = 2);
+    void addEnvironmentalContact(const string link, 
+                    const Vector3d pos_in_link = Vector3d::Zero(),
+                    const Matrix3d orientation = Matrix3d::Identity(),
+                    const ContactType contact_type = ContactType::SurfaceContact);
+    void addManipulationContact(const string link, 
+                    const Vector3d pos_in_link = Vector3d::Zero(),
+                    const Matrix3d orientation = Matrix3d::Identity(),
+                    const ContactType contact_type = ContactType::SurfaceContact);
 
     /**
      * @brief      deletes the contact at a given link
      *
      * @param      link_name  the link at which we want to delete the contact
      */
-    void deleteEnvironmentalContact(const std::string link_name);
-    void deleteManipulationContact(const std::string link_name);
+    void deleteEnvironmentalContact(const string link_name);
+    void deleteManipulationContact(const string link_name);
 
-
+    // /**
+    //  * @brief      Sets an environmental contact as passive or active (full
+    //  *             contact or just a certain direction) directions are 
+    //  *             0-fx | 1-fy | 2-fz | 3-mx | 4-my | 5-mz
+    //  *
+    //  * @param[in]  link_name  The link at which the contact is
+    //  */
+    // void setPassiveEnvironmentalContact(const string link_name);
+    // void setPassiveEnvironmentalContact(const string link_name, const int direction);
+    // void setActiveEnvironmentalContact(const string link_name);
+    // void setActiveEnvironmentalContact(const string link_name, const int direction);
 
     /**
      * @brief      Computes the manipulation grasp matrix that converts contact
@@ -611,18 +633,22 @@ public:
      * @param[in]  center_point  The position (in robot or world frame) of the
      *                           point on which we resolve the resultant forces
      */
-    void manipulationGraspMatrix(Eigen::MatrixXd& G,
-                     Eigen::Matrix3d& R,
-                     const Eigen::Vector3d center_point);
-    void manipulationGraspMatrixInWorld(Eigen::MatrixXd& G,
-                     Eigen::Matrix3d& R,
-                     const Eigen::Vector3d center_point);
-    void manipulationGraspMatrixLocalContactForces(Eigen::MatrixXd& G,
-                     Eigen::Matrix3d& R,
-                     const Eigen::Vector3d center_point);
-    void manipulationGraspMatrixLocalContactForcesToWorld(Eigen::MatrixXd& G,
-                     Eigen::Matrix3d& R,
-                     const Eigen::Vector3d center_point);
+    void manipulationGraspMatrix(MatrixXd& G,
+                     MatrixXd& G_inv,
+                     Matrix3d& R,
+                     const Vector3d center_point);
+    void manipulationGraspMatrixInWorld(MatrixXd& G,
+                     MatrixXd& G_inv,
+                     Matrix3d& R,
+                     const Vector3d center_point);
+    void manipulationGraspMatrixLocalContactForces(MatrixXd& G,
+                     MatrixXd& G_inv,
+                     Matrix3d& R,
+                     const Vector3d center_point);
+    void manipulationGraspMatrixLocalContactForcesToWorld(MatrixXd& G,
+                     MatrixXd& G_inv,
+                     Matrix3d& R,
+                     const Vector3d center_point);
 
     /**
      * @brief      Computes the manipulation grasp matrix that converts contact
@@ -639,18 +665,22 @@ public:
      *                               at which the resultant forces and moments
      *                               are resolved
      */
-    void manipulationGraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
-                     Eigen::Matrix3d& R,
-                     Eigen::Vector3d& geometric_center);
-    void manipulationGraspMatrixAtGeometricCenterInWorld(Eigen::MatrixXd& G,
-                     Eigen::Matrix3d& R,
-                     Eigen::Vector3d& geometric_center);
-    void manipulationGraspMatrixAtGeometricCenterLocalContactForces(Eigen::MatrixXd& G,
-                     Eigen::Matrix3d& R,
-                     Eigen::Vector3d& geometric_center);
-    void manipulationGraspMatrixAtGeometricCenterLocalContactForcesToWorld(Eigen::MatrixXd& G,
-                     Eigen::Matrix3d& R,
-                     Eigen::Vector3d& geometric_center);
+    void manipulationGraspMatrixAtGeometricCenter(MatrixXd& G,
+                     MatrixXd& G_inv,
+                     Matrix3d& R,
+                     Vector3d& geometric_center);
+    void manipulationGraspMatrixAtGeometricCenterInWorld(MatrixXd& G,
+                     MatrixXd& G_inv,
+                     Matrix3d& R,
+                     Vector3d& geometric_center);
+    void manipulationGraspMatrixAtGeometricCenterLocalContactForces(MatrixXd& G,
+                     MatrixXd& G_inv,
+                     Matrix3d& R,
+                     Vector3d& geometric_center);
+    void manipulationGraspMatrixAtGeometricCenterLocalContactForcesToWorld(MatrixXd& G,
+                     MatrixXd& G_inv,
+                     Matrix3d& R,
+                     Vector3d& geometric_center);
 
     /**
      * @brief      Computes the environmental grasp matrix that converts contact
@@ -666,18 +696,22 @@ public:
      * @param[in]  center_point  The position (in robot or world frame) of the
      *                           point on which we resolve the resultant forces
      */
-    void environmentalGraspMatrix(Eigen::MatrixXd& G,
-                     Eigen::Matrix3d& R,
-                     const Eigen::Vector3d center_point);
-    void environmentalGraspMatrixInWorld(Eigen::MatrixXd& G,
-                     Eigen::Matrix3d& R,
-                     const Eigen::Vector3d center_point);
-    void environmentalGraspMatrixLocalContactForces(Eigen::MatrixXd& G,
-                     Eigen::Matrix3d& R,
-                     const Eigen::Vector3d center_point);
-    void environmentalGraspMatrixLocalContactForcesToWorld(Eigen::MatrixXd& G,
-                     Eigen::Matrix3d& R,
-                     const Eigen::Vector3d center_point);
+    void environmentalGraspMatrix(MatrixXd& G,
+                     MatrixXd& G_inv,
+                     Matrix3d& R,
+                     const Vector3d center_point);
+    void environmentalGraspMatrixInWorld(MatrixXd& G,
+                     MatrixXd& G_inv,
+                     Matrix3d& R,
+                     const Vector3d center_point);
+    void environmentalGraspMatrixLocalContactForces(MatrixXd& G,
+                     MatrixXd& G_inv,
+                     Matrix3d& R,
+                     const Vector3d center_point);
+    void environmentalGraspMatrixLocalContactForcesToWorld(MatrixXd& G,
+                     MatrixXd& G_inv,
+                     Matrix3d& R,
+                     const Vector3d center_point);
 
     /**
      * @brief      Computes the environmental grasp matrix that converts contact
@@ -694,18 +728,22 @@ public:
      *                               at which the resultant forces and moments
      *                               are resolved
      */
-    void environmentalGraspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
-                     Eigen::Matrix3d& R,
-                     Eigen::Vector3d& geometric_center);
-    void environmentalGraspMatrixAtGeometricCenterInWorld(Eigen::MatrixXd& G,
-                     Eigen::Matrix3d& R,
-                     Eigen::Vector3d& geometric_center);
-    void environmentalGraspMatrixAtGeometricCenterLocalContactForces(Eigen::MatrixXd& G,
-                     Eigen::Matrix3d& R,
-                     Eigen::Vector3d& geometric_center);
-    void environmentalGraspMatrixAtGeometricCenterLocalContactForcesToWorld(Eigen::MatrixXd& G,
-                     Eigen::Matrix3d& R,
-                     Eigen::Vector3d& geometric_center);
+    void environmentalGraspMatrixAtGeometricCenter(MatrixXd& G,
+                     MatrixXd& G_inv,
+                     Matrix3d& R,
+                     Vector3d& geometric_center);
+    void environmentalGraspMatrixAtGeometricCenterInWorld(MatrixXd& G,
+                     MatrixXd& G_inv,
+                     Matrix3d& R,
+                     Vector3d& geometric_center);
+    void environmentalGraspMatrixAtGeometricCenterLocalContactForces(MatrixXd& G,
+                     MatrixXd& G_inv,
+                     Matrix3d& R,
+                     Vector3d& geometric_center);
+    void environmentalGraspMatrixAtGeometricCenterLocalContactForcesToWorld(MatrixXd& G,
+                     MatrixXd& G_inv,
+                     Matrix3d& R,
+                     Vector3d& geometric_center);
 
 
     /**
@@ -718,28 +756,28 @@ public:
     RigidBodyDynamics::Model* _rbdl_model;
 
     /// \brief Joint positions. Note: _q size can differ from dof() since spherical joints use quaternions.
-    Eigen::VectorXd _q;
+    VectorXd _q;
 
     /// \brief Joint velocities
-    Eigen::VectorXd _dq;
+    VectorXd _dq;
 
     /// \brief Joint accelerations
-    Eigen::VectorXd _ddq;
+    VectorXd _ddq;
 
     /// \brief Mass Matrix
-    Eigen::MatrixXd _M;
+    MatrixXd _M;
 
     /// \brief Inverse of the mass matrix
-    Eigen::MatrixXd _M_inv;
+    MatrixXd _M_inv;
 
     /// \brief gravity in base frame
-    Eigen::Vector3d _world_gravity;
+    Vector3d _world_gravity;
 
     /// \brief List of active contacts between robot and environment
-    std::vector<ContactModel> _environmental_contacts;
+    vector<ContactModel> _environmental_contacts;
 
     /// \brief List of active contacts between robot end effectors and manipulated objects
-    std::vector<ContactModel> _manipulation_contacts;
+    vector<ContactModel> _manipulation_contacts;
 
 public:
     ///
@@ -749,9 +787,9 @@ public:
     ///
     /// @return     the associated 3d anti-symmetric matrix
     ///
-    static Eigen::Matrix3d CrossProductOperator(const Eigen::Vector3d& v)
+    static Matrix3d CrossProductOperator(const Vector3d& v)
     {
-        Eigen::Matrix3d v_hat;
+        Matrix3d v_hat;
         v_hat << 0, -v(2), v(1),
                 v(2), 0, -v(0),
                 -v(1), v(0), 0;
@@ -765,14 +803,14 @@ public:
     int _q_size;
 
     /// \brief Transform from world coordinates to robot base coordinates
-    Eigen::Affine3d _T_world_robot;
+    Affine3d _T_world_robot;
 
 // protected:
     /// \brief map from joint names to joint id
-    std::map<std::string,int> _joint_names_map;
+    map<string,int> _joint_names_map;
 
     /// \brief map from link names to link id
-    std::map<std::string,int> _link_names_map;
+    map<string,int> _link_names_map;
 };
 
  /**
@@ -783,9 +821,9 @@ public:
   * @param      desired_orientation  desired orientation rotation matrix
   * @param      current_orientation  current orientation matrix
   */
-void orientationError(Eigen::Vector3d& delta_phi,
-                      const Eigen::Matrix3d& desired_orientation,
-                      const Eigen::Matrix3d& current_orientation);
+void orientationError(Vector3d& delta_phi,
+                      const Matrix3d& desired_orientation,
+                      const Matrix3d& current_orientation);
 
 
 /**
@@ -796,30 +834,31 @@ void orientationError(Eigen::Vector3d& delta_phi,
  * @param      desired_orientation  desired orientation quaternion
  * @param      current_orientation  current orientation quaternion
  */
-void orientationError(Eigen::Vector3d& delta_phi,
-                      const Eigen::Quaterniond& desired_orientation,
-                      const Eigen::Quaterniond& current_orientation);
+void orientationError(Vector3d& delta_phi,
+                      const Quaterniond& desired_orientation,
+                      const Quaterniond& current_orientation);
 
 
 /// \brief compute the cross product operator of a 3d vector
-Eigen::Matrix3d CrossProductOperator(const Eigen::Vector3d& v);
+Matrix3d CrossProductOperator(const Vector3d& v);
 
 /**
- * @brief      Computes the grasp matrix in the cases where there are 2, 3 or 4
- *             contacts in the _contact member vector. the external forces and
- *             moments are assumed to be in world frame for 2 contact points,
- *             the output resultant (first 6 lines) is given in world frame, and
- *             the output internal tension and moments are given in local frame,
- *             and the description of the local frame is given by R for 3 and 4
- *             contacts, the output quantities are given in world frame the
- *             convention for the output is the following order : support
- *             forces, support moments, internal tensions, internal moments the
- *             internal tensions are given in the order 1-2, 1-3, 2-3 in the 3
- *             contact case and 1-2, 1-3, 1-4, 2-3, 2-4, 3-4 in the 4 contact
- *             case.
+ * @brief      Computes the grasp matrix and its inverse in the cases where
+ *             there are 2, 3 or 4 contacts in the _contact member vector. the
+ *             external forces and moments are assumed to be in world frame for
+ *             2 contact points, the output resultant (first 6 lines) is given
+ *             in world frame, and the output internal tension and moments are
+ *             given in local frame, and the description of the local frame is
+ *             given by R for 3 and 4 contacts, the output quantities are given
+ *             in world frame the convention for the output is the following
+ *             order : support forces, support moments, internal tensions,
+ *             internal moments the internal tensions are given in the order
+ *             1-2, 1-3, 2-3 in the 3 contact case and 1-2, 1-3, 1-4, 2-3, 2-4,
+ *             3-4 in the 4 contact case.
  *
  * @param      G                      The grasp matrix that is going to be
  *                                    populated
+ * @param      G_inv                  The inverse of the grasp matrix
  * @param      R                      the rotation matrix between the world
  *                                    frame and the frame attached to the object
  *                                    (useful when 2 contacts only)
@@ -829,11 +868,12 @@ Eigen::Matrix3d CrossProductOperator(const Eigen::Vector3d& v);
  * @param[in]  contact_locations      The contact locations
  * @param[in]  constrained_rotations  The constrained rotations
  */
-void graspMatrix(Eigen::MatrixXd& G,
-                 Eigen::Matrix3d& R,
-                 const Eigen::Vector3d center_point,
-                 const std::vector<Eigen::Vector3d>& contact_locations,
-                 const std::vector<int> constrained_rotations);
+void graspMatrix(MatrixXd& G,
+                 MatrixXd& G_inv,
+                 Matrix3d& R,
+                 const Vector3d center_point,
+                 const vector<Vector3d>& contact_locations,
+                 const vector<ContactType> contact_types);
 
 /**
  * @brief      Computes the grasp matrix in the cases where there are 2, 3 or 4
@@ -853,11 +893,12 @@ void graspMatrix(Eigen::MatrixXd& G,
  * @param[in]  contact_locations      The contact locations
  * @param[in]  constrained_rotations  The constrained rotations
  */
-void graspMatrixAtGeometricCenter(Eigen::MatrixXd& G,
-                 Eigen::Matrix3d& R,
-                 Eigen::Vector3d& geometric_center,
-                 const std::vector<Eigen::Vector3d>& contact_locations,
-                 const std::vector<int> constrained_rotations);
+void graspMatrixAtGeometricCenter(MatrixXd& G,
+                 MatrixXd& G_inv,
+                 Matrix3d& R,
+                 Vector3d& geometric_center,
+                 const vector<Vector3d>& contact_locations,
+                 const vector<ContactType> contact_types);
 
 } /* namespace Sai2Model */
 
