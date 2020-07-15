@@ -129,7 +129,7 @@ void Sai2Model::gravityVector(VectorXd& g)
 		MatrixXd Jv = MatrixXd::Zero(3, _dof);
 		CalcPointJacobian(*_rbdl_model, _q, body_id, it_body->mCenterOfMass, Jv, false);
 
-		g += Jv.transpose() * (-mass * gravity);
+		g += Jv.transpose() * _T_world_robot.linear().transpose() * (-mass * gravity);
 	}
 }
 
@@ -151,7 +151,7 @@ void Sai2Model::gravityVector(VectorXd& g,
 		MatrixXd Jv = MatrixXd::Zero(3, _dof);
 		CalcPointJacobian(*_rbdl_model, _q, body_id, it_body->mCenterOfMass, Jv, false);
 
-		g += Jv.transpose() * (-mass * gravity);
+		g += Jv.transpose() * _T_world_robot.linear().transpose() * (-mass * gravity);
 	}
 }
 
@@ -196,7 +196,7 @@ void Sai2Model::modifiedNewtonEuler(VectorXd& u,
 	// ddO_i.setZero();
 	if(consider_gravity)
 	{
-		ddO_i = -_rbdl_model->gravity;
+		ddO_i = - _T_world_robot.linear().transpose() * _rbdl_model->gravity;
 	}
 	else
 	{
