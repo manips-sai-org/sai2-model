@@ -101,6 +101,21 @@ void Sai2Model::updateModel()
 	updateDynamics();
 }
 
+void Sai2Model::updateKinematicsCustom(bool update_frame,
+                                bool update_link_velocities,
+                                bool update_link_acceleration, //this does not apply gravity
+                                bool use_ddq)
+{
+	VectorXd* Q_set = update_frame? &_q : NULL;
+	VectorXd* dQ_set = update_link_velocities? &_dq : NULL;
+	VectorXd* ddQ_set = NULL;
+	VectorXd zero_ddq = VectorXd::Zero(_dof);
+	if(update_link_acceleration) {
+		ddQ_set = use_ddq? &_ddq : &zero_ddq;
+	}
+	UpdateKinematicsCustom(*_rbdl_model, Q_set, dQ_set, ddQ_set);
+}
+
 int Sai2Model::dof()
 {
 	return _dof;

@@ -97,6 +97,20 @@ public:
     void updateModel();
 
     /**
+     * @brief      update the kinematics.
+     * @param      update_frame     Whether frame locations should be updated
+     * @param      update_link_velocities Whether link linear/angular velocities should
+     *                                      be updated
+     * @param      update_link_acceleration Whether link linear/angular accelerations
+     *                                      should be updated
+     * @param      use_ddq Whether link accelerations should include J*ddq terms or not
+     */
+    void updateKinematicsCustom(bool update_frame=true,
+                                bool update_link_velocities=true,
+                                bool update_link_acceleration=true, //this does not apply gravity
+                                bool use_ddq=true);
+
+    /**
      * @brief      returns the number of degrees of freedom of the robot
      *
      * @return     number of dof of robot
@@ -301,6 +315,17 @@ public:
                             const string link_name,
                             const Vector3d& pos_in_link = Vector3d::Zero());
 
+    /*
+    *Note: Acceleration computations are very sensitive to frames
+    * being correct. So it is safer to call UpdateKinematics before
+    * calling these, unless these are called right after a simulator
+    * integrator state.
+    *Note: If these functions are called after calling NonLinearEffects()
+    * or other dynamics functions, returned accelerations can include
+    * acceleration due to gravity. If this is not desired, first call
+    * updateKinematicsCustom(false, false, true, true) which recomputes just the
+    * link accelerations in the rbdl model.
+    */
     void acceleration6d(VectorXd& vel6d,
                             const string link_name,
                             const Vector3d& pos_in_link = Vector3d::Zero());
@@ -351,6 +376,10 @@ public:
      *             being correct. So it is safer to call UpdateKinematics before
      *             calling this, unless this is called right after a simulator
      *             integrator state.
+     *             Note: If this function is called after calling NonLinearEffects()
+     *              or other dynamics functions, returned accelerations can include
+     *              acceleration due to gravity. If this is not desired, first call
+     *              updateKinematicsCustom(false, false, true, true)
      *
      * @param      accel        Vector of accelerations to which the result is
      *                          written
