@@ -347,6 +347,10 @@ public:
     /**
      * @brief      Acceleration of point in link, in base coordinates (defalut)
      *             or world coordinates
+     *             Note: Acceleration computations are very sensitive to frames
+     *             being correct. So it is safer to call UpdateKinematics before
+     *             calling this, unless this is called right after a simulator
+     *             integrator state.
      *
      * @param      accel        Vector of accelerations to which the result is
      *                          written
@@ -399,6 +403,10 @@ public:
      * @brief      Angular Acceleration of a link (possibly a local frame
      *             expressed in link frame) with respect to base frame (default)
      *             or world frame
+     *             Note: Acceleration computations are very sensitive to frames
+     *             being correct. So it is safer to call UpdateKinematics before
+     *             calling this, unless this is called right after a simulator
+     *             integrator state.
      *
      * @param      aaccel       Vector to which the result is written
      * @param      link_name    name of the link for which to compute the
