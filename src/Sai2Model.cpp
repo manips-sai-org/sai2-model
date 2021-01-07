@@ -51,7 +51,7 @@ Sai2Model::Sai2Model (const string path_to_model_file,
 
     _q.setZero(_q_size);
     // special case handle spherical joints. See rbdl/Joint class for details.
-    for (uint i = 0; i < _joint_names_map.size(); ++i) {
+    for (uint i = 0; i < _rbdl_model->mJoints.size(); ++i) {
     	if (_rbdl_model->mJoints[i].mJointType == RigidBodyDynamics::JointTypeSpherical) {
     		_rbdl_model->SetQuaternion(i, RigidBodyDynamics::Math::Quaternion(), _q);
     	}
@@ -99,6 +99,21 @@ void Sai2Model::updateModel()
 {
 	updateKinematics();
 	updateDynamics();
+}
+
+void Sai2Model::updateKinematicsCustom(bool update_frame,
+                                bool update_link_velocities,
+                                bool update_link_acceleration, //this does not apply gravity
+                                bool use_ddq)
+{
+	VectorXd* Q_set = update_frame? &_q : NULL;
+	VectorXd* dQ_set = update_link_velocities? &_dq : NULL;
+	VectorXd* ddQ_set = NULL;
+	VectorXd zero_ddq = VectorXd::Zero(_dof);
+	if(update_link_acceleration) {
+		ddQ_set = use_ddq? &_ddq : &zero_ddq;
+	}
+	UpdateKinematicsCustom(*_rbdl_model, Q_set, dQ_set, ddQ_set);
 }
 
 int Sai2Model::dof()
