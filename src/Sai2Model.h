@@ -474,6 +474,9 @@ public:
      */
     void comJacobian(MatrixXd& Jv_com);
 
+    void URangeJacobian(MatrixXd& URange, const MatrixXd& J, const MatrixXd& N, const double tolerance = 1e-3);
+    void URangeJacobian(MatrixXd& URange, const MatrixXd& J, const double tolerance = 1e-3);
+
     /**
      * @brief      Computes the operational space matrix corresponding to a
      *             given Jacobian

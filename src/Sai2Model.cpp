@@ -850,6 +850,66 @@ void Sai2Model::comJacobian(MatrixXd& Jv_com) {
 	Jv_com = Jv_com/robot_mass;
 }
 
+
+
+void Sai2Model::URangeJacobian(MatrixXd& URange, const MatrixXd& task_jacobian, const MatrixXd& N_prec, const double tolerance)
+{
+
+	// check matrices dimmnsions
+	if(N_prec.rows() != N_prec.cols() || N_prec.rows() != _dof)
+	{
+		throw invalid_argument("N_prec matrix dimensions inconsistent in Sai2Model::nullspaceMatrix");
+		return;
+	}
+	else if(task_jacobian.cols() != _dof)
+	{
+		throw invalid_argument("jacobian matrix dimensions inconsistent with model dof in Sai2Model::nullspaceMatrix");
+		return;
+	}
+
+	const int task_size = task_jacobian.rows();
+
+	JacobiSVD<MatrixXd> svd(task_jacobian * N_prec, ComputeThinU | ComputeThinV);
+
+	double sigma_0 = svd.singularValues()(0);
+	if(sigma_0 < tolerance)
+	{
+		URange = MatrixXd::Zero(task_size,1);
+		return;
+	}
+
+	int task_dof = task_size;
+	for(int i=svd.singularValues().size()-1 ; i>0 ; i--)
+	{
+		if(svd.singularValues()(i)/sigma_0 < tolerance)
+		{
+			task_dof -= 1;
+		}
+		else
+		{
+			break;
+		}
+	}
+
+	if(task_dof == task_size)
+	{
+		URange = MatrixXd::Identity(task_size, task_size);
+	}
+	else
+	{
+		URange = svd.matrixU().leftCols(task_dof);
+	}
+}
+
+
+void Sai2Model::URangeJacobian(MatrixXd& URange, const MatrixXd& task_jacobian, const double tolerance)
+{
+	MatrixXd N_prec = MatrixXd::Zero(_dof, _dof);
+	URangeJacobian(URange, task_jacobian, N_prec, tolerance);
+}
+
+
+
 // TODO : Untested
 void Sai2Model::taskInertiaMatrix(MatrixXd& Lambda,
     					   const MatrixXd& task_jacobian)
@@ -1555,6 +1615,10 @@ void orientationError(Vector3d& delta_phi,
 	Matrix3d Q2 = current_orientation*current_orientation.transpose() - Matrix3d::Identity();
 	if(Q1.norm() > 0.0001 || Q2.norm() > 0.0001)
 	{
+		cout << "des orientation:\n" << desired_orientation << endl;
+		cout << "cur orientation:\n" << current_orientation << endl;
+		cout << "Q1: " << Q1.norm() << endl;
+		cout << "Q2: " << Q2.norm() << endl;
 		throw invalid_argument("Invalid rotation matrices in Sai2Model::orientationError");
 		return;
 	}
