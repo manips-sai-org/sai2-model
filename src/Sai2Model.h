@@ -76,12 +76,12 @@ public:
 
 
     /**
-     * @brief      update the kinematics.
+     * @brief      update the kinematics for the current robot configuration.
      */
     void updateKinematics();
 
     /**
-     * @brief      update the dynamics.
+     * @brief      update the dynamics for the current robot configuration.
      */
     void updateDynamics();
 
@@ -91,24 +91,24 @@ public:
     void updateInverseInertia();
 
     /**
-     * @brief      update the kinematics and dynamics. Effectively calls
+     * @brief      update the kinematics and dynamics for the current robot configuration. Effectively calls
      *             updateKinematics and updateDynamics
      */
     void updateModel();
 
-    /**
-     * @brief      update the kinematics.
-     * @param      update_frame     Whether frame locations should be updated
-     * @param      update_link_velocities Whether link linear/angular velocities should
-     *                                      be updated
-     * @param      update_link_acceleration Whether link linear/angular accelerations
-     *                                      should be updated
-     * @param      use_ddq Whether link accelerations should include J*ddq terms or not
-     */
-    void updateKinematicsCustom(bool update_frame=true,
-                                bool update_link_velocities=true,
-                                bool update_link_acceleration=true, //this does not apply gravity
-                                bool use_ddq=true);
+    // *
+    //  * @brief      update the kinematics.
+    //  * @param      update_frame     Whether frame locations should be updated
+    //  * @param      update_link_velocities Whether link linear/angular velocities should
+    //  *                                      be updated
+    //  * @param      update_link_acceleration Whether link linear/angular accelerations
+    //  *                                      should be updated
+    //  * @param      use_ddq Whether link accelerations should include J*ddq terms or not
+     
+    // void updateKinematicsCustom(bool update_frame=true,
+    //                             bool update_link_velocities=true,
+    //                             bool update_link_acceleration=true, //this does not apply gravity
+    //                             bool use_ddq=true);
 
     /**
      * @brief      returns the number of degrees of freedom of the robot
@@ -187,6 +187,12 @@ public:
                                 const VectorXd& dq,
                                 const VectorXd& dqa,
                                 const VectorXd& ddq);
+
+    /**
+     * @brief      Computes the matrix C such that the coriolis and centrifucal forces can be expressed b = C q_dot
+     *
+     * @param      C     return matrix
+     */
     void factorizedChristoffelMatrix(MatrixXd& C);
 
     /**
