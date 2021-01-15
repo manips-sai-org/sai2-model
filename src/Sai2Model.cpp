@@ -144,7 +144,7 @@ void Sai2Model::gravityVector(VectorXd& g)
 		MatrixXd Jv = MatrixXd::Zero(3, _dof);
 		CalcPointJacobian(*_rbdl_model, _q, body_id, it_body->mCenterOfMass, Jv, false);
 
-		g += Jv.transpose() * (-mass * gravity);
+		g += Jv.transpose() * _T_world_robot.linear().transpose() * (-mass * gravity);
 	}
 }
 
@@ -166,7 +166,7 @@ void Sai2Model::gravityVector(VectorXd& g,
 		MatrixXd Jv = MatrixXd::Zero(3, _dof);
 		CalcPointJacobian(*_rbdl_model, _q, body_id, it_body->mCenterOfMass, Jv, false);
 
-		g += Jv.transpose() * (-mass * gravity);
+		g += Jv.transpose() * _T_world_robot.linear().transpose() * (-mass * gravity);
 	}
 }
 
@@ -211,7 +211,7 @@ void Sai2Model::modifiedNewtonEuler(VectorXd& u,
 	// ddO_i.setZero();
 	if(consider_gravity)
 	{
-		ddO_i = -_rbdl_model->gravity;
+		ddO_i = - _T_world_robot.linear().transpose() * _rbdl_model->gravity;
 	}
 	else
 	{
@@ -1097,6 +1097,24 @@ void Sai2Model::deleteEnvironmentalContact(const string link_name)
 	_environmental_contacts = new_contacts;
 }
 
+void Sai2Model::updateEnvironmentalContact(const string link, 
+                const Vector3d pos_in_link,
+                const Matrix3d orientation,
+                const ContactType contact_type)
+{
+	for(vector<ContactModel>::iterator it = _environmental_contacts.begin(); it!=_environmental_contacts.end(); ++it)
+	{
+		if(it->_link_name == link)
+		{
+			it->_contact_position = pos_in_link;
+			it->_contact_orientation = orientation;
+			it->_contact_type = contact_type;
+			return;
+		}
+	}
+	throw invalid_argument("Environmental contact on link " + link + " does not exist in Sai2Model::updateEnvironmentalContact()");
+}
+
 void Sai2Model::addManipulationContact(const string link, 
                 const Vector3d pos_in_link,
                 const Matrix3d orientation,
@@ -1195,6 +1213,13 @@ void Sai2Model::manipulationGraspMatrixLocalContactForces(MatrixXd& G,
 		{
 			G.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
 			G_inv.block(3*(n+k_tmp), 0, 3, 3*(n+k)) = R_tmp.transpose() * G_inv.block(3*(n+k_tmp), 0, 3, 3*(n+k));
+
+			if(n > 2)
+			{
+				G.block(3*(n+k_tmp), 0, 3, 3*(n+k)) = R_tmp.transpose() * G.block(3*(n+k_tmp), 0, 3, 3*(n+k));
+				G_inv.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G_inv.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
+			}
+
 			k_tmp++;
 		}
 	}
@@ -1237,6 +1262,13 @@ void Sai2Model::manipulationGraspMatrixLocalContactForcesToWorld(MatrixXd& G,
 		{
 			G.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
 			G_inv.block(3*(n+k_tmp), 0, 3, 3*(n+k)) = R_tmp.transpose() * G_inv.block(3*(n+k_tmp), 0, 3, 3*(n+k));
+
+			if(n > 2)
+			{
+				G.block(3*(n+k_tmp), 0, 3, 3*(n+k)) = R_tmp.transpose() * G.block(3*(n+k_tmp), 0, 3, 3*(n+k));
+				G_inv.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G_inv.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
+			}
+
 			k_tmp++;
 		}
 	}	
@@ -1314,6 +1346,13 @@ void Sai2Model::manipulationGraspMatrixAtGeometricCenterLocalContactForces(Matri
 		{
 			G.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
 			G_inv.block(3*(n+k_tmp), 0, 3, 3*(n+k)) = R_tmp.transpose() * G_inv.block(3*(n+k_tmp), 0, 3, 3*(n+k));
+
+			if(n > 2)
+			{
+				G.block(3*(n+k_tmp), 0, 3, 3*(n+k)) = R_tmp.transpose() * G.block(3*(n+k_tmp), 0, 3, 3*(n+k));
+				G_inv.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G_inv.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
+			}
+
 			k_tmp++;
 		}
 	}
@@ -1356,6 +1395,13 @@ void Sai2Model::manipulationGraspMatrixAtGeometricCenterLocalContactForcesToWorl
 		{
 			G.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
 			G_inv.block(3*(n+k_tmp), 0, 3, 3*(n+k)) = R_tmp.transpose() * G_inv.block(3*(n+k_tmp), 0, 3, 3*(n+k));
+
+			if(n > 2)
+			{
+				G.block(3*(n+k_tmp), 0, 3, 3*(n+k)) = R_tmp.transpose() * G.block(3*(n+k_tmp), 0, 3, 3*(n+k));
+				G_inv.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G_inv.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
+			}
+
 			k_tmp++;
 		}
 	}
@@ -1432,6 +1478,13 @@ void Sai2Model::environmentalGraspMatrixLocalContactForces(MatrixXd& G,
 		{
 			G.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
 			G_inv.block(3*(n+k_tmp), 0, 3, 3*(n+k)) = R_tmp.transpose() * G_inv.block(3*(n+k_tmp), 0, 3, 3*(n+k));
+
+			if(n > 2)
+			{
+				G.block(3*(n+k_tmp), 0, 3, 3*(n+k)) = R_tmp.transpose() * G.block(3*(n+k_tmp), 0, 3, 3*(n+k));
+				G_inv.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G_inv.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
+			}
+
 			k_tmp++;
 		}
 	}
@@ -1474,6 +1527,13 @@ void Sai2Model::environmentalGraspMatrixLocalContactForcesToWorld(MatrixXd& G,
 		{
 			G.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
 			G_inv.block(3*(n+k_tmp), 0, 3, 3*(n+k)) = R_tmp.transpose() * G_inv.block(3*(n+k_tmp), 0, 3, 3*(n+k));
+
+			if(n > 2)
+			{
+				G.block(3*(n+k_tmp), 0, 3, 3*(n+k)) = R_tmp.transpose() * G.block(3*(n+k_tmp), 0, 3, 3*(n+k));
+				G_inv.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G_inv.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
+			}
+
 			k_tmp++;
 		}
 	}
@@ -1512,6 +1572,7 @@ void Sai2Model::environmentalGraspMatrixAtGeometricCenterInWorld(MatrixXd& G,
 	graspMatrixAtGeometricCenter(G , G_inv , R , geometric_center , contact_locations, contact_types);
 
 }
+
 void Sai2Model::environmentalGraspMatrixAtGeometricCenterLocalContactForces(MatrixXd& G,
                  MatrixXd& G_inv,
                  Matrix3d& R,
@@ -1551,6 +1612,13 @@ void Sai2Model::environmentalGraspMatrixAtGeometricCenterLocalContactForces(Matr
 		{
 			G.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
 			G_inv.block(3*(n+k_tmp), 0, 3, 3*(n+k)) = R_tmp.transpose() * G_inv.block(3*(n+k_tmp), 0, 3, 3*(n+k));
+
+			if(n > 2)
+			{
+				G.block(3*(n+k_tmp), 0, 3, 3*(n+k)) = R_tmp.transpose() * G.block(3*(n+k_tmp), 0, 3, 3*(n+k));
+				G_inv.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G_inv.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
+			}
+
 			k_tmp++;
 		}
 	}
@@ -1593,6 +1661,13 @@ void Sai2Model::environmentalGraspMatrixAtGeometricCenterLocalContactForcesToWor
 		{
 			G.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
 			G_inv.block(3*(n+k_tmp), 0, 3, 3*(n+k)) = R_tmp.transpose() * G_inv.block(3*(n+k_tmp), 0, 3, 3*(n+k));
+
+			if(n > 2)
+			{
+				G.block(3*(n+k_tmp), 0, 3, 3*(n+k)) = R_tmp.transpose() * G.block(3*(n+k_tmp), 0, 3, 3*(n+k));
+				G_inv.block(0, 3*(n+k_tmp), 3*(n+k), 3) = G_inv.block(0, 3*(n+k_tmp), 3*(n+k), 3) * R_tmp;
+			}
+
 			k_tmp++;
 		}
 	}	

@@ -645,6 +645,11 @@ public:
                     const Matrix3d orientation = Matrix3d::Identity(),
                     const ContactType contact_type = ContactType::SurfaceContact);
 
+    void updateEnvironmentalContact(const string link, 
+                    const Vector3d pos_in_link,
+                    const Matrix3d orientation,
+                    const ContactType contact_type);
+
     /**
      * @brief      deletes the contact at a given link
      *
@@ -891,12 +896,12 @@ Matrix3d CrossProductOperator(const Vector3d& v);
 /**
  * @brief      Computes the grasp matrix and its inverse in the cases where
  *             there are 2, 3 or 4 contacts in the _contact member vector. the
- *             external forces and moments are assumed to be in world frame for
+ *             external forces and moments are assumed to be in world frame. For
  *             2 contact points, the output resultant (first 6 lines) is given
  *             in world frame, and the output internal tension and moments are
  *             given in local frame, and the description of the local frame is
- *             given by R for 3 and 4 contacts, the output quantities are given
- *             in world frame the convention for the output is the following
+ *             given by R. For 3 and 4 contacts, the output quantities are given
+ *             in world frame. The convention for the output is the following
  *             order : support forces, support moments, internal tensions,
  *             internal moments the internal tensions are given in the order
  *             1-2, 1-3, 2-3 in the 3 contact case and 1-2, 1-3, 1-4, 2-3, 2-4,
