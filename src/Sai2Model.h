@@ -96,19 +96,19 @@ public:
      */
     void updateModel();
 
-    // *
-    //  * @brief      update the kinematics.
-    //  * @param      update_frame     Whether frame locations should be updated
-    //  * @param      update_link_velocities Whether link linear/angular velocities should
-    //  *                                      be updated
-    //  * @param      update_link_acceleration Whether link linear/angular accelerations
-    //  *                                      should be updated
-    //  * @param      use_ddq Whether link accelerations should include J*ddq terms or not
-     
-    // void updateKinematicsCustom(bool update_frame=true,
-    //                             bool update_link_velocities=true,
-    //                             bool update_link_acceleration=true, //this does not apply gravity
-    //                             bool use_ddq=true);
+    /**
+     * @brief      update the kinematics.
+     * @param      update_frame     Whether frame locations should be updated
+     * @param      update_link_velocities Whether link linear/angular velocities should
+     *                                      be updated
+     * @param      update_link_acceleration Whether link linear/angular accelerations
+     *                                      should be updated
+     * @param      use_ddq Whether link accelerations should include J*ddq terms or not
+     */
+    void updateKinematicsCustom(bool update_frame=true,
+                                bool update_link_velocities=true,
+                                bool update_link_acceleration=true, //this does not apply gravity
+                                bool use_ddq=true);
 
     /**
      * @brief      returns the number of degrees of freedom of the robot
@@ -275,11 +275,36 @@ public:
                     const Matrix3d& rot_in_link = Matrix3d::Identity());
 
 
+    /**
+     * @brief      Computes the inverse kinematics to get the robot
+     *             configuration that matches a set of points on the robot to
+     *             desired positions. Uses the underlying RBDL function based on
+     *             an iterative computation using the damped Levenberg-Marquardt
+     *             method (also known as Damped Least Squares method)
+     *
+     * @param      q_result                                The resulting robot configuration
+     * @param[in]  link_names                              List of links that contain the points to match
+     * @param[in]  point_positions_in_links                List of positions in the links for the points to match
+     * @param[in]  desired_point_positions_in_robot_frame  The desired point positions in robot frame
+     */
     void computeIK3d(VectorXd& q_result, 
                     const vector<string>& link_names,
                     const vector<Vector3d>& point_positions_in_links,
                     const vector<Vector3d>& desired_point_positions_in_robot_frame);
 
+    /**
+     * @brief      Inverse kinematics using a weighted damped Least-Squared
+     *             method and considering joint limits by saturating the joint
+     *             values to their limits in every iteration of the algorithm
+     *
+     * @param      q_result                                Resulting robot configuration
+     * @param[in]  link_names                              The link names for the points to match
+     * @param[in]  point_positions_in_links                The point positions in links
+     * @param[in]  desired_point_positions_in_robot_frame  The desired point positions in robot frame
+     * @param[in]  q_min                                   Lower joint limits
+     * @param[in]  q_max                                   Upper joint limits
+     * @param[in]  weights                                 The weights
+     */
     void computeIK3d_JL(VectorXd& q_result, 
                     const vector<string>& link_names,
                     const vector<Vector3d>& point_positions_in_links,
@@ -289,6 +314,16 @@ public:
                     const VectorXd weights
                     );
 
+    /**
+     * @brief      Inverse kinematics that matches frames in the robot to
+     *             desired configurations (instead of just points) using the
+     *             damped least-squared method
+     *
+     * @param      q_result                                Resulting robot configuration
+     * @param[in]  link_names                              The link names for the frames to match
+     * @param[in]  frame_in_links                          The frames to match expressed in link frame
+     * @param[in]  desired_frame_locations_in_robot_frame  The desired frame locations in robot frame
+     */
     void computeIK6d(VectorXd& q_result, 
                     const vector<string>& link_names,
                     const vector<Affine3d>& frame_in_links,
@@ -517,6 +552,19 @@ public:
      */
     void comJacobian(MatrixXd& Jv_com);
 
+    /**
+     * @brief      Computes the range space of the Jacobian (potentially
+     *             constrained to the nullspace of previous tasks) where the
+     *             singular directions have been removed. The computed URange
+     *             matrix is a matrix whose columns corresponds to the
+     *             directions of the jacobian associated with the singular
+     *             values of magnitude higher than than the tolerance
+     *
+     * @param      URange     Return matrix U
+     * @param[in]  J          The jacobian
+     * @param[in]  N          The Nullspace of the previous tasks
+     * @param[in]  tolerance  The tolerance
+     */
     void URangeJacobian(MatrixXd& URange, const MatrixXd& J, const MatrixXd& N, const double tolerance = 1e-3);
     void URangeJacobian(MatrixXd& URange, const MatrixXd& J, const double tolerance = 1e-3);
 
@@ -620,7 +668,7 @@ public:
 
 
     /**
-     @brief      Adds an environmental contact to the desired link at the
+     @brief      Adds an environmental (or manipulation) contact to the desired link at the
                  desired contact frame. There can only be one contact per link
     
      @param[in]  link               link at which the contact happens
@@ -645,7 +693,20 @@ public:
                     const Matrix3d orientation = Matrix3d::Identity(),
                     const ContactType contact_type = ContactType::SurfaceContact);
 
+    /**
+     * @brief      Updates the environmental (or manipulation) contact frame or
+     *             type at the given link
+     *
+     * @param[in]  link          The link
+     * @param[in]  pos_in_link   The position in link
+     * @param[in]  orientation   The orientation
+     * @param[in]  contact_type  The contact type
+     */
     void updateEnvironmentalContact(const string link, 
+                    const Vector3d pos_in_link,
+                    const Matrix3d orientation,
+                    const ContactType contact_type);
+    void updateManipulationContact(const string link, 
                     const Vector3d pos_in_link,
                     const Matrix3d orientation,
                     const ContactType contact_type);
@@ -657,18 +718,6 @@ public:
      */
     void deleteEnvironmentalContact(const string link_name);
     void deleteManipulationContact(const string link_name);
-
-    // /**
-    //  * @brief      Sets an environmental contact as passive or active (full
-    //  *             contact or just a certain direction) directions are 
-    //  *             0-fx | 1-fy | 2-fz | 3-mx | 4-my | 5-mz
-    //  *
-    //  * @param[in]  link_name  The link at which the contact is
-    //  */
-    // void setPassiveEnvironmentalContact(const string link_name);
-    // void setPassiveEnvironmentalContact(const string link_name, const int direction);
-    // void setActiveEnvironmentalContact(const string link_name);
-    // void setActiveEnvironmentalContact(const string link_name, const int direction);
 
     /**
      * @brief      Computes the manipulation grasp matrix that converts contact
@@ -830,23 +879,6 @@ public:
     /// \brief List of active contacts between robot end effectors and manipulated objects
     vector<ContactModel> _manipulation_contacts;
 
-public:
-    ///
-    /// @brief      compute the cross product operator of a 3d vector
-    ///
-    /// @param[in]  v     the vector
-    ///
-    /// @return     the associated 3d anti-symmetric matrix
-    ///
-    static Matrix3d CrossProductOperator(const Vector3d& v)
-    {
-        Matrix3d v_hat;
-        v_hat << 0, -v(2), v(1),
-                v(2), 0, -v(0),
-                -v(1), v(0), 0;
-        return v_hat;
-    }
-
     /// \brief number of Dof of robot
     int _dof;
 
@@ -895,28 +927,28 @@ Matrix3d CrossProductOperator(const Vector3d& v);
 
 /**
  * @brief      Computes the grasp matrix and its inverse in the cases where
- *             there are 2, 3 or 4 contacts in the _contact member vector. the
- *             external forces and moments are assumed to be in world frame. For
- *             2 contact points, the output resultant (first 6 lines) is given
- *             in world frame, and the output internal tension and moments are
- *             given in local frame, and the description of the local frame is
- *             given by R. For 3 and 4 contacts, the output quantities are given
- *             in world frame. The convention for the output is the following
- *             order : support forces, support moments, internal tensions,
- *             internal moments the internal tensions are given in the order
- *             1-2, 1-3, 2-3 in the 3 contact case and 1-2, 1-3, 1-4, 2-3, 2-4,
- *             3-4 in the 4 contact case.
+ *             there are 2, 3 or 4 contacts. the external forces and moments are
+ *             assumed to be in world frame. For 2 contact points, the output
+ *             resultant (first 6 lines) is given in world frame, and the output
+ *             internal tension and moments are given in local frame, and the
+ *             description of the local frame is given by R. For 3 and 4
+ *             contacts, the output quantities are given in world frame. The
+ *             convention for the output is the following order : support
+ *             forces, support moments, internal tensions, internal moments the
+ *             internal tensions are given in the order 1-2, 1-3, 2-3 in the 3
+ *             contact case and 1-2, 1-3, 1-4, 2-3, 2-4, 3-4 in the 4 contact
+ *             case. Line contacts are not yet supported.
  *
- * @param      G                      The grasp matrix that is going to be
- *                                    populated
- * @param      G_inv                  The inverse of the grasp matrix
- * @param      R                      the rotation matrix between the world
- *                                    frame and the frame attached to the object
- *                                    (useful when 2 contacts only)
- * @param      center_point           The position (in world frame) of the point
- *                                    on which we resolve the resultant forces
- *                                    and moments
- * @param[in]  contact_locations      The contact locations
+ * @param      G                  The grasp matrix that is going to be populated
+ * @param      G_inv              The inverse of the grasp matrix
+ * @param      R                  the rotation matrix between the world frame
+ *                                and the frame attached to the object (useful
+ *                                when 2 contacts only)
+ * @param      center_point       The position (in world frame) of the point on
+ *                                which we resolve the resultant forces and
+ *                                moments
+ * @param[in]  contact_locations  The contact locations
+ * @param[in]  contact_types      The contact types
  * @param[in]  constrained_rotations  The constrained rotations
  */
 void graspMatrix(MatrixXd& G,

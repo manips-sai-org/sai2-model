@@ -101,20 +101,20 @@ void Sai2Model::updateModel()
 	updateDynamics();
 }
 
-// void Sai2Model::updateKinematicsCustom(bool update_frame,
-//                                 bool update_link_velocities,
-//                                 bool update_link_acceleration, //this does not apply gravity
-//                                 bool use_ddq)
-// {
-// 	VectorXd* Q_set = update_frame? &_q : NULL;
-// 	VectorXd* dQ_set = update_link_velocities? &_dq : NULL;
-// 	VectorXd* ddQ_set = NULL;
-// 	VectorXd zero_ddq = VectorXd::Zero(_dof);
-// 	if(update_link_acceleration) {
-// 		ddQ_set = use_ddq? &_ddq : &zero_ddq;
-// 	}
-// 	UpdateKinematicsCustom(*_rbdl_model, Q_set, dQ_set, ddQ_set);
-// }
+void Sai2Model::updateKinematicsCustom(bool update_frame,
+                                bool update_link_velocities,
+                                bool update_link_acceleration, //this does not apply gravity
+                                bool use_ddq)
+{
+	VectorXd* Q_set = update_frame? &_q : NULL;
+	VectorXd* dQ_set = update_link_velocities? &_dq : NULL;
+	VectorXd* ddQ_set = NULL;
+	VectorXd zero_ddq = VectorXd::Zero(_dof);
+	if(update_link_acceleration) {
+		ddQ_set = use_ddq? &_ddq : &zero_ddq;
+	}
+	UpdateKinematicsCustom(*_rbdl_model, Q_set, dQ_set, ddQ_set);
+}
 
 int Sai2Model::dof()
 {
@@ -365,31 +365,18 @@ void Sai2Model::modifiedNewtonEuler(VectorXd& u,
 
 void Sai2Model::factorizedChristoffelMatrix(MatrixXd& C)
 {
-	// check matrix have the right size
-	if(C.rows() != C.cols())
-	{
-		throw invalid_argument("C matrix not square in Sai2Model::factorizedChristoffelMatrix");
-		return;
-	}
-	else if(C.cols() != _dof)
-	{
-		throw invalid_argument("C matrix size inconsistent with DOF of robot model in Sai2Model::factorizedChristoffelMatrix");
-		return;
-	}
-	// compute task inertia
-	else
-	{
-		VectorXd vi = VectorXd::Zero(_dof);
-		VectorXd u = VectorXd::Zero(_dof);
+	C.setZero(_dof, _dof);
 
-		for(int i=0; i<_dof; i++)
-		{
-			vi.setZero();
-			u.setZero();
-			vi(i) = 1;
-			modifiedNewtonEuler(u, false, _q, _dq, vi, VectorXd::Zero(_dof));
-			C.col(i) = u;
-		}
+	VectorXd vi = VectorXd::Zero(_dof);
+	VectorXd u = VectorXd::Zero(_dof);
+
+	for(int i=0; i<_dof; i++)
+	{
+		vi.setZero();
+		u.setZero();
+		vi(i) = 1;
+		modifiedNewtonEuler(u, false, _q, _dq, vi, VectorXd::Zero(_dof));
+		C.col(i) = u;
 	}
 }
 
@@ -549,7 +536,7 @@ void Sai2Model::computeIK3d(VectorXd& q_result,
 		target_pos.push_back(desired_point_positions_in_robot_frame[i]);
 	}
 
-	InverseKinematics(*_rbdl_model, _q, link_ids, body_point, target_pos, q_result);   // ends up modifying the internal model so we need to re update the kinematics with the previous q value to keep it unchanged
+	InverseKinematics(*_rbdl_model, _q, link_ids, body_point, target_pos, q_result);   // modifies the internal model so we need to re update the kinematics with the previous q value to keep it unchanged
 	updateKinematics();
 }
 
@@ -577,7 +564,7 @@ void Sai2Model::computeIK3d_JL(VectorXd& q_result,
 		target_pos.push_back(desired_point_positions_in_robot_frame[i]);
 	}
 
-	InverseKinematics_JL(*_rbdl_model, _q, q_min, q_max, weights, link_ids, body_point, target_pos, q_result, 1.0e-12, 0.0001, 500);   // ends up modifying the internal model so we need to re update the kinematics with the previous q value to keep it unchanged
+	InverseKinematics_JL(*_rbdl_model, _q, q_min, q_max, weights, link_ids, body_point, target_pos, q_result, 1.0e-12, 0.0001, 500);   // modifies the internal model so we need to re update the kinematics with the previous q value to keep it unchanged
 	updateKinematics();
 }
 
@@ -609,7 +596,7 @@ void Sai2Model::computeIK6d(VectorXd& q_result,
 		desired_point_pos.push_back(desired_frame_locations_in_robot_frame[i]*Vector3d::UnitY());
 	}
 
-	InverseKinematics(*_rbdl_model, _q, link_ids, point_pos, desired_point_pos, q_result);  // ends up modifying the internal model so we need to re update the kinematics with the previous q value to keep it unchanged
+	InverseKinematics(*_rbdl_model, _q, link_ids, point_pos, desired_point_pos, q_result);  // modifies the internal model so we need to re update the kinematics with the previous q value to keep it unchanged
 	updateKinematics();
 }
 
@@ -919,13 +906,11 @@ void Sai2Model::URangeJacobian(MatrixXd& URange, const MatrixXd& task_jacobian, 
 
 void Sai2Model::URangeJacobian(MatrixXd& URange, const MatrixXd& task_jacobian, const double tolerance)
 {
-	MatrixXd N_prec = MatrixXd::Zero(_dof, _dof);
+	MatrixXd N_prec = MatrixXd::Identity(_dof, _dof);
 	URangeJacobian(URange, task_jacobian, N_prec, tolerance);
 }
 
 
-
-// TODO : Untested
 void Sai2Model::taskInertiaMatrix(MatrixXd& Lambda,
     					   const MatrixXd& task_jacobian)
 {
@@ -945,7 +930,6 @@ void Sai2Model::taskInertiaMatrix(MatrixXd& Lambda,
 	Lambda = inv_inertia.llt().solve(MatrixXd::Identity(k,k));
 }
 
-// TODO : Untested
 void Sai2Model::taskInertiaMatrixWithPseudoInv(MatrixXd& Lambda,
     					   const MatrixXd& task_jacobian)
 {
@@ -971,7 +955,6 @@ void Sai2Model::taskInertiaMatrixWithPseudoInv(MatrixXd& Lambda,
 	Lambda = svd.matrixV() * (svd.singularValues().array().abs() > tolerance).select(svd.singularValues().array().inverse(), 0).matrix().asDiagonal() * svd.matrixU().adjoint();
 }
 
-//TODO : Untested
 void Sai2Model::dynConsistentInverseJacobian(MatrixXd& Jbar,
 									const MatrixXd& task_jacobian)
 {
@@ -998,7 +981,6 @@ void Sai2Model::nullspaceMatrix(MatrixXd& N,
 	nullspaceMatrix(N,task_jacobian,N_prec);
 }
 
-//TODO :: Untested
 void Sai2Model::nullspaceMatrix(MatrixXd& N,
     					 const MatrixXd& task_jacobian,
     					 const MatrixXd& N_prec)
@@ -1024,7 +1006,6 @@ void Sai2Model::nullspaceMatrix(MatrixXd& N,
 	N = N*N_prec;
 }
 
-// TODO : Untested
 void Sai2Model::operationalSpaceMatrices(MatrixXd& Lambda, MatrixXd& Jbar, MatrixXd& N,
                                     const MatrixXd& task_jacobian)
 {
@@ -1032,7 +1013,6 @@ void Sai2Model::operationalSpaceMatrices(MatrixXd& Lambda, MatrixXd& Jbar, Matri
 	operationalSpaceMatrices(Lambda,Jbar,N,task_jacobian,N_prec);
 }
 
-// TODO : Untested
 void Sai2Model::operationalSpaceMatrices(MatrixXd& Lambda, MatrixXd& Jbar, MatrixXd& N,
                                     const MatrixXd& task_jacobian,
                                     const MatrixXd& N_prec)
@@ -1112,8 +1092,9 @@ void Sai2Model::updateEnvironmentalContact(const string link,
 			return;
 		}
 	}
-	throw invalid_argument("Environmental contact on link " + link + " does not exist in Sai2Model::updateEnvironmentalContact()");
+	throw invalid_argument("Environmental contact on link " + link + " does not exist in Sai2Model::updateManipulationContact()");
 }
+
 
 void Sai2Model::addManipulationContact(const string link, 
                 const Vector3d pos_in_link,
@@ -1141,6 +1122,24 @@ void Sai2Model::deleteManipulationContact(const string link_name)
 		}
 	}
 	_manipulation_contacts = new_contacts;
+}
+
+void Sai2Model::updateManipulationContact(const string link, 
+                const Vector3d pos_in_link,
+                const Matrix3d orientation,
+                const ContactType contact_type)
+{
+	for(vector<ContactModel>::iterator it = _manipulation_contacts.begin(); it!=_manipulation_contacts.end(); ++it)
+	{
+		if(it->_link_name == link)
+		{
+			it->_contact_position = pos_in_link;
+			it->_contact_orientation = orientation;
+			it->_contact_type = contact_type;
+			return;
+		}
+	}
+	throw invalid_argument("Environmental contact on link " + link + " does not exist in Sai2Model::updateManipulationContact()");
 }
 
 void Sai2Model::manipulationGraspMatrix(MatrixXd& G,
@@ -1695,7 +1694,6 @@ void Sai2Model::displayLinks()
 }
 
 
-// TODO : Untested
 void orientationError(Vector3d& delta_phi,
 		              const Matrix3d& desired_orientation,
 		              const Matrix3d& current_orientation)
