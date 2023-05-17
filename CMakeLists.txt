@@ -30,6 +30,8 @@ set(RBDL_INCLUDE_DIR ${RBDL_LOCAL_DIR}/include ${RBDL_LOCAL_DIR}/build/include)
 # include sai2-URDF
 find_package(SAI2-URDF REQUIRED)
 
+MESSAGE(STATUS "\n\n\nsai2 urdfreader include dirs: ${SAI2-URDF_INCLUDE_DIRS}\n\n\n")
+
 # include Parser
 SET(PARSER_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/src/parser)
 SET(PARSER_SOURCE ${PROJECT_SOURCE_DIR}/src/parser/UrdfToSai2Model.cpp)

@@ -1,0 +1,52 @@
+name: Build and Archive
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    # - name: Download Sai2-urdfreader Artifact
+    #   uses: actions/download-artifact@v2
+    #   with:
+    #     name: sai2-urdfreader-artifact
+    # Download artifacts from the sai2-urdfreader repository
+    - name: Download Sai2-urdfreader
+      run: |
+        cd ..
+        sudo apt-get install libtinyxml2-dev
+        git clone https://github.com/manips-sai-org/sai2-urdfreader.git
+        cd  sai2-urdfreader
+        mkdir build && cd build && cmake ..
+        curl -L \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.TEST_TOKEN }}"\
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/repos/manips-sai-org/sai2-urdfreader/actions/artifacts/702922724/zip --output lib.zip
+        unzip lib.zip
+        cd ../../sai2-model
+
+    - name: Build
+      run: |
+        sudo apt-get install libeigen3-dev
+        cd rbdl && mkdir build && cd build
+        cmake -DRBDL_BUILD_ADDON_URDFREADER=ON -DCMAKE_BUILD_TYPE=Release .. && make -j8
+        cd ../..
+        mkdir build && cd build
+        ls ../../sai2-urdfreader
+        export CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:../../sai2-urdfreader/build/
+        cmake .. && make -j8
+    
+    # - name: Archive Sai2-model Artifact
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: sai2-model-artifact
+    #     path: build/
+
