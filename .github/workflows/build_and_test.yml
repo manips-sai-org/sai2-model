@@ -13,36 +13,44 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    # - name: Download Sai2-urdfreader Artifact
-    #   uses: actions/download-artifact@v2
-    #   with:
-    #     name: sai2-urdfreader-artifact
-    # Download artifacts from the sai2-urdfreader repository
-    - name: Download Sai2-urdfreader
+    - name: Install dependencies
+      run: sudo apt-get install libtinyxml2-dev libeigen3-dev
+
+    - name: Setup Sai2-urdfreader
       run: |
-        cd ..
-        sudo apt-get install libtinyxml2-dev
+        mkdir dep && cd dep
         git clone https://github.com/manips-sai-org/sai2-urdfreader.git
         cd  sai2-urdfreader
         mkdir build && cd build && cmake ..
-        curl -L \
-          -H "Accept: application/vnd.github+json" \
-          -H "Authorization: Bearer ${{ secrets.TEST_TOKEN }}"\
-          -H "X-GitHub-Api-Version: 2022-11-28" \
-          https://api.github.com/repos/manips-sai-org/sai2-urdfreader/actions/artifacts/702922724/zip --output lib.zip
-        unzip lib.zip
-        cd ../../sai2-model
+        # curl -L \
+        #   -H "Accept: application/vnd.github+json" \
+        #   -H "Authorization: Bearer ${{ secrets.TEST_TOKEN }}"\
+        #   -H "X-GitHub-Api-Version: 2022-11-28" \
+        #   https://api.github.com/repos/manips-sai-org/sai2-urdfreader/actions/artifacts/702922724/zip --output lib.zip
+        # unzip lib.zip
+        # cd ../../..
 
-    - name: Build
+    - name: Download Artifact for sai2-urdfreader library
       run: |
-        sudo apt-get install libeigen3-dev
-        cd rbdl && mkdir build && cd build
-        cmake -DRBDL_BUILD_ADDON_URDFREADER=ON -DCMAKE_BUILD_TYPE=Release .. && make -j8
-        cd ../..
-        mkdir build && cd build
-        ls ../../sai2-urdfreader
-        export CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:../../sai2-urdfreader/build/
-        cmake .. && make -j8
+        # Get the latest artifact from the specific branch
+        LATEST_ARTIFACT=$(curl -s -X GET \
+          -H "Authorization: Bearer ${{ secrets.TEST_TOKEN }}" \
+          "https://api.github.com/repos/manips-sai-org/sai2-urdfreader/actions/artifacts?branch=master" \
+          | jq -r '.artifacts[0].id')
+
+        # Download the artifact using the latest artifact ID
+        curl -L \
+          -H "Authorization: Bearer ${{ secrets.TEST_TOKEN }}" \
+          https://api.github.com/repos/manips-sai-org/sai2-urdfreader/actions/artifacts/$LATEST_ARTIFACT/zip --output lib.zip
+
+        unzip lib.zip
+        cd ../../..
+
+
+    - name: Build Sai2-Model
+      run: |
+        export CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:dep/sai2-urdfreader/build/
+        sh install.sh
     
     # - name: Archive Sai2-model Artifact
     #   uses: actions/upload-artifact@v2
