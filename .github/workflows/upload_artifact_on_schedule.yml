@@ -1,0 +1,27 @@
+name: Build master and upload artifact on a schedule
+
+on:
+  schedule:
+    - cron: "0 0 1 * *"
+      branches: [ "master" ]
+  workflow_dispatch:
+
+jobs:
+  call-build-workflow:
+    uses: ./.github/workflows/build_and_test.yml
+    secrets: 
+      token: ${{ secrets.SAI2_TOKEN }}
+
+  upload-artifact:
+    needs: call-build-workflow
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Archive Sai2-model Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: sai2-model-artifact
+        path: |
+          build/libsai2-model.a
+          rbdl/build/librbdl.so.2.5.0
