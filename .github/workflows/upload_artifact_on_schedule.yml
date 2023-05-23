@@ -7,21 +7,26 @@ on:
   workflow_dispatch:
 
 jobs:
-  call-build-workflow:
-    uses: ./.github/workflows/build_and_test.yml
-    secrets: 
-      token: ${{ secrets.SAI2_TOKEN }}
-
-  upload-artifact:
-    needs: call-build-workflow
-
+  build-and-archive:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Archive Sai2-model Artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: sai2-model-artifact
-        path: |
-          build/libsai2-model.a
-          rbdl/build/librbdl.so.2.5.0
+      - name: checkout-repo
+        uses: actions/checkout@v3
+
+      - name: build-repo
+        uses: ./.github/actions/build-repo
+        with: 
+          token: ${{ secrets.SAI2_TOKEN }}
+
+      - name: Copy Libraries to Archive
+        run: |
+          cp build/libsai2-model.a ./libsai2-model.a
+          cp rbdl/build/librbdl.so.2.5.0 ./librbdl.so
+
+      - name: Archive Sai2-model Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: sai2-model-artifact
+          path: |
+            libsai2-model.a
+            librbdl.so

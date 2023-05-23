@@ -1,24 +1,21 @@
-name: Build and Test
+name: 'Build'
+description: 'Builds the repository'
+inputs:
+  token:
+    description: 'token to download artifacts'
+    required: true
 
-on:
-  workflow_call:
-    secrets:
-      token:
-        required: true
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v3
-
+runs:
+  using: "composite"
+  steps:
     - name: Install dependencies library and prepare dependency folder
+      shell: bash
       run: |
         mkdir ../dep
         sudo apt-get install libtinyxml2-dev libeigen3-dev
 
     - name: Setup Sai2-urdfreader
+      shell: bash
       run: |
         # clone repo and run cmake
         cd ../dep
@@ -28,23 +25,25 @@ jobs:
 
         # Get the latest artifact from the master branch
         LATEST_ARTIFACT=$(curl -s -X GET \
-          -H "Authorization: Bearer ${{ secrets.token }}" \
+          -H "Authorization: Bearer ${{ inputs.token }}" \
           https://api.github.com/repos/manips-sai-org/sai2-urdfreader/actions/artifacts?branch=master \
           | jq -r '.artifacts[0].id')
 
         # Download the artifact using the latest artifact ID to get the library
         curl -L \
-          -H "Authorization: Bearer ${{ secrets.token }}" \
+          -H "Authorization: Bearer ${{ inputs.token }}" \
           https://api.github.com/repos/manips-sai-org/sai2-urdfreader/actions/artifacts/${LATEST_ARTIFACT}/zip --output lib.zip
 
         unzip lib.zip
 
     - name: Build Sai2-Model
+      shell: bash
       run: |
         export CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:dep/sai2-urdfreader/build/
         sh install.sh
 
     - name: Check build status
+      shell: bash
       run: |
         cd build
         make --always-make --dry-run

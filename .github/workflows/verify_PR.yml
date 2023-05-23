@@ -7,7 +7,13 @@ on:
     branches: [ "master" ]
 
 jobs:
-  call-build-workflow:
-    uses: ./.github/workflows/build_and_test.yml
-    secrets: 
-      token: ${{ secrets.SAI2_TOKEN }}
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout-repo
+        uses: actions/checkout@v3
+
+      - name: build-repo
+        uses: ./.github/actions/build-repo
+        with: 
+          token: ${{ secrets.SAI2_TOKEN }}
