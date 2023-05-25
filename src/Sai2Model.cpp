@@ -62,8 +62,6 @@ Sai2Model::Sai2Model (const string path_to_model_file,
     _M.setIdentity(_dof,_dof);
     _M_inv.setIdentity(_dof,_dof);
 
-    _world_gravity = world_gravity;
-
 	updateModel();
 }
 
@@ -74,31 +72,44 @@ Sai2Model::~Sai2Model ()
 	_rbdl_model = NULL;
 }
 
+void Sai2Model::set_q(const Eigen::VectorXd& q) {
+	if(q.size() != _q_size) {
+		throw invalid_argument("q size inconsistent in Sai2Model::set_q");
+		return;		
+	}
+	_q = q;
+}
+
+void Sai2Model::set_dq(const Eigen::VectorXd& dq) {
+	if(dq.size() != _q_size) {
+		throw invalid_argument("dq size inconsistent in Sai2Model::set_dq");
+		return;		
+	}
+	_dq = dq;
+}
+
 
 void Sai2Model::updateKinematics()
 {
 	UpdateKinematicsCustom(*_rbdl_model, &_q, &_dq, &_ddq);
 }
 
-
-void Sai2Model::updateDynamics()
-{
-	if (_M.rows()!=_dof|| _M.cols()!=_dof)
-	{_M.setZero(_dof,_dof);}
-
-	CompositeRigidBodyAlgorithm(*_rbdl_model, _q, _M, false);
-	updateInverseInertia();
-}
-
-void Sai2Model::updateInverseInertia()
-{
-	_M_inv = _M.inverse();
-}
-
 void Sai2Model::updateModel()
 {
 	updateKinematics();
 	updateDynamics();
+}
+
+void Sai2Model::updateModel(const Eigen::MatrixXd& M)
+{
+	updateKinematics();
+	
+	if(M.rows() != M.cols() || M.rows() != _dof)
+	{
+		throw invalid_argument("M matrix dimensions inconsistent in Sai2Model::updateModel");
+		return;
+	}	
+	updateInverseInertia();
 }
 
 void Sai2Model::updateKinematicsCustom(bool update_frame,
@@ -126,10 +137,8 @@ int Sai2Model::q_size()
 	return _q_size;
 }
 
-void Sai2Model::gravityVector(VectorXd& g)
+void Sai2Model::jointGravityVector(VectorXd& g)
 {
-	Vector3d gravity = _rbdl_model->gravity;
-
 	if (g.size() != _dof){ g.resize(_dof); }
 	g.setZero();
 
@@ -144,32 +153,9 @@ void Sai2Model::gravityVector(VectorXd& g)
 		MatrixXd Jv = MatrixXd::Zero(3, _dof);
 		CalcPointJacobian(*_rbdl_model, _q, body_id, it_body->mCenterOfMass, Jv, false);
 
-		g += Jv.transpose() * _T_world_robot.linear().transpose() * (-mass * gravity);
+		g += Jv.transpose() * _T_world_robot.linear().transpose() * (-mass * worldGravity());
 	}
 }
-
-void Sai2Model::gravityVector(VectorXd& g,
-	const Vector3d& gravity)
-{
-
-	if (g.size() != _dof){ g.resize(_dof); }
-	g.setZero();
-
-	vector<RigidBodyDynamics::Body>::iterator it_body;
-	int body_id;
-
-	for (it_body = _rbdl_model->mBodies.begin(), body_id=0;
-	it_body != _rbdl_model->mBodies.end();
-	++it_body, ++body_id)
-	{
-		double mass = it_body->mMass;
-		MatrixXd Jv = MatrixXd::Zero(3, _dof);
-		CalcPointJacobian(*_rbdl_model, _q, body_id, it_body->mCenterOfMass, Jv, false);
-
-		g += Jv.transpose() * _T_world_robot.linear().transpose() * (-mass * gravity);
-	}
-}
-
 
 void Sai2Model::coriolisForce(VectorXd& b)
 {
@@ -177,7 +163,7 @@ void Sai2Model::coriolisForce(VectorXd& b)
 	NonlinearEffects(*_rbdl_model,_q,_dq,b);
 
 	VectorXd g = VectorXd::Zero(_dof);
-	gravityVector(g);
+	jointGravityVector(g);
 
 	b -= g;
 }
@@ -185,182 +171,6 @@ void Sai2Model::coriolisForce(VectorXd& b)
 void Sai2Model::coriolisPlusGravity(VectorXd& h)
 {
 	NonlinearEffects(*_rbdl_model,_q,_dq,h);
-}
-
-void Sai2Model::modifiedNewtonEuler(VectorXd& u, 
-								const bool consider_gravity,
-                                const VectorXd& q,
-                                const VectorXd& dq,
-                                const VectorXd& dqa,
-                            	const VectorXd& ddq)
-{
-	u = VectorXd::Zero(_dof);
-
-	// cout << u.transpose() << endl;
-
-	vector<Vector3d> w, wa, dw, ddO, ddB, f, tau;
-	vector<Vector3d> ripi_list, rib_list, z_list;
-	Vector3d w_i, wa_i, dw_i, ddO_i, ddB_i, f_i, tau_i;
-	Vector3d wp, wap, dwp, ddOp, ddBp, fc, tauc;
-	Vector3d z, r_ipi, r_ipb, r_ib;
-
-	// initial conditions forward recursion
-	w_i.setZero();
-	wa_i.setZero();
-	dw_i.setZero();
-	// ddO_i.setZero();
-	if(consider_gravity)
-	{
-		ddO_i = - _T_world_robot.linear().transpose() * _rbdl_model->gravity;
-	}
-	else
-	{
-		ddO_i.setZero();
-	}
-	ddB_i = ddO_i;
-
-	f_i.setZero();
-	tau_i.setZero();
-
-	z.setZero();
-	r_ipi.setZero();
-	r_ib.setZero();
-
-	w.push_back(w_i);
-	wa.push_back(wa_i);
-	dw.push_back(dw_i);
-	ddO.push_back(ddO_i);
-	ddB.push_back(ddB_i);
-
-	z_list.push_back(z);
-	rib_list.push_back(r_ib);
-	ripi_list.push_back(r_ipi);
-
-	f.push_back(f_i);
-	tau.push_back(tau_i);
-
-	for(int i=1; i < _dof+1; i++)
-	{
-		int parent = _rbdl_model->lambda_q[i];
-		vector<unsigned int> children = _rbdl_model->mu[i];
-		int child;
-		if(children.empty())
-		{
-			child = i;
-			r_ipi.setZero();
-		}
-		else if(children.size() == 1)
-		{
-			child = _rbdl_model->mu[i][0];	
-			r_ipi = _rbdl_model->X_lambda[child].r;
-		} 
-		else
-		{
-			throw("tree structures not implemented yet");
-		}
-		z = _rbdl_model->mJoints[i].mJointAxes->head(3);
-		// cout << "parent joint axis : " << _rbdl_model->mJoints[i].mJointAxes->transpose() << endl;
-		// r_ipi = _rbdl_model->X_T[i].r;
-		r_ipb = _rbdl_model->mBodies[i].mCenterOfMass;
-		r_ib = -r_ipi + r_ipb;
-
-		// transform parent quantities in local frame
-		wp = _rbdl_model->X_lambda[i].E*w[parent];
-		wap = _rbdl_model->X_lambda[i].E*wa[parent];
-		dwp = _rbdl_model->X_lambda[i].E*dw[parent];
-		ddOp = _rbdl_model->X_lambda[i].E*ddO[parent];
-		// ddBp = _rbdl_model->X_lambda[i].E*w[parent];
-		// cout << "wp : " << wp.transpose() << endl << endl;
-
-		// cout << "index : " << i << endl;
-		// cout << "parent : " << parent << endl;
-		// cout << "child : " << child << endl;
-		// cout << "z : " << z.transpose() << endl;
-		// cout << "r_ipi : " << r_ipi.transpose() << endl;
-		// cout << "r_ipb : " << r_ipb.transpose() << endl;
-		// cout << "r_ib : " << r_ib.transpose() << endl;
-		// cout << "q : " << q.transpose() << endl;
-		// cout << "dq : " << dq.transpose() << endl;
-
-		w_i = wp + dq(parent)*z;
-		wa_i = wap + dqa(parent)*z;
-		dw_i = dwp + ddq(parent)*z + dq(parent)*wap.cross(z);
-		ddO_i = ddOp + dw_i.cross(r_ipi) + w_i.cross(wa_i.cross(r_ipi));
-		ddB_i = ddO_i + dw_i.cross(r_ib) + w_i.cross(wa_i.cross(r_ib));
-
-		// cout << "w_i : " << w_i.transpose() << endl;
-		// cout << "dw_i : " << dw_i.transpose() << endl;
-		// cout << "ddO_i : " << ddO_i.transpose() << endl;
-		// cout << "ddB_i : " << ddB_i.transpose() << endl;
-		// cout << endl << endl;
-
-		w.push_back(w_i);
-		wa.push_back(wa_i);
-		dw.push_back(dw_i);
-		ddO.push_back(ddO_i);
-		ddB.push_back(ddB_i);
-
-		z_list.push_back(z);
-		rib_list.push_back(r_ib);
-		ripi_list.push_back(r_ipi);
-
-		f.push_back(f_i);
-		tau.push_back(tau_i);
-	}
-
-	// cout << "end of forward recursion" << endl << endl;
-	// cout << w << endl;
-
-	// backward recursion
-	for(int i=_dof; i>0; i--)
-	{
-		Vector3d fip, tauip;
-		vector<unsigned int> children = _rbdl_model->mu[i];
-		if(children.size() == 0)
-		{
-			fip.setZero();
-			tauip.setZero();
-		}
-		else if(children.size() == 1)
-		{
-			int child = children[0];
-			fip = _rbdl_model->X_lambda[child].E.transpose()*f[child];
-			tauip = _rbdl_model->X_lambda[child].E.transpose()*tau[child];
-		}
-		else
-		{
-			throw("tree structures not implemented yet");
-		}
-
-		double m = _rbdl_model->mBodies[i].mMass;
-		Matrix3d I = _rbdl_model->mBodies[i].mInertia;
-
-		// cout << "index : " << i << endl;
-		// cout << "mass : " << m << endl;
-		// cout << "inertia :\n" << I << endl;
-
-		f_i = fip + m*ddB[i];
-		tau_i = tauip - f_i.cross(ripi_list[i]+rib_list[i]) + fip.cross(rib_list[i]) + I*dw[i] + wa[i].cross(I*w[i]);
-		
-		// cout << "fip : " << fip.transpose() << endl;
-		// cout << "tauip : " << tauip.transpose() << endl;
-		// cout << "f_i : " << f_i.transpose() << endl;
-		// cout << "tau_i : " << tau_i.transpose() << endl;
-
-		// int parent = _rbdl_model->lambda_q[i];
-		Vector3d zp = z_list[i];
-		u(i-1) = tau_i.dot(zp);
-
-		// cout << "zp : " << zp.transpose() << endl;
-		// cout << "u_i : " << u(i-1) << endl;
-		// cout << endl << endl;
-
-		f[i] = f_i;
-		tau[i] = tau_i;
-
-	}
-
-
 }
 
 void Sai2Model::factorizedChristoffelMatrix(MatrixXd& C)
@@ -564,7 +374,8 @@ void Sai2Model::computeIK3d_JL(VectorXd& q_result,
 		target_pos.push_back(desired_point_positions_in_robot_frame[i]);
 	}
 
-	InverseKinematics_JL(*_rbdl_model, _q, q_min, q_max, weights, link_ids, body_point, target_pos, q_result, 1.0e-12, 0.0001, 500);   // modifies the internal model so we need to re update the kinematics with the previous q value to keep it unchanged
+	InverseKinematics_JL(*_rbdl_model, _q, q_min, q_max, weights, link_ids, body_point, target_pos, q_result, 1.0e-12, 0.0001, 500);   
+	// InverseKinematics_JL modifies the internal model so we need to re update the kinematics with the previous q value to keep it unchanged
 	updateKinematics();
 }
 
@@ -1693,6 +1504,152 @@ void Sai2Model::displayLinks()
 	cout << endl;
 }
 
+void Sai2Model::updateDynamics() {
+        if (_M.rows() != _dof || _M.cols() != _dof) {
+                _M.setZero(_dof, _dof);
+        }
+
+        CompositeRigidBodyAlgorithm(*_rbdl_model, _q, _M, false);
+        updateInverseInertia();
+}
+
+void Sai2Model::updateInverseInertia() { 
+	_M_inv = _M.inverse();
+}
+
+void Sai2Model::modifiedNewtonEuler(VectorXd& u, 
+								const bool consider_gravity,
+                                const VectorXd& q,
+                                const VectorXd& dq,
+                                const VectorXd& dqa,
+                            	const VectorXd& ddq)
+{
+	u = VectorXd::Zero(_dof);
+
+	vector<Vector3d> w, wa, dw, ddO, ddB, f, tau;
+	vector<Vector3d> ripi_list, rib_list, z_list;
+	Vector3d w_i, wa_i, dw_i, ddO_i, ddB_i, f_i, tau_i;
+	Vector3d wp, wap, dwp, ddOp, ddBp, fc, tauc;
+	Vector3d z, r_ipi, r_ipb, r_ib;
+
+	// initial conditions forward recursion
+	w_i.setZero();
+	wa_i.setZero();
+	dw_i.setZero();
+	if(consider_gravity)
+	{
+		ddO_i = - _T_world_robot.linear().transpose() * _rbdl_model->gravity;
+	}
+	else
+	{
+		ddO_i.setZero();
+	}
+	ddB_i = ddO_i;
+
+	f_i.setZero();
+	tau_i.setZero();
+
+	z.setZero();
+	r_ipi.setZero();
+	r_ib.setZero();
+
+	w.push_back(w_i);
+	wa.push_back(wa_i);
+	dw.push_back(dw_i);
+	ddO.push_back(ddO_i);
+	ddB.push_back(ddB_i);
+
+	z_list.push_back(z);
+	rib_list.push_back(r_ib);
+	ripi_list.push_back(r_ipi);
+
+	f.push_back(f_i);
+	tau.push_back(tau_i);
+
+	for(int i=1; i < _dof+1; i++)
+	{
+		int parent = _rbdl_model->lambda_q[i];
+		vector<unsigned int> children = _rbdl_model->mu[i];
+		int child;
+		if(children.empty())
+		{
+			child = i;
+			r_ipi.setZero();
+		}
+		else if(children.size() == 1)
+		{
+			child = _rbdl_model->mu[i][0];	
+			r_ipi = _rbdl_model->X_lambda[child].r;
+		} 
+		else
+		{
+			throw("tree structures not implemented yet");
+		}
+		z = _rbdl_model->mJoints[i].mJointAxes->head(3);
+		r_ipb = _rbdl_model->mBodies[i].mCenterOfMass;
+		r_ib = -r_ipi + r_ipb;
+
+		// transform parent quantities in local frame
+		wp = _rbdl_model->X_lambda[i].E*w[parent];
+		wap = _rbdl_model->X_lambda[i].E*wa[parent];
+		dwp = _rbdl_model->X_lambda[i].E*dw[parent];
+		ddOp = _rbdl_model->X_lambda[i].E*ddO[parent];
+
+		w_i = wp + dq(parent)*z;
+		wa_i = wap + dqa(parent)*z;
+		dw_i = dwp + ddq(parent)*z + dq(parent)*wap.cross(z);
+		ddO_i = ddOp + dw_i.cross(r_ipi) + w_i.cross(wa_i.cross(r_ipi));
+		ddB_i = ddO_i + dw_i.cross(r_ib) + w_i.cross(wa_i.cross(r_ib));
+
+		w.push_back(w_i);
+		wa.push_back(wa_i);
+		dw.push_back(dw_i);
+		ddO.push_back(ddO_i);
+		ddB.push_back(ddB_i);
+
+		z_list.push_back(z);
+		rib_list.push_back(r_ib);
+		ripi_list.push_back(r_ipi);
+
+		f.push_back(f_i);
+		tau.push_back(tau_i);
+	}
+
+	// backward recursion
+	for(int i=_dof; i>0; i--)
+	{
+		Vector3d fip, tauip;
+		vector<unsigned int> children = _rbdl_model->mu[i];
+		if(children.size() == 0)
+		{
+			fip.setZero();
+			tauip.setZero();
+		}
+		else if(children.size() == 1)
+		{
+			int child = children[0];
+			fip = _rbdl_model->X_lambda[child].E.transpose()*f[child];
+			tauip = _rbdl_model->X_lambda[child].E.transpose()*tau[child];
+		}
+		else
+		{
+			throw("tree structures not implemented yet");
+		}
+
+		double m = _rbdl_model->mBodies[i].mMass;
+		Matrix3d I = _rbdl_model->mBodies[i].mInertia;
+
+		f_i = fip + m*ddB[i];
+		tau_i = tauip - f_i.cross(ripi_list[i]+rib_list[i]) + fip.cross(rib_list[i]) + I*dw[i] + wa[i].cross(I*w[i]);
+		
+		Vector3d zp = z_list[i];
+		u(i-1) = tau_i.dot(zp);
+
+		f[i] = f_i;
+		tau[i] = tau_i;
+
+	}
+}
 
 void orientationError(Vector3d& delta_phi,
 		              const Matrix3d& desired_orientation,

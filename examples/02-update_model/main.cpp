@@ -31,29 +31,33 @@ int main (int argc, char ** argv) {
 	// jacobian at the end effector (1m from second joint)
 	robot->J_0(J,ee_link,ee_pos_in_link);
 	// gravity and coriolis/centrifugal forces
-	robot->gravityVector(gravity);
+	robot->jointGravityVector(gravity);
 
 	cout << "------------------------------------------------------" << endl;
 	cout << "               Initial configuration                  " << endl;
 	cout << "------------------------------------------------------" << endl;
 	cout << endl;
-	cout << "robot coordinates : " << robot->_q.transpose() << endl;
+	cout << "robot coordinates : " << robot->q().transpose() << endl;
 	cout << "position at end effector : " << position.transpose() << endl;
 	cout << "velocity at end effector : " << velocity.transpose() << endl;
 	cout << "orientation at end effector : \n" << rotation << endl;
 	cout << "jacobian at the end effector \n" << J << endl;
-	cout << "Mass matrix :\n" << robot->_M << endl;
+	cout << "Mass matrix :\n" << robot->M() << endl;
 	cout << "joint gravity : " << gravity.transpose() << endl;
 	cout << endl;
 
 	// modify joint positions and velocities
-	robot->_q << -0.5*M_PI, 1;
-	robot->_dq << 0, 1;
+	Eigen::VectorXd new_q = Eigen::VectorXd::Zero(2);
+	Eigen::VectorXd new_dq = Eigen::VectorXd::Zero(2);
+	new_q << -0.5*M_PI, 1;
+	new_dq << 0, 1;
+	robot->set_q(new_q);
+	robot->set_dq(new_dq);
 	robot->position(position, ee_link, Eigen::Vector3d(0.0, 0.0, 0.0));
 	robot->linearVelocity(velocity, ee_link, ee_pos_in_link);
 	robot->rotation(rotation, ee_link);
 	robot->J_0(J,ee_link,ee_pos_in_link);
-	robot->gravityVector(gravity);
+	robot->jointGravityVector(gravity);
 
 	cout << endl;
 	cout << "------------------------------------------------------" << endl;
@@ -61,11 +65,11 @@ int main (int argc, char ** argv) {
 	cout << " nothing will change before we call updateKinematics()" << endl;
 	cout << "------------------------------------------------------" << endl;
 	cout << endl;
-	cout << "robot coordinates : " << robot->_q.transpose() << endl;
+	cout << "robot coordinates : " << robot->q().transpose() << endl;
 	cout << "position at end effector : " << position.transpose() << endl;
 	cout << "velocity at end effector : " << velocity.transpose() << endl;
 	cout << "orientation at end effector : \n" << rotation << endl;
-	cout << "Mass matrix :\n" << robot->_M << endl;
+	cout << "Mass matrix :\n" << robot->M() << endl;
 	cout << "jacobian at the end effector \n" << J << endl;
 	cout << "joint gravity : " << gravity.transpose() << endl;
 	cout << endl;
@@ -76,7 +80,7 @@ int main (int argc, char ** argv) {
 	robot->linearVelocity(velocity, ee_link, ee_pos_in_link);
 	robot->rotation(rotation, ee_link);
 	robot->J_0(J,ee_link,ee_pos_in_link);
-	robot->gravityVector(gravity);
+	robot->jointGravityVector(gravity);
 
 	cout << endl;
 	cout << "------------------------------------------------------" << endl;
@@ -84,39 +88,40 @@ int main (int argc, char ** argv) {
 	cout << "      Everything updated except the mass matrix       " << endl;
 	cout << "------------------------------------------------------" << endl;
 	cout << endl;
-	cout << "robot coordinates : " << robot->_q.transpose() << endl;
+	cout << "robot coordinates : " << robot->q().transpose() << endl;
 	cout << "position at end effector : " << position.transpose() << endl;
 	cout << "velocity at end effector : " << velocity.transpose() << endl;
 	cout << "orientation at end effector : \n" << rotation << endl;
-	cout << "Mass matrix :\n" << robot->_M << endl;
+	cout << "Mass matrix :\n" << robot->M() << endl;
 	cout << "jacobian at the end effector \n" << J << endl;
 	cout << "joint gravity : " << gravity.transpose() << endl;
 	cout << endl;
 
-	// update dynamics
-	robot->updateDynamics();
+	// update model to update mass matrix as well
+	robot->updateModel();
 
 	cout << endl;
 	cout << "------------------------------------------------------" << endl;
-	cout << "               call to updateDynamics()               " << endl;
+	cout << "               call to updateModel()                  " << endl;
 	cout << "   The mass matrix (and its inverse) is recomputed    " << endl;
 	cout << "------------------------------------------------------" << endl;
 	cout << endl;
-	cout << "robot coordinates : " << robot->_q.transpose() << endl;
-	cout << "Mass matrix :\n" << robot->_M << endl;
+	cout << "robot coordinates : " << robot->q().transpose() << endl;
+	cout << "Mass matrix :\n" << robot->M() << endl;
 	cout << endl;
 
-	// update model : everything at the same time
 	// come back to initial position
-	robot->_q << 0,0;
-	robot->_dq << 0,0;
+	new_q << 0, 0;
+	new_dq << 0, 0;
+	robot->set_q(new_q);
+	robot->set_dq(new_dq);
 	robot->updateModel();
 
 	robot->position(position, ee_link, Eigen::Vector3d(0.0, 0.0, 0.0));
 	robot->linearVelocity(velocity, ee_link, ee_pos_in_link);
 	robot->rotation(rotation, ee_link);
 	robot->J_0(J,ee_link,ee_pos_in_link);
-	robot->gravityVector(gravity);
+	robot->jointGravityVector(gravity);
 
 	cout << endl;
 	cout << "------------------------------------------------------" << endl;
@@ -124,11 +129,11 @@ int main (int argc, char ** argv) {
 	cout << " call updateModel() to update kinematics and dynamics " << endl;
 	cout << "------------------------------------------------------" << endl;
 	cout << endl;
-	cout << "robot coordinates : " << robot->_q.transpose() << endl;
+	cout << "robot coordinates : " << robot->q().transpose() << endl;
 	cout << "position at end effector : " << position.transpose() << endl;
 	cout << "velocity at end effector : " << velocity.transpose() << endl;
 	cout << "orientation at end effector : \n" << rotation << endl;
-	cout << "Mass matrix :\n" << robot->_M << endl;
+	cout << "Mass matrix :\n" << robot->M() << endl;
 	cout << "jacobian at the end effector \n" << J << endl;
 	cout << "joint gravity : " << gravity.transpose() << endl;
 	cout << endl;
