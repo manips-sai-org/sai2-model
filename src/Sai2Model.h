@@ -26,10 +26,8 @@ enum ContactType {PointContact, SurfaceContact};
 class ContactModel
 {
     friend class Sai2Model;
-// private:
-// protected:
 public:
-    ContactModel();
+    ContactModel() = delete;
     ContactModel(const string link_name, 
                  const Vector3d pos, 
                  const Matrix3d orientation,
@@ -42,11 +40,9 @@ public:
         _contact_type = contact_type;
         // _active_directions = active_directions;
     }
-    ~ContactModel(){}
+    ~ContactModel() = default;
 
-// protected:
-// public:
-
+private:
     /// \brief name of the link at which the contact occurs
     string _link_name;
 
@@ -67,13 +63,33 @@ public:
 class Sai2Model
 {
 public:
-    // Sai2Model ();
     Sai2Model (const string path_to_model_file, 
                bool verbose = true, 
                const Affine3d T_world_robot = Affine3d::Identity(),
                const Vector3d world_gravity = Vector3d(0.0,0.0,-9.81));
-    ~Sai2Model ();
+    ~Sai2Model();
 
+    // disallow empty, copy and asssign constructors
+    Sai2Model() = delete;
+    Sai2Model(Sai2Model const&) = delete;
+    Sai2Model& operator=(Sai2Model const&) = delete;
+
+    // getter and setter for joint positions
+    Eigen::VectorXd q() {return _q;}
+    void set_q(const Eigen::VectorXd& q);
+
+    // getter and setter for joint velocities
+    Eigen::VectorXd dq() {return _q;}
+    void set_dq(const Eigen::VectorXd& dq);
+
+    // getter for joint accelerations
+    Eigen::VectorXd ddq() {return _ddq;}
+
+    // getter for mass matrix
+    Eigen::MatrixXd M() {return _M;}
+
+    // getter for world gravity
+    Eigen::Vector3d worldGravity() {return _rbdl_model->gravity;}
 
     /**
      * @brief      update the kinematics for the current robot configuration.
@@ -81,20 +97,20 @@ public:
     void updateKinematics();
 
     /**
-     * @brief      update the dynamics for the current robot configuration.
-     */
-    void updateDynamics();
-
-    /**
-     * @brief      update the inverse inertia matrix.
-     */
-    void updateInverseInertia();
-
-    /**
-     * @brief      update the kinematics and dynamics for the current robot configuration. Effectively calls
-     *             updateKinematics and updateDynamics
+     * @brief      update the kinematics and dynamics (mass matrix and its
+     *             inverse) for the current robot configuration.
      */
     void updateModel();
+
+    /**
+     * @brief update the kinematics and the inverse of the mass matrix
+     *        with an externally provided mass matrix (for example from the 
+     *        robot's manufacturer API) insetad of computing the mass matrix
+     *        from the urdf description of the robot.
+     * 
+     * @param M externally provided mass matrix
+     */
+    void updateModel(const Eigen::MatrixXd& M);
 
     /**
      * @brief      update the kinematics.
@@ -133,19 +149,7 @@ public:
      * @param      g     Vector to which the joint gravity torques will be
      *                   written
      */
-    void gravityVector(VectorXd& g);
-
-
-    /**
-     * @brief      Gives the joint gravity torques vector of the last updated
-     *             configuration suing a custom world gravity vector
-     *
-     * @param      g        Vector to which the joint gravity torques will be
-     *                      written
-     * @param      gravity  the 3d gravity vector of the world in base frame
-     */
-    void gravityVector(VectorXd& g,
-                               const Vector3d& gravity);
+    void jointGravityVector(VectorXd& g);
 
     /**
      * @brief      Gives the joint coriolis and centrifugal forces of the last
@@ -166,30 +170,7 @@ public:
     void coriolisPlusGravity(VectorXd& h);
 
     /**
-     * @brief      Computes the modified Newton-Euler Algorithm as described in
-     *             ''' De Luca, A., & Ferrajoli, L. (2009, May). A modified
-     *             Newton-Euler method for dynamic computations in robot fault
-     *             detection and control. In Robotics and Automation, 2009.
-     *             ICRA'09. IEEE International Conference on (pp. 3359-3364).
-     *             IEEE. ''' @tau                       return vector
-     *
-     * @param      tau               return vector
-     * @param      consider_gravity  consider or not the acceleration due to
-     *                               gravity at the base
-     * @param      q                 joint positions
-     * @param      dq                joint velocity
-     * @param      dqa               auxiliary joint velocity
-     * @param      ddq               joint acceleration
-     */
-    void modifiedNewtonEuler(VectorXd& tau, 
-                                const bool consider_gravity,
-                                const VectorXd& q,
-                                const VectorXd& dq,
-                                const VectorXd& dqa,
-                                const VectorXd& ddq);
-
-    /**
-     * @brief      Computes the matrix C such that the coriolis and centrifucal forces can be expressed b = C q_dot
+     * @brief      Computes the matrix C such that the coriolis and centrifucal forces can be expressed b = C*q_dot
      *
      * @param      C     return matrix
      */
@@ -197,8 +178,8 @@ public:
 
     /**
      * @brief      Full jacobian for link, relative to base (id=0) in the form
-     *             [Jv; Jw] expressed in base frame (default), world frame or
-     *             local frame
+     *             [Jv; Jw] (linear first, angular next) expressed in base frame (default), 
+     *             world frame or local frame
      *
      * @param      J            Matrix to which the jacobian will be written
      * @param      link_name    the name of the link where to compute the
@@ -219,8 +200,8 @@ public:
 
     /**
      * @brief      Full jacobian for link, relative to base (id=0) in the form
-     *             [Jw; Jv] expressed in base frame (default), world frame or
-     *             local frame
+     *             [Jw; Jv] (angular first, linear next) expressed in base frame (default),
+     *             world frame or local frame
      *
      * @param      J            Matrix to which the jacobian will be written
      * @param      link_name    the name of the link where to compute the
@@ -273,7 +254,6 @@ public:
     void JwLocalFrame(MatrixXd& J,
                     const string& link_name,
                     const Matrix3d& rot_in_link = Matrix3d::Identity());
-
 
     /**
      * @brief      Computes the inverse kinematics to get the robot
@@ -514,24 +494,15 @@ public:
      * @brief      Gives the mass properties of a given link
      *
      * @param      mass            the returned mass value
-     * @param      center_of_mass  the position of the center of mass in the
+     * @param      center_of_mass  the returned position of the center of mass in the
      *                             body's frame
-     * @param      inertia         the inertia of the given link
+     * @param      inertia         the returned inertia of the given link
      * @param      link_name       the name of the considered link
      */
     void getLinkMass(double& mass,
                      Vector3d& center_of_mass,
                      Matrix3d& inertia,
                      const string& link_name);
-
-    /**
-     * @brief      Gives the mass properties of a given link
-     *
-     * @param      mass            the returned mass value
-     * @param      center_of_mass  the position of the center of mass in the
-     *                             body's frame
-     * @param      link_name       the name of the considered link
-     */
     void getLinkMass(double& mass,
                      Vector3d& center_of_mass,
                      const string& link_name);
@@ -604,18 +575,6 @@ public:
 
 
     /**
-     * @brief      Computes the nullspace matrix for the highest priority task.
-     *             Recomputes the dynamically consistent inverse and the task
-     *             mass matrix at each call
-     *
-     * @param      N              Matrix to which the nullspace matrix will be
-     *                            written
-     * @param[in]  task_jacobian  The task jacobian
-     */
-    void nullspaceMatrix(MatrixXd& N,
-                             const MatrixXd& task_jacobian);
-
-    /**
      * @brief      Computes the nullspace matrix of the task, consistent with
      *             the previous nullspace Recomputes the dynamically consistent
      *             inverse and the task mass matrix at each call
@@ -623,28 +582,13 @@ public:
      * @param      N              Matrix to which the nullspace matrix will be
      *                            written
      * @param[in]  task_jacobian  The task jacobian
-     * @param[in]  N_prec         The previous nullspace matrix
+     * @param[in]  N_prec         The previous nullspace matrix (identity if not specified)
      */
     void nullspaceMatrix(MatrixXd& N,
                              const MatrixXd& task_jacobian,
                              const MatrixXd& N_prec);
-
-    /**
-     * @brief      Computes the operational spce matrices (task inertia,
-     *             dynamically consistent inverse of the jacobian and nullspace)
-     *             for a given task, for the first task. More efficient than
-     *             calling the three individual functions.
-     *
-     * @param      Lambda         Matrix to which the operational space mass
-     *                            matrix will be written
-     * @param      Jbar           Matrix to which the dynamically consistent
-     *                            inverse of the jacobian will be written
-     * @param      N              Matrix to which the nullspace matrix will be
-     *                            written
-     * @param[in]  task_jacobian  Task jacobian
-     */
-    void operationalSpaceMatrices(MatrixXd& Lambda, MatrixXd& Jbar, MatrixXd& N,
-                                    const MatrixXd& task_jacobian);
+    void nullspaceMatrix(MatrixXd& N,
+                             const MatrixXd& task_jacobian);
 
     /**
      * @brief      Computes the operational spce matrices (task inertia,
@@ -659,12 +603,13 @@ public:
      * @param      N              Matrix to which the nullspace matrix will be
      *                            written
      * @param[in]  task_jacobian  Task jacobian
-     * @param[in]  N_prec         Previous nullspace matrix
+     * @param[in]  N_prec         Previous nullspace matrix (identity if not specified)
      */
     void operationalSpaceMatrices(MatrixXd& Lambda, MatrixXd& Jbar, MatrixXd& N,
                                     const MatrixXd& task_jacobian,
                                     const MatrixXd& N_prec);
-
+    void operationalSpaceMatrices(MatrixXd& Lambda, MatrixXd& Jbar, MatrixXd& N,
+                                    const MatrixXd& task_jacobian);
 
 
     /**
@@ -852,6 +797,40 @@ public:
     void displayJoints();
     void displayLinks();
 
+private:
+    /**
+     * @brief      update the dynamics (mass matrix and its inverse) for the current robot configuration.
+     */
+    void updateDynamics();
+
+    /**
+     * @brief      update the inverse inertia matrix.
+     */
+    void updateInverseInertia();
+
+    /**
+     * @brief      Computes the modified Newton-Euler Algorithm as described in
+     *             ''' De Luca, A., & Ferrajoli, L. (2009, May). A modified
+     *             Newton-Euler method for dynamic computations in robot fault
+     *             detection and control. In Robotics and Automation, 2009.
+     *             ICRA'09. IEEE International Conference on (pp. 3359-3364).
+     *             IEEE. ''' @tau                       return vector
+     *
+     * @param      tau               return vector
+     * @param      consider_gravity  consider or not the acceleration due to
+     *                               gravity at the base
+     * @param      q                 joint positions
+     * @param      dq                joint velocity
+     * @param      dqa               auxiliary joint velocity
+     * @param      ddq               joint acceleration
+     */
+    void modifiedNewtonEuler(VectorXd& tau, 
+                                const bool consider_gravity,
+                                const VectorXd& q,
+                                const VectorXd& dq,
+                                const VectorXd& dqa,
+                                const VectorXd& ddq);
+
     /// \brief internal rbdl model
     RigidBodyDynamics::Model* _rbdl_model;
 
@@ -870,9 +849,6 @@ public:
     /// \brief Inverse of the mass matrix
     MatrixXd _M_inv;
 
-    /// \brief gravity in base frame
-    Vector3d _world_gravity;
-
     /// \brief List of active contacts between robot and environment
     vector<ContactModel> _environmental_contacts;
 
@@ -888,7 +864,6 @@ public:
     /// \brief Transform from world coordinates to robot base coordinates
     Affine3d _T_world_robot;
 
-// protected:
     /// \brief map from joint names to joint id
     map<string,int> _joint_names_map;
 
