@@ -27,14 +27,42 @@ Sai2Model::Sai2Model (const string path_to_model_file,
 	                  const Affine3d T_world_robot,
 	                  const Vector3d world_gravity)
 {
-
 	_rbdl_model = new RigidBodyDynamics::Model();
 
 	// parse rbdl model from urdf
-	bool success = RigidBodyDynamics::URDFReadFromFile(path_to_model_file.c_str(), _rbdl_model, _link_names_map, _joint_names_map, false, verbose, world_gravity);
-	if (!success) 
-	{
-		cout << "Error loading model [" + path_to_model_file + "]" << "\n";
+	bool success = RigidBodyDynamics::URDFReadFromFile(
+		path_to_model_file.c_str(), _rbdl_model, _link_names_to_id_map,
+		_joint_names_to_id_map, _joint_limits, false, verbose, world_gravity);
+	if (!success) {
+		throw std::runtime_error("Error loading model [" + path_to_model_file + "]\n");
+	}
+
+	// create joint id to name map
+	for (auto pair : _joint_names_to_id_map) {
+		string joint_name = pair.first;
+		int rbdl_index = pair.second;
+		const auto& rbdl_joint = _rbdl_model->mJoints[rbdl_index];
+		switch (rbdl_joint.mJointType)
+		{
+		case RigidBodyDynamics::JointTypeSpherical:
+			for(int i=0 ; i<3 ; ++i) {
+				_joint_id_to_names_map[rbdl_joint.q_index + i] = joint_name;
+			}
+			_joint_id_to_names_map[_rbdl_model->multdof3_w_index[rbdl_index]] = joint_name;
+			break;
+		
+		case RigidBodyDynamics::JointTypeRevolute:
+		case RigidBodyDynamics::JointTypeRevoluteX:
+		case RigidBodyDynamics::JointTypeRevoluteY:
+		case RigidBodyDynamics::JointTypeRevoluteZ:
+		case RigidBodyDynamics::JointTypePrismatic:
+			_joint_id_to_names_map[rbdl_joint.q_index] = joint_name;
+			break;
+
+		default:
+			throw std::runtime_error("error generating joint id to name map\n");
+			break;
+		}
 	}
 
 	// set the base position in the world
@@ -46,9 +74,7 @@ Sai2Model::Sai2Model (const string path_to_model_file,
 	// set the size of q vector
 	_q_size = _rbdl_model->q_size;
 
-	// TODO : support other initial joint configuration
-    // resize state vectors
-
+    // Initialize state vectors
     _q.setZero(_q_size);
     // special case handle spherical joints. See rbdl/Joint class for details.
     for (uint i = 0; i < _rbdl_model->mJoints.size(); ++i) {
@@ -81,7 +107,7 @@ void Sai2Model::set_q(const Eigen::VectorXd& q) {
 }
 
 void Sai2Model::set_dq(const Eigen::VectorXd& dq) {
-	if(dq.size() != _q_size) {
+	if(dq.size() != _dof) {
 		throw invalid_argument("dq size inconsistent in Sai2Model::set_dq");
 		return;		
 	}
@@ -196,7 +222,7 @@ void Sai2Model::J_0(MatrixXd& J,
 {
 	J.setZero(6,_dof);
 	MatrixXd J_temp = MatrixXd::Zero(6,_dof);
-	CalcPointJacobian6D (*_rbdl_model, _q, linkId(link_name), pos_in_link, J_temp, false);
+	CalcPointJacobian6D (*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link, J_temp, false);
 
 	// RBDL gives Jw as the top 3 rows and Jv as the bottom part. We need to swap it here
 	J << J_temp.block(3,0,3,_dof),
@@ -208,7 +234,7 @@ void Sai2Model::J_0WorldFrame(MatrixXd& J,
 {
 	J.setZero(6,_dof);
 	MatrixXd J_temp = MatrixXd::Zero(6,_dof);
-	CalcPointJacobian6D (*_rbdl_model, _q, linkId(link_name), pos_in_link, J_temp, false);
+	CalcPointJacobian6D (*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link, J_temp, false);
 
 	// RBDL gives Jw as the top 3 rows and Jv as the bottom part. We need to swap it here
 	J << _T_world_robot.linear() * J_temp.block(3,0,3,_dof),
@@ -221,9 +247,9 @@ void Sai2Model::J_0LocalFrame(MatrixXd& J,
 {
 	J.setZero(6,_dof);
 	MatrixXd J_temp = MatrixXd::Zero(6,_dof);
-	CalcPointJacobian6D (*_rbdl_model, _q, linkId(link_name), pos_in_link, J_temp, false);
+	CalcPointJacobian6D (*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link, J_temp, false);
 
-	// Matrix3d link_rot = CalcBodyWorldOrientation(*_rbdl_model, _q, linkId(link_name), false).transpose();
+	// Matrix3d link_rot = CalcBodyWorldOrientation(*_rbdl_model, _q, linkIdRbdl(link_name), false).transpose();
 
 	Matrix3d R_0_link;
 	rotation(R_0_link, link_name);
@@ -240,14 +266,14 @@ void Sai2Model::J(MatrixXd& J,
 	const Vector3d& pos_in_link)
 {
 	J.setZero(6,_dof);
-	CalcPointJacobian6D (*_rbdl_model, _q, linkId(link_name), pos_in_link, J, false);
+	CalcPointJacobian6D (*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link, J, false);
 }
 void Sai2Model::JWorldFrame(MatrixXd& J,
 	const string& link_name,
 	const Vector3d& pos_in_link)
 {
 	J.setZero(6,_dof);
-	CalcPointJacobian6D (*_rbdl_model, _q, linkId(link_name), pos_in_link, J, false);
+	CalcPointJacobian6D (*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link, J, false);
 
 	J.block(0,0,3,_dof) = _T_world_robot.linear() * J.block(0,0,3,_dof);
 	J.block(3,0,3,_dof) = _T_world_robot.linear() * J.block(3,0,3,_dof);
@@ -258,9 +284,9 @@ void Sai2Model::JLocalFrame(MatrixXd& J,
 	const Matrix3d& rot_in_link)
 {
 	J.setZero(6,_dof);
-	CalcPointJacobian6D (*_rbdl_model, _q, linkId(link_name), pos_in_link, J, false);
+	CalcPointJacobian6D (*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link, J, false);
 
-	Matrix3d link_rot = CalcBodyWorldOrientation(*_rbdl_model, _q, linkId(link_name), false).transpose();
+	Matrix3d link_rot = CalcBodyWorldOrientation(*_rbdl_model, _q, linkIdRbdl(link_name), false).transpose();
 	
 	J.block(0,0,3,_dof) = rot_in_link.transpose() * link_rot.transpose() * J.block(0,0,3,_dof);
 	J.block(3,0,3,_dof) = rot_in_link.transpose() * link_rot.transpose() * J.block(3,0,3,_dof);
@@ -271,14 +297,14 @@ void Sai2Model::Jv(MatrixXd& J,
 	const Vector3d& pos_in_link)
 {
 	J.setZero(3,_dof);
-	CalcPointJacobian(*_rbdl_model, _q, linkId(link_name), pos_in_link, J, false);
+	CalcPointJacobian(*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link, J, false);
 }
 void Sai2Model::JvWorldFrame(MatrixXd& J,
 	const string& link_name,
 	const Vector3d& pos_in_link)
 {
 	J.setZero(3,_dof);
-	CalcPointJacobian(*_rbdl_model, _q, linkId(link_name), pos_in_link, J, false);
+	CalcPointJacobian(*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link, J, false);
 
 	J = _T_world_robot.linear() * J;
 }
@@ -288,9 +314,9 @@ void Sai2Model::JvLocalFrame(MatrixXd& J,
 	const Matrix3d& rot_in_link)
 {
 	J.setZero(3,_dof);
-	CalcPointJacobian(*_rbdl_model, _q, linkId(link_name), pos_in_link, J, false);
+	CalcPointJacobian(*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link, J, false);
 
-	Matrix3d link_rot = CalcBodyWorldOrientation(*_rbdl_model, _q, linkId(link_name), false).transpose();
+	Matrix3d link_rot = CalcBodyWorldOrientation(*_rbdl_model, _q, linkIdRbdl(link_name), false).transpose();
 
 	J = rot_in_link.transpose() * link_rot.transpose() * J;
 }
@@ -302,7 +328,7 @@ void Sai2Model::Jw(MatrixXd& J,
 {
 	// compute the full jacobian at the center of the link and take rotational part
 	MatrixXd J_temp = MatrixXd::Zero(6,_dof);
-	CalcPointJacobian6D (*_rbdl_model, _q, linkId(link_name), Vector3d::Zero(), J_temp, false);
+	CalcPointJacobian6D (*_rbdl_model, _q, linkIdRbdl(link_name), Vector3d::Zero(), J_temp, false);
 	J = J_temp.topRows<3>();
 }
 void Sai2Model::JwWorldFrame(MatrixXd& J,
@@ -310,7 +336,7 @@ void Sai2Model::JwWorldFrame(MatrixXd& J,
 {
 	// compute the full jacobian at the center of the link and take rotational part
 	MatrixXd J_temp = MatrixXd::Zero(6,_dof);
-	CalcPointJacobian6D (*_rbdl_model, _q, linkId(link_name), Vector3d::Zero(), J_temp, false);
+	CalcPointJacobian6D (*_rbdl_model, _q, linkIdRbdl(link_name), Vector3d::Zero(), J_temp, false);
 	J = _T_world_robot.linear() * J_temp.topRows<3>();
 }
 void Sai2Model::JwLocalFrame(MatrixXd& J,
@@ -319,9 +345,9 @@ void Sai2Model::JwLocalFrame(MatrixXd& J,
 {
 	// compute the full jacobian at the center of the link and take rotational part
 	MatrixXd J_temp = MatrixXd::Zero(6,_dof);
-	CalcPointJacobian6D (*_rbdl_model, _q, linkId(link_name), Vector3d::Zero(), J_temp, false);
+	CalcPointJacobian6D (*_rbdl_model, _q, linkIdRbdl(link_name), Vector3d::Zero(), J_temp, false);
 	
-	Matrix3d link_rot = CalcBodyWorldOrientation(*_rbdl_model, _q, linkId(link_name), false).transpose();
+	Matrix3d link_rot = CalcBodyWorldOrientation(*_rbdl_model, _q, linkIdRbdl(link_name), false).transpose();
 
 	J = rot_in_link.transpose() * link_rot.transpose() * J_temp.topRows<3>();
 }
@@ -341,7 +367,7 @@ void Sai2Model::computeIK3d(VectorXd& q_result,
 	vector<RigidBodyDynamics::Math::Vector3d> target_pos;
 	for(int i=0 ; i<link_names.size() ; i++)
 	{
-		link_ids.push_back(linkId(link_names[i]));
+		link_ids.push_back(linkIdRbdl(link_names[i]));
 		body_point.push_back(point_positions_in_links[i]);
 		target_pos.push_back(desired_point_positions_in_robot_frame[i]);
 	}
@@ -369,7 +395,7 @@ void Sai2Model::computeIK3d_JL(VectorXd& q_result,
 	vector<RigidBodyDynamics::Math::Vector3d> target_pos;
 	for(int i=0 ; i<link_names.size() ; i++)
 	{
-		link_ids.push_back(linkId(link_names[i]));
+		link_ids.push_back(linkIdRbdl(link_names[i]));
 		body_point.push_back(point_positions_in_links[i]);
 		target_pos.push_back(desired_point_positions_in_robot_frame[i]);
 	}
@@ -394,9 +420,9 @@ void Sai2Model::computeIK6d(VectorXd& q_result,
 	vector<RigidBodyDynamics::Math::Vector3d> desired_point_pos;
 	for(int i=0 ; i<link_names.size() ; i++)
 	{
-		link_ids.push_back(linkId(link_names[i]));
-		link_ids.push_back(linkId(link_names[i]));
-		link_ids.push_back(linkId(link_names[i]));
+		link_ids.push_back(linkIdRbdl(link_names[i]));
+		link_ids.push_back(linkIdRbdl(link_names[i]));
+		link_ids.push_back(linkIdRbdl(link_names[i]));
 
 		point_pos.push_back(frame_in_links[i]*Vector3d::Zero());
 		point_pos.push_back(frame_in_links[i]*Vector3d::UnitX());
@@ -417,7 +443,7 @@ void Sai2Model::transform(Affine3d& T,
  const Vector3d& pos_in_link,
  const Matrix3d& rot_in_link)
 {
-	unsigned int link_id = linkId(link_name);
+	unsigned int link_id = linkIdRbdl(link_name);
 	T.linear() = CalcBodyWorldOrientation(*_rbdl_model, _q, link_id, false).transpose() * rot_in_link;
 	T.translation() = CalcBodyToBaseCoordinates(*_rbdl_model, _q, link_id, pos_in_link, false);
 }
@@ -436,7 +462,7 @@ void Sai2Model::velocity6d(VectorXd& vel6d,
 {
 	vel6d.setZero(6);
 	VectorXd v_tmp = VectorXd::Zero(6);
-	v_tmp = CalcPointVelocity6D(*_rbdl_model,_q,_dq,linkId(link_name),pos_in_link,false);
+	v_tmp = CalcPointVelocity6D(*_rbdl_model,_q,_dq,linkIdRbdl(link_name),pos_in_link,false);
 	vel6d << v_tmp.tail(3), v_tmp.head(3);
 }
 
@@ -446,7 +472,7 @@ void Sai2Model::velocity6dInWorld(VectorXd& vel6d,
 {
 	vel6d.setZero(6);
 	VectorXd v_tmp = VectorXd::Zero(6);
-	v_tmp = CalcPointVelocity6D(*_rbdl_model,_q,_dq,linkId(link_name),pos_in_link,false);
+	v_tmp = CalcPointVelocity6D(*_rbdl_model,_q,_dq,linkIdRbdl(link_name),pos_in_link,false);
 	vel6d << _T_world_robot.linear() * v_tmp.tail(3), _T_world_robot.linear() * v_tmp.head(3);	
 }
 
@@ -456,7 +482,7 @@ void Sai2Model::acceleration6d(VectorXd& accel6d,
 {
 	accel6d.setZero(6);
 	VectorXd a_tmp = VectorXd::Zero(6);
-	a_tmp = CalcPointAcceleration6D(*_rbdl_model,_q,_dq,_ddq,linkId(link_name),pos_in_link,false);
+	a_tmp = CalcPointAcceleration6D(*_rbdl_model,_q,_dq,_ddq,linkIdRbdl(link_name),pos_in_link,false);
 	accel6d << a_tmp.tail(3), a_tmp.head(3);
 }
 void Sai2Model::acceleration6dInWorld(VectorXd& accel6d,
@@ -465,7 +491,7 @@ void Sai2Model::acceleration6dInWorld(VectorXd& accel6d,
 {
 	accel6d.setZero(6);
 	VectorXd a_tmp = VectorXd::Zero(6);
-	a_tmp = CalcPointAcceleration6D(*_rbdl_model,_q,_dq,_ddq,linkId(link_name),pos_in_link,false);
+	a_tmp = CalcPointAcceleration6D(*_rbdl_model,_q,_dq,_ddq,linkIdRbdl(link_name),pos_in_link,false);
 	accel6d << _T_world_robot.linear() * a_tmp.tail(3), _T_world_robot.linear() * a_tmp.head(3);
 }
 
@@ -473,14 +499,14 @@ void Sai2Model::position(Vector3d& pos,
 	const string& link_name,
 	const Vector3d& pos_in_link)
 {
-	pos = CalcBodyToBaseCoordinates(*_rbdl_model, _q, linkId(link_name), pos_in_link, false);
+	pos = CalcBodyToBaseCoordinates(*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link, false);
 }
 
 void Sai2Model::positionInWorld(Vector3d& pos,
 	const string& link_name,
 	const Vector3d& pos_in_link)
 {
-	pos = CalcBodyToBaseCoordinates(*_rbdl_model, _q, linkId(link_name), pos_in_link, false);
+	pos = CalcBodyToBaseCoordinates(*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link, false);
 	pos = _T_world_robot*pos;
 }
 
@@ -488,13 +514,13 @@ void Sai2Model::linearVelocity(Vector3d& vel,
 	const string& link_name,
 	const Vector3d& pos_in_link)
 {
-	vel = CalcPointVelocity(*_rbdl_model,_q,_dq,linkId(link_name),pos_in_link,false);
+	vel = CalcPointVelocity(*_rbdl_model,_q,_dq,linkIdRbdl(link_name),pos_in_link,false);
 }
 void Sai2Model::linearVelocityInWorld(Vector3d& vel,
 	const string& link_name,
 	const Vector3d& pos_in_link)
 {
-	vel = CalcPointVelocity(*_rbdl_model,_q,_dq,linkId(link_name),pos_in_link,false);
+	vel = CalcPointVelocity(*_rbdl_model,_q,_dq,linkIdRbdl(link_name),pos_in_link,false);
 	vel = _T_world_robot.linear()*vel;
 }
 
@@ -502,13 +528,13 @@ void Sai2Model::linearAcceleration(Vector3d& accel,
 	const string& link_name,
 	const Vector3d& pos_in_link)
 {
-	accel = CalcPointAcceleration(*_rbdl_model,_q,_dq,_ddq,linkId(link_name),pos_in_link,false);
+	accel = CalcPointAcceleration(*_rbdl_model,_q,_dq,_ddq,linkIdRbdl(link_name),pos_in_link,false);
 }
 void Sai2Model::linearAccelerationInWorld(Vector3d& accel,
 	const string& link_name,
 	const Vector3d& pos_in_link)
 {
-	accel = CalcPointAcceleration(*_rbdl_model,_q,_dq,_ddq,linkId(link_name),pos_in_link,false);
+	accel = CalcPointAcceleration(*_rbdl_model,_q,_dq,_ddq,linkIdRbdl(link_name),pos_in_link,false);
 	accel = _T_world_robot.linear()*accel;
 }
 
@@ -516,14 +542,14 @@ void Sai2Model::rotation(Matrix3d& rot,
 	const string& link_name,
 	const Matrix3d& rot_in_link)
 {
-	rot = CalcBodyWorldOrientation(*_rbdl_model, _q, linkId(link_name), false).transpose();
+	rot = CalcBodyWorldOrientation(*_rbdl_model, _q, linkIdRbdl(link_name), false).transpose();
 	rot = rot * rot_in_link;
 }
 void Sai2Model::rotationInWorld(Matrix3d& rot,
 	const string& link_name,
 	const Matrix3d& rot_in_link)
 {
-	rot = CalcBodyWorldOrientation(*_rbdl_model, _q, linkId(link_name), false).transpose();
+	rot = CalcBodyWorldOrientation(*_rbdl_model, _q, linkIdRbdl(link_name), false).transpose();
 	rot = _T_world_robot.linear() * rot * rot_in_link;
 }
 
@@ -532,7 +558,7 @@ void Sai2Model::angularVelocity(Vector3d& avel,
  const Vector3d& pos_in_link)
 {
 	VectorXd v_tmp = VectorXd::Zero(6);
-	v_tmp = CalcPointVelocity6D(*_rbdl_model,_q,_dq,linkId(link_name),pos_in_link,false);
+	v_tmp = CalcPointVelocity6D(*_rbdl_model,_q,_dq,linkIdRbdl(link_name),pos_in_link,false);
 	avel = v_tmp.head(3);
 }
 void Sai2Model::angularVelocityInWorld(Vector3d& avel,
@@ -540,7 +566,7 @@ void Sai2Model::angularVelocityInWorld(Vector3d& avel,
  const Vector3d& pos_in_link)
 {
 	VectorXd v_tmp = VectorXd::Zero(6);
-	v_tmp = CalcPointVelocity6D(*_rbdl_model,_q,_dq,linkId(link_name),pos_in_link,false);
+	v_tmp = CalcPointVelocity6D(*_rbdl_model,_q,_dq,linkIdRbdl(link_name),pos_in_link,false);
 	avel = v_tmp.head(3);
 	avel = _T_world_robot.linear()*avel;
 }
@@ -550,7 +576,7 @@ void Sai2Model::angularAcceleration(Vector3d& aaccel,
  const Vector3d& pos_in_link)
 {
 	VectorXd a_tmp = VectorXd::Zero(6);
-	a_tmp = CalcPointAcceleration6D(*_rbdl_model,_q,_dq,_ddq,linkId(link_name),pos_in_link,false);
+	a_tmp = CalcPointAcceleration6D(*_rbdl_model,_q,_dq,_ddq,linkIdRbdl(link_name),pos_in_link,false);
 	aaccel = a_tmp.head(3);
 }
 void Sai2Model::angularAccelerationInWorld(Vector3d& aaccel,
@@ -558,38 +584,37 @@ void Sai2Model::angularAccelerationInWorld(Vector3d& aaccel,
  const Vector3d& pos_in_link)
 {
 	VectorXd a_tmp = VectorXd::Zero(6);
-	a_tmp = CalcPointAcceleration6D(*_rbdl_model,_q,_dq,_ddq,linkId(link_name),pos_in_link,false);
+	a_tmp = CalcPointAcceleration6D(*_rbdl_model,_q,_dq,_ddq,linkIdRbdl(link_name),pos_in_link,false);
 	aaccel = a_tmp.head(3);
 	aaccel = _T_world_robot.linear()*aaccel;
 }
 
-unsigned int Sai2Model::linkId(const string& link_name)
-{
-	int link_id = -1;
-	if(_link_names_map.find(link_name) == _link_names_map.end()) 
-	{
-		cout << "link ["+link_name+"] does not exists\n";
-		throw runtime_error("link does not exist");
-	} else 
-	{
-		link_id = _link_names_map[link_name];
+unsigned int Sai2Model::linkIdRbdl(const string& link_name) {
+	if (_link_names_to_id_map.find(link_name) == _link_names_to_id_map.end()) {
+		throw runtime_error("link [" + link_name + "] does not exist");
 	}
-	return link_id;
+	return _link_names_to_id_map[link_name];
 }
 
-int Sai2Model::jointId(const string& joint_name)
-{
-	int joint_id = -1;
-	if(_joint_names_map.find(joint_name) == _joint_names_map.end())
-	{
-		cout << "joint ["+joint_name+"] does not exists\n";
-		throw runtime_error("joint does not exist");
+int Sai2Model::joint_index(const string& joint_name) {
+	if (_joint_names_to_id_map.find(joint_name) == _joint_names_to_id_map.end()) {
+		throw runtime_error("joint [" + joint_name + "] does not exist");
 	}
-	else
-	{
-		joint_id = _joint_names_map[joint_name];
+	return _rbdl_model->mJoints[_joint_names_to_id_map[joint_name]].q_index;
+}
+
+int Sai2Model::spherical_joint_w_index(const string& joint_name) {
+	if (_joint_names_to_id_map.find(joint_name) == _joint_names_to_id_map.end()) {
+		throw runtime_error("joint [" + joint_name + "] does not exist");
 	}
-	return joint_id;
+	return _rbdl_model->multdof3_w_index[_joint_names_to_id_map[joint_name]];	
+}
+
+std::string Sai2Model::joint_name(const int joint_id) {
+	if (joint_id < 0 || joint_id >= _q_size) {
+		throw std::invalid_argument("cannot get joint name for id out of bounds");
+	}
+	return _joint_id_to_names_map[joint_id];
 }
 
 void Sai2Model::getLinkMass(double& mass,
@@ -597,7 +622,7 @@ void Sai2Model::getLinkMass(double& mass,
  Matrix3d& inertia,
  const string& link_name)
 {
-	RigidBodyDynamics::Body b = _rbdl_model->mBodies[linkId(link_name)];
+	RigidBodyDynamics::Body b = _rbdl_model->mBodies[linkIdRbdl(link_name)];
 
 	mass = b.mMass;
 	center_of_mass = b.mCenterOfMass;
@@ -608,7 +633,7 @@ void Sai2Model::getLinkMass(double& mass,
  Vector3d& center_of_mass,
  const string& link_name)
 {
-	RigidBodyDynamics::Body b = _rbdl_model->mBodies[linkId(link_name)];
+	RigidBodyDynamics::Body b = _rbdl_model->mBodies[linkIdRbdl(link_name)];
 
 	mass = b.mMass;
 	center_of_mass = b.mCenterOfMass;
@@ -1487,7 +1512,7 @@ void Sai2Model::environmentalGraspMatrixAtGeometricCenterLocalContactForcesToWor
 void Sai2Model::Sai2Model::displayJoints()
 {
 	cout << "\nRobot Joints :" << endl;
-	for(map<string,int>::iterator it = _joint_names_map.begin(); it!=_joint_names_map.end(); ++it)
+	for(map<string,int>::iterator it = _joint_names_to_id_map.begin(); it!=_joint_names_to_id_map.end(); ++it)
 	{
 		cout << "joint : " << it->first << "\t id : " << it->second << endl;
 	}
@@ -1496,8 +1521,8 @@ void Sai2Model::Sai2Model::displayJoints()
 
 void Sai2Model::displayLinks()
 {
-	cout << "\nRobot Joints :" << endl;
-	for(map<string,int>::iterator it = _link_names_map.begin(); it!=_link_names_map.end(); ++it)
+	cout << "\nRobot Links :" << endl;
+	for(map<string,int>::iterator it = _link_names_to_id_map.begin(); it!=_link_names_to_id_map.end(); ++it)
 	{
 		cout << "link : " << it->first << "\t id : " << it->second << endl;
 	}
