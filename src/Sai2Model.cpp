@@ -24,7 +24,7 @@ namespace {
 bool is_valid_quaternion(double x, double y, double z, double w) {
 	Eigen::Quaterniond quaternion(w, x, y, z);
 
-	if (std::abs(quaternion.squaredNorm() - 1.0) > 1e-6) {
+	if (std::abs(quaternion.squaredNorm() - 1.0) > 1e-3) {
 		return false;
 	}
 
