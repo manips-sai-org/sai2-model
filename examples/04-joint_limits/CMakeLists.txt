@@ -1,6 +1,6 @@
-SET(EXAMPLE_NAME 02-update_model)
-
 # add the include directory to the include paths
+SET(EXAMPLE_NAME 04-joint_limits)
+
 INCLUDE_DIRECTORIES (
 	${SAI2-MODELINCLUDE_DIRS})
 
@@ -15,4 +15,4 @@ TARGET_LINK_LIBRARIES (${EXAMPLE_NAME}
 # NOTE: this requires an install build
 SET(RESOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/resources)
 FILE(MAKE_DIRECTORY ${RESOURCE_DIR})
-FILE(COPY rpbot.urdf DESTINATION ${RESOURCE_DIR})
+FILE(COPY rpspbot.urdf DESTINATION ${RESOURCE_DIR})

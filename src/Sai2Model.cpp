@@ -80,6 +80,9 @@ Sai2Model::Sai2Model (const string path_to_model_file,
     for (uint i = 0; i < _rbdl_model->mJoints.size(); ++i) {
     	if (_rbdl_model->mJoints[i].mJointType == RigidBodyDynamics::JointTypeSpherical) {
     		_rbdl_model->SetQuaternion(i, RigidBodyDynamics::Math::Quaternion(), _q);
+			int index = _rbdl_model->mJoints[i].q_index;
+			int w_index = _rbdl_model->multdof3_w_index[i];
+			_spherical_joints.push_back(SphericalJointDescription(joint_name(index), index, w_index));
     	}
     }
 
@@ -607,7 +610,12 @@ int Sai2Model::spherical_joint_w_index(const string& joint_name) {
 	if (_joint_names_to_id_map.find(joint_name) == _joint_names_to_id_map.end()) {
 		throw runtime_error("joint [" + joint_name + "] does not exist");
 	}
-	return _rbdl_model->multdof3_w_index[_joint_names_to_id_map[joint_name]];	
+	for(auto it = _spherical_joints.cbegin() ; it != _spherical_joints.cend() ; ++it) {
+		if(it->name == joint_name) {
+			return it->w_index;
+		}
+	}
+	throw runtime_error("joint [" + joint_name + "] is not spherical");
 }
 
 std::string Sai2Model::joint_name(const int joint_id) {
@@ -615,6 +623,17 @@ std::string Sai2Model::joint_name(const int joint_id) {
 		throw std::invalid_argument("cannot get joint name for id out of bounds");
 	}
 	return _joint_id_to_names_map[joint_id];
+}
+
+std::vector<std::string> Sai2Model::joint_names() const {
+	std::vector<std::string> names;
+    names.reserve(_joint_names_to_id_map.size());
+
+    for (const auto& pair : _joint_names_to_id_map) {
+        names.push_back(pair.first);
+    }
+
+	return names;
 }
 
 void Sai2Model::getLinkMass(double& mass,

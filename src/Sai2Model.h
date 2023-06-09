@@ -22,6 +22,16 @@ typedef Matrix< bool, 6, 1 > Vector6bool;
 namespace Sai2Model
 {
 
+struct SphericalJointDescription {
+	string name;
+	int index;
+	int w_index;
+
+	SphericalJointDescription(const string name, const int index,
+							  const int w_index)
+		: name(name), index(index), w_index(w_index) {}
+};
+
 enum ContactType {PointContact, SurfaceContact};
 
 class ContactModel
@@ -93,7 +103,13 @@ public:
     Eigen::Vector3d worldGravity() const {return _rbdl_model->gravity;}
 
     // getter for the joint limits
-    vector<JointLimit> joint_limits() const {return _joint_limits;}
+    std::vector<JointLimit> joint_limits() const {return _joint_limits;}
+
+    // getter for the spherical joints
+    std::vector<SphericalJointDescription> spherical_joints() const {return _spherical_joints;}
+
+    // getter for joint names
+    std::vector<std::string> joint_names() const;
 
     /**
      * @brief      update the kinematics for the current robot configuration.
@@ -890,6 +906,9 @@ private:
 
     /// \brief map from joint id to joint names
     map<int, string> _joint_id_to_names_map;
+
+    /// \brief vector of spherical joints
+    vector<SphericalJointDescription> _spherical_joints;
 
     /// \brief map from joint names to joint id (with rbdl indexing)
     map<string,int> _joint_names_to_id_map;

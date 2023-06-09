@@ -4,13 +4,14 @@
 namespace Sai2Model {
 
 struct JointLimit {
+	std::string joint_name = "";
 	int joint_index = -1;
 	double position_lower = 0.0;
 	double position_upper = 0.0;
 	double velocity = 0.0;
 	double effort = 0.0;
 
-	JointLimit(int index, double lower, double upper, double vel, double f)
+	JointLimit(std::string joint_name, int index, double lower, double upper, double vel, double f)
 		: joint_index(index),
 		  position_lower(lower),
 		  position_upper(upper),

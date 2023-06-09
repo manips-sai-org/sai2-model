@@ -283,15 +283,15 @@ bool construct_model(Model* rbdl_model, ModelPtr urdf_model,
 			if (urdf_joint->limits->upper <= urdf_joint->limits->lower) {
 				cerr << "error while processing limits on joint '"
 					 << urdf_joint->name
-					 << "': lower limit cannot be equal or higher tha upper "
+					 << "': lower limit cannot be equal or higher than upper "
 						"limit"
 					 << endl;
 				return false;
 			}
 			const auto& lim = urdf_joint->limits;
-			joint_limits.push_back(
-				Sai2Model::JointLimit(rbdl_model->mJoints[j+1].q_index, lim->lower,
-									  lim->upper, lim->velocity, lim->effort));
+			joint_limits.push_back(Sai2Model::JointLimit(
+				urdf_joint->name, rbdl_model->mJoints[j + 1].q_index,
+				lim->lower, lim->upper, lim->velocity, lim->effort));
 		}
 	}
 
