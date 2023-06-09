@@ -19,6 +19,20 @@
 using namespace std;
 using namespace Eigen;
 
+namespace {
+
+bool is_valid_quaternion(double x, double y, double z, double w) {
+	Eigen::Quaterniond quaternion(w, x, y, z);
+
+	if (std::abs(quaternion.squaredNorm() - 1.0) > 1e-6) {
+		return false;
+	}
+
+	return true;
+}
+
+}  // namespace
+
 namespace Sai2Model
 {
 
@@ -102,9 +116,20 @@ Sai2Model::~Sai2Model ()
 }
 
 void Sai2Model::set_q(const Eigen::VectorXd& q) {
-	if(q.size() != _q_size) {
+	if (q.size() != _q_size) {
 		throw invalid_argument("q size inconsistent in Sai2Model::set_q");
-		return;		
+		return;
+	}
+	for (const auto& sph_joint : _spherical_joints) {
+		if (!is_valid_quaternion(q(sph_joint.index), q(sph_joint.index + 1),
+								 q(sph_joint.index + 2),
+								 q(sph_joint.w_index))) {
+			throw invalid_argument(
+				"trying to set an invalid quaternion for joint " +
+				sph_joint.name + "at index " + std::to_string(sph_joint.index) +
+				", and w_index: " + std::to_string(sph_joint.w_index));
+			return;
+		}
 	}
 	_q = q;
 }
