@@ -147,7 +147,11 @@ bool construct_model(Model* rbdl_model, ModelPtr urdf_model,
 		JointPtr urdf_joint = joint_map[joint_names[j]];
 		LinkPtr urdf_parent = link_map[urdf_joint->parent_link_name];
 		LinkPtr urdf_child = link_map[urdf_joint->child_link_name];
-		joint_names_to_id_map[urdf_joint->name] = j+1; // offset to take the root joint into account
+		if (urdf_joint->type != urdf::Joint::FIXED &&
+			urdf_joint->type != urdf::Joint::UNKNOWN) {
+			joint_names_to_id_map[urdf_joint->name] =
+				j + 1;	// offset to take the root joint into account
+		}
 
 		// determine where to add the current joint and child body
 		unsigned int rbdl_parent_id = 0;
