@@ -1,12 +1,14 @@
+SET(EXAMPLE_NAME 01-create_model_from_file)
+
 # add the include directory to the include paths
 INCLUDE_DIRECTORIES (
 	${SAI2-MODELINCLUDE_DIRS})
 
 # create an executable
-ADD_EXECUTABLE (01-create_model_from_file main.cpp)
+ADD_EXECUTABLE (${EXAMPLE_NAME} main.cpp)
 
 # and link the library against the executable
-TARGET_LINK_LIBRARIES (01-create_model_from_file
+TARGET_LINK_LIBRARIES (${EXAMPLE_NAME}
 	${SAI2-MODEL_LIBRARIES})
 
 # export resources such as model files.

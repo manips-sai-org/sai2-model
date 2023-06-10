@@ -9,6 +9,7 @@
 #define SAI2MODEL_H_
 
 #include <rbdl/Model.h>
+#include "JointLimits.h"
 
 using namespace std;
 using namespace Eigen;
@@ -20,6 +21,16 @@ typedef Matrix< bool, 6, 1 > Vector6bool;
 
 namespace Sai2Model
 {
+
+struct SphericalJointDescription {
+	string name;
+	int index;
+	int w_index;
+
+	SphericalJointDescription(const string name, const int index,
+							  const int w_index)
+		: name(name), index(index), w_index(w_index) {}
+};
 
 enum ContactType {PointContact, SurfaceContact};
 
@@ -75,21 +86,30 @@ public:
     Sai2Model& operator=(Sai2Model const&) = delete;
 
     // getter and setter for joint positions
-    Eigen::VectorXd q() {return _q;}
+    Eigen::VectorXd q() const {return _q;}
     void set_q(const Eigen::VectorXd& q);
 
     // getter and setter for joint velocities
-    Eigen::VectorXd dq() {return _q;}
+    Eigen::VectorXd dq() const {return _dq;}
     void set_dq(const Eigen::VectorXd& dq);
 
     // getter for joint accelerations
-    Eigen::VectorXd ddq() {return _ddq;}
+    Eigen::VectorXd ddq() const {return _ddq;}
 
     // getter for mass matrix
-    Eigen::MatrixXd M() {return _M;}
+    Eigen::MatrixXd M() const {return _M;}
 
     // getter for world gravity
-    Eigen::Vector3d worldGravity() {return _rbdl_model->gravity;}
+    Eigen::Vector3d worldGravity() const {return _rbdl_model->gravity;}
+
+    // getter for the joint limits
+    std::vector<JointLimit> joint_limits() const {return _joint_limits;}
+
+    // getter for the spherical joints
+    std::vector<SphericalJointDescription> spherical_joints() const {return _spherical_joints;}
+
+    // getter for joint names
+    std::vector<std::string> joint_names() const;
 
     /**
      * @brief      update the kinematics for the current robot configuration.
@@ -470,25 +490,34 @@ public:
                                      const string& link_name,
                                      const Vector3d& pos_in_link = Vector3d::Zero());
 
-    /**
-     * @brief      Gives the link id for a given name with the right indexing
-     *             for rbdl
-     *
-     * @param      link_name  name of the link
-     *
-     * @return     the link number
-     */
-    unsigned int linkId(const string& link_name);
+	/**
+	 * @brief      Gives the joint index for a given name. For spherical joints,
+	 * returns the first index of the vector part of the quaternion.
+	 *
+	 * @param      joint_name  name of the joint
+	 * @return     the joint index
+	 */
+	int joint_index(const string& joint_name);
 
-    /**
-     * @brief      Gives the joint id for a given name with the right indexing
-     *             for rbdl
-     *
-     * @param      joint_name  name of the joint
-     *
-     * @return     the joint number
-     */
-    int jointId(const string& joint_name);
+	/**
+	 * @brief      Returns the index of the scalar part of the quaternion for a
+	 * spherical joint. Throws an error if the joint is not spherical
+	 *
+	 * @param      joint_name  name of the joint
+	 *
+	 * @return     the index of the w coefficient of the quaternion
+	 */
+	int spherical_joint_w_index(const string& joint_name);
+
+	/**
+	 * @brief returns the joint name for the given index (for spherical joints,
+	 * any index corresponding to the position of one of the quaternion
+	 * coefficients will return the spherical joint name)
+	 *
+	 * @param joint_id index of the joint
+	 * @return std::string name of the joint
+	 */
+	std::string joint_name(const int joint_id);
 
     /**
      * @brief      Gives the mass properties of a given link
@@ -831,6 +860,17 @@ private:
                                 const VectorXd& dqa,
                                 const VectorXd& ddq);
 
+
+    /**
+     * @brief      Gives the link id for a given name with the right indexing
+     *             for rbdl
+     *
+     * @param      link_name  name of the link
+     *
+     * @return     the link number
+     */
+    unsigned int linkIdRbdl(const string& link_name);
+
     /// \brief internal rbdl model
     RigidBodyDynamics::Model* _rbdl_model;
 
@@ -864,11 +904,20 @@ private:
     /// \brief Transform from world coordinates to robot base coordinates
     Affine3d _T_world_robot;
 
-    /// \brief map from joint names to joint id
-    map<string,int> _joint_names_map;
+    /// \brief map from joint id to joint names
+    map<int, string> _joint_id_to_names_map;
 
-    /// \brief map from link names to link id
-    map<string,int> _link_names_map;
+    /// \brief vector of spherical joints
+    vector<SphericalJointDescription> _spherical_joints;
+
+    /// \brief map from joint names to joint id (with rbdl indexing)
+    map<string,int> _joint_names_to_id_map;
+
+    /// \brief map from link names to link id (with rbdl indexing)
+    map<string,int> _link_names_to_id_map;
+
+    /// \brief joint limits for positions, velocity and torque, parsed from URDF
+    vector<JointLimit> _joint_limits;
 };
 
  /**
