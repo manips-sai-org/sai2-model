@@ -22,6 +22,24 @@ typedef Matrix< bool, 6, 1 > Vector6bool;
 namespace Sai2Model
 {
 
+// Basic data structure for force sensor data
+struct ForceSensorData {
+	std::string _robot_name;  // name of robot to which sensor is attached
+	std::string _link_name;	  // name of link to which sensor is attached
+	// transform from link to sensor frame. Measured moments are with respect to
+	// the sensor frame origin
+	Eigen::Affine3d _transform_in_link;
+	Eigen::Vector3d _force;	  // force applied to the environment in sensor frame
+	Eigen::Vector3d _moment;  // moment applied to the environment in sensor frame
+
+	ForceSensorData()
+		: _robot_name(""),
+		  _link_name(""),
+		  _transform_in_link(Eigen::Affine3d::Identity()),
+		  _force(Eigen::Vector3d::Zero()),
+		  _moment(Eigen::Vector3d::Zero()) {}
+};
+
 struct SphericalJointDescription {
 	string name;
 	int index;
