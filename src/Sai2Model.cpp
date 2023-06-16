@@ -142,6 +142,12 @@ void Sai2Model::set_dq(const Eigen::VectorXd& dq) {
 	_dq = dq;
 }
 
+bool Sai2Model::isLinkInRobot(const std::string& link_name) const {
+	if (_link_names_to_id_map.find(link_name) == _link_names_to_id_map.end()) {
+		return false;
+	}
+	return true;
+}
 
 void Sai2Model::updateKinematics()
 {
@@ -348,8 +354,6 @@ void Sai2Model::JvLocalFrame(MatrixXd& J,
 
 	J = rot_in_link.transpose() * link_rot.transpose() * J;
 }
-
-
 
 void Sai2Model::Jw(MatrixXd& J,
  const string& link_name)
