@@ -1,8 +1,8 @@
 # add the include directory to the include paths
 SET(EXAMPLE_NAME 03-spherical_joints)
 
-INCLUDE_DIRECTORIES (
-	${SAI2-MODELINCLUDE_DIRS})
+# INCLUDE_DIRECTORIES (
+# 	${SAI2-MODELINCLUDE_DIRS})
 
 # create an executable
 ADD_EXECUTABLE (${EXAMPLE_NAME} main.cpp)

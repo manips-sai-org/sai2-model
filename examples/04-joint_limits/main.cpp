@@ -1,3 +1,4 @@
+// 04-joint linits
 #include <Sai2Model.h>
 
 #include <iostream>
@@ -12,7 +13,14 @@ int main(int argc, char** argv) {
 
 	auto robot = std::make_shared<Sai2Model::Sai2Model>(robot_fname, false);
 
-	cout << endl;
+	cout << endl
+		 << "Joint limits are parsed automatically in the urdf file. They must "
+			"be present for prismatic and revolute joints and must not be "
+			"there for spherical and fixed joints, otherwise the parser will "
+			"give an error"
+		 << endl
+		 << endl;
+
 	for (const auto& limit : robot->joint_limits()) {
 		cout << "Joint name: " << limit.joint_name
 			 << " - joint index: " << limit.joint_index

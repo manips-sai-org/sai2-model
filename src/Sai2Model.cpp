@@ -143,6 +143,36 @@ void Sai2Model::set_dq(const Eigen::VectorXd& dq) {
 	_dq = dq;
 }
 
+Eigen::Quaterniond Sai2Model::spherical_quat(const std::string& joint_name) const {
+	for(auto joint : _spherical_joints) {
+		if(joint.name == joint_name) {
+			int i = joint.index;
+			int iw = joint.w_index;
+			return Eigen::Quaterniond(_q(iw), _q(i), _q(i+1), _q(i+2));
+		}
+	}
+	throw invalid_argument(
+		"cannot get the quaternion for non existing spherical joint " +
+		joint_name);
+}
+
+void Sai2Model::set_spherical_quat(const std::string& joint_name, const Eigen::Quaterniond quat) {
+	for(auto joint : _spherical_joints) {
+		if(joint.name == joint_name) {
+			int i = joint.index;
+			int iw = joint.w_index;
+			_q(i) = quat.x();
+			_q(i+1) = quat.y();
+			_q(i+2) = quat.z();
+			_q(iw) = quat.w();
+			return;
+		}
+	}
+	throw invalid_argument(
+		"cannot set the quaternion for non existing spherical joint " +
+		joint_name);
+}
+
 bool Sai2Model::isLinkInRobot(const std::string& link_name) const {
 	if (_link_names_to_id_map.find(link_name) == _link_names_to_id_map.end()) {
 		return false;
