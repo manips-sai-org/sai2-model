@@ -7,6 +7,8 @@
 
 #include <iostream>
 
+#include <iostream>
+
 using namespace std;
 
 const string robot_fname = "resources/rprbot.urdf";
