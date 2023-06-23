@@ -1,8 +1,8 @@
 SET(EXAMPLE_NAME 01-create_model_from_file)
 
 # add the include directory to the include paths
-INCLUDE_DIRECTORIES (
-	${SAI2-MODELINCLUDE_DIRS})
+# INCLUDE_DIRECTORIES (
+# 	${SAI2-MODELINCLUDE_DIRS})
 
 # create an executable
 ADD_EXECUTABLE (${EXAMPLE_NAME} main.cpp)

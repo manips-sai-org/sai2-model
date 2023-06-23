@@ -1,8 +1,5 @@
-SET(EXAMPLE_NAME 02-update_model)
-
-# # add the include directory to the include paths
-# INCLUDE_DIRECTORIES (
-# 	${SAI2-MODELINCLUDE_DIRS})
+# add the include directory to the include paths
+SET(EXAMPLE_NAME 05-grasp_matrix)
 
 # create an executable
 ADD_EXECUTABLE (${EXAMPLE_NAME} main.cpp)
@@ -15,4 +12,4 @@ TARGET_LINK_LIBRARIES (${EXAMPLE_NAME}
 # NOTE: this requires an install build
 SET(RESOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/resources)
 FILE(MAKE_DIRECTORY ${RESOURCE_DIR})
-FILE(COPY rprbot.urdf DESTINATION ${RESOURCE_DIR})
+FILE(COPY linkage.urdf DESTINATION ${RESOURCE_DIR})

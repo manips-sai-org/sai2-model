@@ -121,6 +121,11 @@ public:
 	Eigen::VectorXd dq() const { return _dq; }
 	void set_dq(const Eigen::VectorXd& dq);
 
+	// setter and getter for spherical joint by name
+	Eigen::Quaterniond spherical_quat(const std::string& joint_name) const;
+	void set_spherical_quat(const std::string& joint_name,
+							Eigen::Quaterniond quat);
+
 	// getter for joint accelerations
 	Eigen::VectorXd ddq() const { return _ddq; }
 
