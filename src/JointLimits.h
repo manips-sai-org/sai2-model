@@ -1,6 +1,8 @@
 #ifndef SAI2MODEL_JOINT_LIMITS_H_
 #define SAI2MODEL_JOINT_LIMITS_H_
 
+#include <string>
+
 namespace Sai2Model {
 
 struct JointLimit {
@@ -11,7 +13,8 @@ struct JointLimit {
 	double velocity = 0.0;
 	double effort = 0.0;
 
-	JointLimit(std::string joint_name, int index, double lower, double upper, double vel, double f)
+	JointLimit(std::string joint_name, int index, double lower, double upper,
+			   double vel, double f)
 		: joint_index(index),
 		  position_lower(lower),
 		  position_upper(upper),

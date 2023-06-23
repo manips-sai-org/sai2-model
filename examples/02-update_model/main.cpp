@@ -1,14 +1,15 @@
-// 02-update_model: 
+// 02-update_model:
 // example of how to use the different kinematic and dynamic functions
 
-#include <iostream>
 #include <Sai2Model.h>
+
+#include <iostream>
 
 using namespace std;
 
 const string robot_fname = "resources/rpbot.urdf";
 
-int main (int argc, char ** argv) {
+int main(int argc, char** argv) {
 	cout << "Loading robot file: " << robot_fname << endl;
 
 	Sai2Model::Sai2Model* robot = new Sai2Model::Sai2Model(robot_fname, false);
@@ -21,7 +22,7 @@ int main (int argc, char ** argv) {
 	Eigen::Vector3d position;
 	Eigen::Vector3d velocity;
 	Eigen::Matrix3d rotation;
-	Eigen::MatrixXd J(6,dof);
+	Eigen::MatrixXd J(6, dof);
 	Eigen::VectorXd gravity(dof);
 
 	// position and orientation of the end effector
@@ -29,7 +30,7 @@ int main (int argc, char ** argv) {
 	robot->linearVelocity(velocity, ee_link, ee_pos_in_link);
 	robot->rotation(rotation, ee_link);
 	// jacobian at the end effector (1m from second joint)
-	robot->J_0(J,ee_link,ee_pos_in_link);
+	robot->J_0(J, ee_link, ee_pos_in_link);
 	// gravity and coriolis/centrifugal forces
 	robot->jointGravityVector(gravity);
 
@@ -49,14 +50,14 @@ int main (int argc, char ** argv) {
 	// modify joint positions and velocities
 	Eigen::VectorXd new_q = Eigen::VectorXd::Zero(2);
 	Eigen::VectorXd new_dq = Eigen::VectorXd::Zero(2);
-	new_q << -0.5*M_PI, 1;
+	new_q << -0.5 * M_PI, 1;
 	new_dq << 0, 1;
 	robot->set_q(new_q);
 	robot->set_dq(new_dq);
 	robot->position(position, ee_link, Eigen::Vector3d(0.0, 0.0, 0.0));
 	robot->linearVelocity(velocity, ee_link, ee_pos_in_link);
 	robot->rotation(rotation, ee_link);
-	robot->J_0(J,ee_link,ee_pos_in_link);
+	robot->J_0(J, ee_link, ee_pos_in_link);
 	robot->jointGravityVector(gravity);
 
 	cout << endl;
@@ -79,7 +80,7 @@ int main (int argc, char ** argv) {
 	robot->position(position, ee_link, Eigen::Vector3d(0.0, 0.0, 0.0));
 	robot->linearVelocity(velocity, ee_link, ee_pos_in_link);
 	robot->rotation(rotation, ee_link);
-	robot->J_0(J,ee_link,ee_pos_in_link);
+	robot->J_0(J, ee_link, ee_pos_in_link);
 	robot->jointGravityVector(gravity);
 
 	cout << endl;
@@ -120,7 +121,7 @@ int main (int argc, char ** argv) {
 	robot->position(position, ee_link, Eigen::Vector3d(0.0, 0.0, 0.0));
 	robot->linearVelocity(velocity, ee_link, ee_pos_in_link);
 	robot->rotation(rotation, ee_link);
-	robot->J_0(J,ee_link,ee_pos_in_link);
+	robot->J_0(J, ee_link, ee_pos_in_link);
 	robot->jointGravityVector(gravity);
 
 	cout << endl;

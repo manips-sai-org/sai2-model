@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
 	cout << endl;
 	for (const auto& limit : robot->joint_limits()) {
 		cout << "Joint name: " << limit.joint_name
-		     << " - joint index: " << limit.joint_index
+			 << " - joint index: " << limit.joint_index
 			 << " - joint name: " << robot->joint_name(limit.joint_index)
 			 << " - lower limit: " << limit.position_lower
 			 << " - upper limit: " << limit.position_upper
