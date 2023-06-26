@@ -115,15 +115,15 @@ public:
 
 	// getter and setter for joint positions
 	Eigen::VectorXd q() const { return _q; }
-	void set_q(const Eigen::VectorXd& q);
+	void setQ(const Eigen::VectorXd& q);
 
 	// getter and setter for joint velocities
 	Eigen::VectorXd dq() const { return _dq; }
-	void set_dq(const Eigen::VectorXd& dq);
+	void setDq(const Eigen::VectorXd& dq);
 
 	// setter and getter for spherical joint by name
-	Eigen::Quaterniond spherical_quat(const std::string& joint_name) const;
-	void set_spherical_quat(const std::string& joint_name,
+	Eigen::Quaterniond sphericalQuat(const std::string& joint_name) const;
+	void setSphericalQuat(const std::string& joint_name,
 							Eigen::Quaterniond quat);
 
 	// getter for joint accelerations
@@ -136,15 +136,17 @@ public:
 	Eigen::Vector3d worldGravity() const { return _rbdl_model->gravity; }
 
 	// getter for the joint limits
-	std::vector<JointLimit> joint_limits() const { return _joint_limits; }
+	std::vector<JointLimit> jointLimits() const { return _joint_limits; }
 
 	// getter for the spherical joints
-	std::vector<SphericalJointDescription> spherical_joints() const {
+	std::vector<SphericalJointDescription> sphericalJoints() const {
 		return _spherical_joints;
 	}
 
+	Eigen::Affine3d TWorldRobot() const {return _T_world_robot;}
+
 	// getter for joint names
-	std::vector<std::string> joint_names() const;
+	std::vector<std::string> jointNames() const;
 
 	bool isLinkInRobot(const std::string& link_name) const;
 
@@ -199,7 +201,7 @@ public:
 	 * @return     number of values required for robot joint positions
 	 * description
 	 */
-	int q_size();
+	int qSize();
 
 	/**
 	 * @brief      Gives the joint gravity torques vector of the last updated
@@ -238,26 +240,7 @@ public:
 
 	/**
 	 * @brief      Full jacobian for link, relative to base (id=0) in the form
-	 *             [Jv; Jw] (linear first, angular next) expressed in base frame
-	 * (default), world frame or local frame
-	 *
-	 * @param      J            Matrix to which the jacobian will be written
-	 * @param      link_name    the name of the link where to compute the
-	 *                          jacobian
-	 * @param      pos_in_link  the position of the point in the link where the
-	 *                          jacobian is computed (in local link frame)
-	 */
-	void J_0(MatrixXd& J, const string& link_name,
-			 const Vector3d& pos_in_link = Vector3d::Zero());
-	void J_0WorldFrame(MatrixXd& J, const string& link_name,
-					   const Vector3d& pos_in_link = Vector3d::Zero());
-	void J_0LocalFrame(MatrixXd& J, const string& link_name,
-					   const Vector3d& pos_in_link = Vector3d::Zero(),
-					   const Matrix3d& rot_in_link = Matrix3d::Identity());
-
-	/**
-	 * @brief      Full jacobian for link, relative to base (id=0) in the form
-	 *             [Jw; Jv] (angular first, linear next) expressed in base frame
+	 *             [Jv; Jw] (angular first, linear next) expressed in base frame
 	 * (default), world frame or local frame
 	 *
 	 * @param      J            Matrix to which the jacobian will be written
@@ -341,7 +324,7 @@ public:
 	 * @param[in]  q_max                                   Upper joint limits
 	 * @param[in]  weights                                 The weights
 	 */
-	void computeIK3d_JL(
+	void computeIK3dJL(
 		VectorXd& q_result, const vector<string>& link_names,
 		const vector<Vector3d>& point_positions_in_links,
 		const vector<Vector3d>& desired_point_positions_in_robot_frame,
@@ -519,7 +502,7 @@ public:
 	 * @param      joint_name  name of the joint
 	 * @return     the joint index
 	 */
-	int joint_index(const string& joint_name);
+	int jointIndex(const string& joint_name);
 
 	/**
 	 * @brief      Returns the index of the scalar part of the quaternion for a
@@ -529,7 +512,7 @@ public:
 	 *
 	 * @return     the index of the w coefficient of the quaternion
 	 */
-	int spherical_joint_w_index(const string& joint_name);
+	int sphericalJointIndexW(const string& joint_name);
 
 	/**
 	 * @brief returns the joint name for the given index (for spherical joints,
@@ -539,7 +522,7 @@ public:
 	 * @param joint_id index of the joint
 	 * @return std::string name of the joint
 	 */
-	std::string joint_name(const int joint_id);
+	std::string jointName(const int joint_id);
 
 	/**
 	 * @brief      Gives the mass properties of a given link

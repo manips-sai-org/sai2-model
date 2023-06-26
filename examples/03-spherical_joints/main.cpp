@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
 			"component of the quaternion (placed at the end of the q vector "
 			"after all the non spherical joints indexes): "
 		 << endl;
-	for (const auto& joint_description : robot->spherical_joints()) {
+	for (const auto& joint_description : robot->sphericalJoints()) {
 		cout << "name: " << joint_description.name
 			 << " - index: " << joint_description.index
 			 << " - w_index: " << joint_description.w_index << endl;
@@ -51,14 +51,14 @@ int main(int argc, char** argv) {
 			"the n last components of the q vector contain the w part of the "
 			"quaternions representation of each spherical joint"
 		 << endl;
-	cout << "q size: " << robot->q_size() << endl;
+	cout << "q size: " << robot->qSize() << endl;
 	cout << "dof size: " << robot->dof() << endl;
 	cout << "q: " << robot->q().transpose() << endl;
 	cout << "dq: " << robot->dq().transpose() << endl;
 	cout << endl << endl;
 
 	cout << "joint names from Sai2Model call" << std::endl;
-	for (const auto& name : robot->joint_names()) {
+	for (const auto& name : robot->jointNames()) {
 		std::cout << name << " , ";
 	}
 	cout << endl << endl;
@@ -66,23 +66,23 @@ int main(int argc, char** argv) {
 	cout << "joint names from Sai2Model individual call, looping on q_size "
 			"indexes"
 		 << std::endl;
-	for (int i = 0; i < robot->q_size(); ++i) {
-		cout << "joint: " << i << " - name: " << robot->joint_name(i) << endl;
+	for (int i = 0; i < robot->qSize(); ++i) {
+		cout << "joint: " << i << " - name: " << robot->jointName(i) << endl;
 	}
 	cout << endl << endl;
 
 	cout << "joint index per name. The spherical joints return the index of "
 			"the x component"
 		 << endl;
-	for (const auto& joint_name : robot->joint_names()) {
-		cout << joint_name << ": " << robot->joint_index(joint_name) << endl;
+	for (const auto& joint_name : robot->jointNames()) {
+		cout << joint_name << ": " << robot->jointIndex(joint_name) << endl;
 	}
 	cout << endl << endl;
 
 	cout << "spherical joint w indexes from individual call: " << endl;
-	for (const auto& sph_joint : robot->spherical_joints()) {
+	for (const auto& sph_joint : robot->sphericalJoints()) {
 		cout << "name: " << sph_joint.name << " -  w_index: "
-			 << robot->spherical_joint_w_index(sph_joint.name) << endl;
+			 << robot->sphericalJointIndexW(sph_joint.name) << endl;
 	}
 	cout << endl << endl;
 
@@ -95,14 +95,14 @@ int main(int argc, char** argv) {
 	cout << endl << endl;
 
 	// change spherical joint position
-	string sph_joint_name = robot->spherical_joints()[0].name;
+	string sph_joint_name = robot->sphericalJoints()[0].name;
 	Eigen::Quaterniond quat = Eigen::Quaterniond(
 		Eigen::AngleAxisd(M_PI / 6, Eigen::Vector3d(1, 0, 1)));
-	robot->set_spherical_quat(sph_joint_name, quat);
+	robot->setSphericalQuat(sph_joint_name, quat);
 	cout << "setting first spherical joint to quaternion: "
 		 << quat.coeffs().transpose() << endl;
 	cout << "getting first spherical joint quaternion from model: "
-		 << robot->spherical_quat(sph_joint_name).coeffs().transpose() << endl;
+		 << robot->sphericalQuat(sph_joint_name).coeffs().transpose() << endl;
 	cout << "new model q vector: " << robot->q().transpose() << endl;
 
 	robot->updateKinematics();

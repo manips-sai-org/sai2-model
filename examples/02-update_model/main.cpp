@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
 	robot->linearVelocity(velocity, ee_link, ee_pos_in_link);
 	robot->rotation(rotation, ee_link);
 	// jacobian at the end effector (1m from second joint)
-	robot->J_0(J, ee_link, ee_pos_in_link);
+	robot->J(J, ee_link, ee_pos_in_link);
 	// gravity and coriolis/centrifugal forces
 	robot->jointGravityVector(gravity);
 
@@ -52,16 +52,16 @@ int main(int argc, char** argv) {
 	cout << endl;
 
 	// modify joint positions and velocities
-	Eigen::VectorXd new_q = Eigen::VectorXd::Zero(robot->q_size());
+	Eigen::VectorXd new_q = Eigen::VectorXd::Zero(robot->qSize());
 	Eigen::VectorXd new_dq = Eigen::VectorXd::Zero(robot->dof());
 	new_q << M_PI / 2, 1, M_PI / 2;
 	new_dq << 0, 1, M_PI / 12;
-	robot->set_q(new_q);
-	robot->set_dq(new_dq);
+	robot->setQ(new_q);
+	robot->setDq(new_dq);
 	robot->position(position, ee_link, ee_pos_in_link);
 	robot->linearVelocity(velocity, ee_link, ee_pos_in_link);
 	robot->rotation(rotation, ee_link);
-	robot->J_0(J, ee_link, ee_pos_in_link);
+	robot->J(J, ee_link, ee_pos_in_link);
 	robot->jointGravityVector(gravity);
 
 	cout << endl;
@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
 	robot->position(position, ee_link, ee_pos_in_link);
 	robot->linearVelocity(velocity, ee_link, ee_pos_in_link);
 	robot->rotation(rotation, ee_link);
-	robot->J_0(J, ee_link, ee_pos_in_link);
+	robot->J(J, ee_link, ee_pos_in_link);
 	robot->jointGravityVector(gravity);
 
 	cout << endl;
@@ -134,14 +134,14 @@ int main(int argc, char** argv) {
 	// come back to initial position
 	new_q.setZero();
 	new_dq.setZero();
-	robot->set_q(new_q);
-	robot->set_dq(new_dq);
+	robot->setQ(new_q);
+	robot->setDq(new_dq);
 	robot->updateModel();
 
 	robot->position(position, ee_link, ee_pos_in_link);
 	robot->linearVelocity(velocity, ee_link, ee_pos_in_link);
 	robot->rotation(rotation, ee_link);
-	robot->J_0(J, ee_link, ee_pos_in_link);
+	robot->J(J, ee_link, ee_pos_in_link);
 	robot->jointGravityVector(gravity);
 
 	cout << endl;
