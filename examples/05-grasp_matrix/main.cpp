@@ -16,7 +16,7 @@ int main() {
 	auto linkage = std::make_shared<Sai2Model::Sai2Model>(robot_file, false);
 
 	// Make perfect tetrahedron
-	linkage->set_q(Vector3d(54.7356 / 180.0 * M_PI, 54.7356 / 180.0 * M_PI,
+	linkage->setQ(Vector3d(54.7356 / 180.0 * M_PI, 54.7356 / 180.0 * M_PI,
 							54.7356 / 180.0 * M_PI));
 	linkage->updateModel();
 

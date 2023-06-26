@@ -356,7 +356,7 @@ RBDL_DLLAPI
       );
 
 RBDL_DLLAPI
-  bool InverseKinematics_JL (
+  bool InverseKinematicsJL (
       Model &model,
       const Math::VectorNd &Qinit,
       const Math::VectorNd &Qmin,
