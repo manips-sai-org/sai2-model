@@ -114,36 +114,37 @@ public:
 	Sai2Model& operator=(Sai2Model const&) = delete;
 
 	// getter and setter for joint positions
-	Eigen::VectorXd q() const { return _q; }
+	const Eigen::VectorXd& q() const { return _q; }
 	void setQ(const Eigen::VectorXd& q);
 
 	// getter and setter for joint velocities
-	Eigen::VectorXd dq() const { return _dq; }
+	const Eigen::VectorXd& dq() const { return _dq; }
 	void setDq(const Eigen::VectorXd& dq);
 
 	// setter and getter for spherical joint by name
-	Eigen::Quaterniond sphericalQuat(const std::string& joint_name) const;
+	const Eigen::Quaterniond sphericalQuat(const std::string& joint_name) const;
 	void setSphericalQuat(const std::string& joint_name,
 							Eigen::Quaterniond quat);
 
 	// getter for joint accelerations
-	Eigen::VectorXd ddq() const { return _ddq; }
+	const Eigen::VectorXd& ddq() const { return _ddq; }
 
 	// getter for mass matrix
-	Eigen::MatrixXd M() const { return _M; }
+	const Eigen::MatrixXd& M() const { return _M; }
+	const Eigen::MatrixXd& MInv() const { return _M_inv; }
 
 	// getter for world gravity
-	Eigen::Vector3d worldGravity() const { return _rbdl_model->gravity; }
+	const Eigen::Vector3d& worldGravity() const { return _rbdl_model->gravity; }
 
 	// getter for the joint limits
-	std::vector<JointLimit> jointLimits() const { return _joint_limits; }
+	const std::vector<JointLimit>& jointLimits() const { return _joint_limits; }
 
 	// getter for the spherical joints
-	std::vector<SphericalJointDescription> sphericalJoints() const {
+	const std::vector<SphericalJointDescription>& sphericalJoints() const {
 		return _spherical_joints;
 	}
 
-	Eigen::Affine3d TWorldRobot() const {return _T_world_robot;}
+	const Eigen::Affine3d& TWorldRobot() const {return _T_world_robot;}
 
 	// getter for joint names
 	std::vector<std::string> jointNames() const;
@@ -191,7 +192,7 @@ public:
 	 *
 	 * @return     number of dof of robot
 	 */
-	int dof();
+	const int& dof() const {return _dof;}
 
 	/**
 	 * @brief      returns the number of values required for robot joint
@@ -201,7 +202,7 @@ public:
 	 * @return     number of values required for robot joint positions
 	 * description
 	 */
-	int qSize();
+	const int& qSize() const {return _q_size;}
 
 	/**
 	 * @brief      Gives the joint gravity torques vector of the last updated

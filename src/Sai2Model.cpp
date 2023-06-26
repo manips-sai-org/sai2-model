@@ -143,7 +143,7 @@ void Sai2Model::setDq(const Eigen::VectorXd& dq) {
 	_dq = dq;
 }
 
-Eigen::Quaterniond Sai2Model::sphericalQuat(const std::string& joint_name) const {
+const Eigen::Quaterniond Sai2Model::sphericalQuat(const std::string& joint_name) const {
 	for(auto joint : _spherical_joints) {
 		if(joint.name == joint_name) {
 			int i = joint.index;
@@ -213,10 +213,6 @@ void Sai2Model::updateKinematicsCustom(
 	}
 	UpdateKinematicsCustom(*_rbdl_model, Q_set, dQ_set, ddQ_set);
 }
-
-int Sai2Model::dof() { return _dof; }
-
-int Sai2Model::qSize() { return _q_size; }
 
 void Sai2Model::jointGravityVector(VectorXd& g) {
 	if (g.size() != _dof) {
@@ -319,6 +315,7 @@ void Sai2Model::Jv(MatrixXd& J, const string& link_name,
 	CalcPointJacobian(*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link, J,
 					  false);
 }
+
 void Sai2Model::JvWorldFrame(MatrixXd& J, const string& link_name,
 							 const Vector3d& pos_in_link) {
 	J.setZero(3, _dof);
@@ -327,6 +324,7 @@ void Sai2Model::JvWorldFrame(MatrixXd& J, const string& link_name,
 
 	J = _T_world_robot.linear() * J;
 }
+
 void Sai2Model::JvLocalFrame(MatrixXd& J, const string& link_name,
 							 const Vector3d& pos_in_link,
 							 const Matrix3d& rot_in_link) {
@@ -349,6 +347,7 @@ void Sai2Model::Jw(MatrixXd& J, const string& link_name) {
 						Vector3d::Zero(), J_temp, false);
 	J = J_temp.topRows<3>();
 }
+
 void Sai2Model::JwWorldFrame(MatrixXd& J, const string& link_name) {
 	// compute the full jacobian at the center of the link and take rotational
 	// part
@@ -357,6 +356,7 @@ void Sai2Model::JwWorldFrame(MatrixXd& J, const string& link_name) {
 						Vector3d::Zero(), J_temp, false);
 	J = _T_world_robot.linear() * J_temp.topRows<3>();
 }
+
 void Sai2Model::JwLocalFrame(MatrixXd& J, const string& link_name,
 							 const Matrix3d& rot_in_link) {
 	// compute the full jacobian at the center of the link and take rotational
