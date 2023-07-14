@@ -103,9 +103,8 @@ private:
 
 class Sai2Model {
 public:
-	Sai2Model(const string path_to_model_file, bool verbose = true,
-			  const Affine3d T_world_robot = Affine3d::Identity(),
-			  const Vector3d world_gravity = Vector3d(0.0, 0.0, -9.81));
+	Sai2Model(const string path_to_model_file,
+			  bool verbose = false);
 	~Sai2Model();
 
 	// disallow empty, copy and asssign constructors
@@ -124,7 +123,7 @@ public:
 	// setter and getter for spherical joint by name
 	const Eigen::Quaterniond sphericalQuat(const std::string& joint_name) const;
 	void setSphericalQuat(const std::string& joint_name,
-							Eigen::Quaterniond quat);
+						  Eigen::Quaterniond quat);
 
 	// getter for joint accelerations
 	const Eigen::VectorXd& ddq() const { return _ddq; }
@@ -133,8 +132,11 @@ public:
 	const Eigen::MatrixXd& M() const { return _M; }
 	const Eigen::MatrixXd& MInv() const { return _M_inv; }
 
-	// getter for world gravity
+	// getter and setter for world gravity
 	const Eigen::Vector3d& worldGravity() const { return _rbdl_model->gravity; }
+	void setWorldGravity(const Vector3d& world_gravity) {
+		_rbdl_model->gravity = world_gravity;
+	}
 
 	// getter for the joint limits
 	const std::vector<JointLimit>& jointLimits() const { return _joint_limits; }
@@ -144,7 +146,9 @@ public:
 		return _spherical_joints;
 	}
 
-	const Eigen::Affine3d& TWorldRobot() const {return _T_world_robot;}
+	// getter and setter for robot base transform
+	const Eigen::Affine3d& TRobotBase() const { return _T_world_robot; }
+	void setTRobotBase(const Affine3d& T) { _T_world_robot = T; }
 
 	// getter for joint names
 	std::vector<std::string> jointNames() const;
@@ -192,7 +196,7 @@ public:
 	 *
 	 * @return     number of dof of robot
 	 */
-	const int& dof() const {return _dof;}
+	const int& dof() const { return _dof; }
 
 	/**
 	 * @brief      returns the number of values required for robot joint
@@ -202,7 +206,7 @@ public:
 	 * @return     number of values required for robot joint positions
 	 * description
 	 */
-	const int& qSize() const {return _q_size;}
+	const int& qSize() const { return _q_size; }
 
 	/**
 	 * @brief      Gives the joint gravity torques vector of the last updated

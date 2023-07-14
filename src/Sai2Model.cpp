@@ -34,9 +34,8 @@ bool isValidQuaternion(double x, double y, double z, double w) {
 
 namespace Sai2Model {
 
-Sai2Model::Sai2Model(const string path_to_model_file, bool verbose,
-					 const Affine3d T_world_robot,
-					 const Vector3d world_gravity) {
+Sai2Model::Sai2Model(const string path_to_model_file,
+					 bool verbose) {
 	_rbdl_model = new RigidBodyDynamics::Model();
 
 	// parse rbdl model from urdf
@@ -47,7 +46,7 @@ Sai2Model::Sai2Model(const string path_to_model_file, bool verbose,
 		throw std::runtime_error("Error loading model [" + path_to_model_file +
 								 "]\n");
 	}
-	_rbdl_model->gravity = world_gravity;
+	_rbdl_model->gravity = Vector3d(0,0,-9.81);
 
 	// create joint id to name map
 	for (auto pair : _joint_names_to_id_map) {
@@ -80,7 +79,7 @@ Sai2Model::Sai2Model(const string path_to_model_file, bool verbose,
 	}
 
 	// set the base position in the world
-	_T_world_robot = T_world_robot;
+	_T_world_robot = Affine3d::Identity();
 
 	// set the number of degrees of freedom
 	_dof = _rbdl_model->dof_count;
@@ -123,8 +122,7 @@ void Sai2Model::setQ(const Eigen::VectorXd& q) {
 	}
 	for (const auto& sph_joint : _spherical_joints) {
 		if (!isValidQuaternion(q(sph_joint.index), q(sph_joint.index + 1),
-								 q(sph_joint.index + 2),
-								 q(sph_joint.w_index))) {
+							   q(sph_joint.index + 2), q(sph_joint.w_index))) {
 			throw invalid_argument(
 				"trying to set an invalid quaternion for joint " +
 				sph_joint.name + "at index " + std::to_string(sph_joint.index) +
@@ -143,12 +141,13 @@ void Sai2Model::setDq(const Eigen::VectorXd& dq) {
 	_dq = dq;
 }
 
-const Eigen::Quaterniond Sai2Model::sphericalQuat(const std::string& joint_name) const {
-	for(auto joint : _spherical_joints) {
-		if(joint.name == joint_name) {
+const Eigen::Quaterniond Sai2Model::sphericalQuat(
+	const std::string& joint_name) const {
+	for (auto joint : _spherical_joints) {
+		if (joint.name == joint_name) {
 			int i = joint.index;
 			int iw = joint.w_index;
-			return Eigen::Quaterniond(_q(iw), _q(i), _q(i+1), _q(i+2));
+			return Eigen::Quaterniond(_q(iw), _q(i), _q(i + 1), _q(i + 2));
 		}
 	}
 	throw invalid_argument(
@@ -156,14 +155,15 @@ const Eigen::Quaterniond Sai2Model::sphericalQuat(const std::string& joint_name)
 		joint_name);
 }
 
-void Sai2Model::setSphericalQuat(const std::string& joint_name, const Eigen::Quaterniond quat) {
-	for(auto joint : _spherical_joints) {
-		if(joint.name == joint_name) {
+void Sai2Model::setSphericalQuat(const std::string& joint_name,
+								 const Eigen::Quaterniond quat) {
+	for (auto joint : _spherical_joints) {
+		if (joint.name == joint_name) {
 			int i = joint.index;
 			int iw = joint.w_index;
 			_q(i) = quat.x();
-			_q(i+1) = quat.y();
-			_q(i+2) = quat.z();
+			_q(i + 1) = quat.y();
+			_q(i + 2) = quat.z();
 			_q(iw) = quat.w();
 			return;
 		}
@@ -265,7 +265,7 @@ void Sai2Model::factorizedChristoffelMatrix(MatrixXd& C) {
 }
 
 void Sai2Model::J(MatrixXd& J, const string& link_name,
-					const Vector3d& pos_in_link) {
+				  const Vector3d& pos_in_link) {
 	J.setZero(6, _dof);
 	MatrixXd J_temp = MatrixXd::Zero(6, _dof);
 	CalcPointJacobian6D(*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link,
@@ -277,7 +277,7 @@ void Sai2Model::J(MatrixXd& J, const string& link_name,
 }
 
 void Sai2Model::JWorldFrame(MatrixXd& J, const string& link_name,
-							  const Vector3d& pos_in_link) {
+							const Vector3d& pos_in_link) {
 	J.setZero(6, _dof);
 	MatrixXd J_temp = MatrixXd::Zero(6, _dof);
 	CalcPointJacobian6D(*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link,
@@ -290,8 +290,8 @@ void Sai2Model::JWorldFrame(MatrixXd& J, const string& link_name,
 }
 
 void Sai2Model::JLocalFrame(MatrixXd& J, const string& link_name,
-							  const Vector3d& pos_in_link,
-							  const Matrix3d& rot_in_link) {
+							const Vector3d& pos_in_link,
+							const Matrix3d& rot_in_link) {
 	J.setZero(6, _dof);
 	MatrixXd J_temp = MatrixXd::Zero(6, _dof);
 	CalcPointJacobian6D(*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link,
@@ -421,8 +421,7 @@ void Sai2Model::computeIK3dJL(
 	}
 
 	InverseKinematicsJL(*_rbdl_model, _q, q_min, q_max, weights, link_ids,
-						 body_point, target_pos, q_result, 1.0e-12, 0.0001,
-						 500);
+						body_point, target_pos, q_result, 1.0e-12, 0.0001, 500);
 	// InverseKinematicsJL modifies the internal model so we need to re update
 	// the kinematics with the previous q value to keep it unchanged
 	updateKinematics();

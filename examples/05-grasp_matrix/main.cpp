@@ -13,7 +13,7 @@ const string robot_file = "resources/linkage.urdf";
 
 int main() {
 	// load robot
-	auto linkage = std::make_shared<Sai2Model::Sai2Model>(robot_file, false);
+	auto linkage = std::make_shared<Sai2Model::Sai2Model>(robot_file);
 
 	// Make perfect tetrahedron
 	linkage->setQ(Vector3d(54.7356 / 180.0 * M_PI, 54.7356 / 180.0 * M_PI,
