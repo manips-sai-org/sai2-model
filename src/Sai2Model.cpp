@@ -141,6 +141,14 @@ void Sai2Model::setDq(const Eigen::VectorXd& dq) {
 	_dq = dq;
 }
 
+void Sai2Model::setDdq(const Eigen::VectorXd& ddq) {
+	if (ddq.size() != _dof) {
+		throw invalid_argument("ddq size inconsistent in Sai2Model::setDdq");
+		return;
+	}
+	_ddq = ddq;
+}
+
 const Eigen::Quaterniond Sai2Model::sphericalQuat(
 	const std::string& joint_name) const {
 	for (auto joint : _spherical_joints) {
@@ -1696,7 +1704,7 @@ void orientationError(Vector3d& delta_phi,
 	delta_phi = -2.0 * inv_dlambda.vec();
 }
 
-Matrix3d CrossProductOperator(const Vector3d& v) {
+Matrix3d crossProductOperator(const Vector3d& v) {
 	Matrix3d v_hat;
 	v_hat << 0, -v(2), v(1), v(2), 0, -v(0), -v(1), v(0), 0;
 	return v_hat;
@@ -1713,7 +1721,7 @@ void graspMatrix(MatrixXd& G, MatrixXd& G_inv, Matrix3d& R,
 
 	// transform the resultant forces and moments to the desired resolving point
 	Vector3d r_cg = geom_center - center_point;
-	Matrix3d Rcross_cg = CrossProductOperator(r_cg);
+	Matrix3d Rcross_cg = crossProductOperator(r_cg);
 
 	int n = G.rows();
 
@@ -1769,7 +1777,7 @@ void graspMatrixAtGeometricCenter(MatrixXd& G, MatrixXd& G_inv, Matrix3d& R,
 	for (int i = 0; i < n; i++) {
 		Vector3d ri = contact_locations[i] - geometric_center;
 		Wf.block<3, 3>(0, 3 * i) = Matrix3d::Identity();
-		Wf.block<3, 3>(3, 3 * i) = CrossProductOperator(ri);
+		Wf.block<3, 3>(3, 3 * i) = crossProductOperator(ri);
 	}
 	for (int i = 0; i < k; i++) {
 		Wm.block<3, 3>(3, 3 * i) = Matrix3d::Identity();
@@ -1886,7 +1894,7 @@ void graspMatrixAtGeometricCenter(MatrixXd& G, MatrixXd& G_inv, Matrix3d& R,
 					G.block<5, 6>(7, 6) = I;
 
 					G_inv = MatrixXd::Zero(12, 12);
-					Matrix3d rx_cross = CrossProductOperator(x);
+					Matrix3d rx_cross = crossProductOperator(x);
 					Matrix3d rx_cross_square = rx_cross * rx_cross;
 					G_inv.block<3, 3>(0, 0) = 0.5 * Matrix3d::Identity();
 					G_inv.block<3, 3>(3, 0) = 0.5 * Matrix3d::Identity();

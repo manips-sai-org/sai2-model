@@ -127,6 +127,7 @@ public:
 
 	// getter for joint accelerations
 	const Eigen::VectorXd& ddq() const { return _ddq; }
+	void setDdq(const Eigen::VectorXd& ddq);
 
 	// getter for mass matrix
 	const Eigen::MatrixXd& M() const { return _M; }
@@ -922,7 +923,7 @@ void orientationError(Vector3d& delta_phi,
 					  const Quaterniond& current_orientation);
 
 /// \brief compute the cross product operator of a 3d vector
-Matrix3d CrossProductOperator(const Vector3d& v);
+Matrix3d crossProductOperator(const Vector3d& v);
 
 /**
  * @brief      Computes the grasp matrix and its inverse in the cases where
