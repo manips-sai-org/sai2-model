@@ -30,6 +30,29 @@ bool isValidQuaternion(double x, double y, double z, double w) {
 	return true;
 }
 
+bool isPositiveDefinite(const MatrixXd& matrix)
+{
+	// square
+    if (matrix.rows() != matrix.cols())
+        return false;
+
+    // symmetric
+    if (!matrix.transpose().isApprox(matrix))
+        return false;
+
+    // positive eigenvalues
+    SelfAdjointEigenSolver<MatrixXd> eigensolver(matrix);
+    const auto& eigenvalues = eigensolver.eigenvalues();
+
+    for (int i = 0; i < eigenvalues.size(); ++i)
+    {
+        if (eigenvalues(i) <= 0)
+            return false;
+    }
+
+    return true;
+}
+
 }  // namespace
 
 namespace Sai2Model {
@@ -46,7 +69,6 @@ Sai2Model::Sai2Model(const string path_to_model_file,
 		throw std::runtime_error("Error loading model [" + path_to_model_file +
 								 "]\n");
 	}
-	_rbdl_model->gravity = Vector3d(0,0,-9.81);
 
 	// create joint id to name map
 	for (auto pair : _joint_names_to_id_map) {
@@ -80,6 +102,7 @@ Sai2Model::Sai2Model(const string path_to_model_file,
 
 	// set the base position in the world
 	_T_world_robot = Affine3d::Identity();
+	_rbdl_model->gravity = Vector3d(0,0,-9.81);
 
 	// set the number of degrees of freedom
 	_dof = _rbdl_model->dof_count;
@@ -181,6 +204,13 @@ void Sai2Model::setSphericalQuat(const std::string& joint_name,
 		joint_name);
 }
 
+void Sai2Model::setTRobotBase(const Affine3d& T) {
+	_T_world_robot = T;
+	Vector3d prev_world_gravity = worldGravity();
+	_rbdl_model->gravity =
+		_T_world_robot.linear().transpose() * prev_world_gravity;
+}
+
 bool Sai2Model::isLinkInRobot(const std::string& link_name) const {
 	if (_link_names_to_id_map.find(link_name) == _link_names_to_id_map.end()) {
 		return false;
@@ -200,11 +230,15 @@ void Sai2Model::updateModel() {
 void Sai2Model::updateModel(const Eigen::MatrixXd& M) {
 	updateKinematics();
 
-	if (M.rows() != M.cols() || M.rows() != _dof) {
+	if (!isPositiveDefinite(M)) {
+		throw invalid_argument(
+			"M is not symmetric positive definite Sai2Model::updateModel");
+	}
+	if (M.rows() != _dof) {
 		throw invalid_argument(
 			"M matrix dimensions inconsistent in Sai2Model::updateModel");
-		return;
 	}
+	_M = M;
 	updateInverseInertia();
 }
 
@@ -615,7 +649,7 @@ void Sai2Model::angularAccelerationInWorld(Vector3d& aaccel,
 
 unsigned int Sai2Model::linkIdRbdl(const string& link_name) {
 	if (_link_names_to_id_map.find(link_name) == _link_names_to_id_map.end()) {
-		throw runtime_error("link [" + link_name + "] does not exist");
+		throw invalid_argument("link [" + link_name + "] does not exist");
 	}
 	return _link_names_to_id_map[link_name];
 }
@@ -623,7 +657,7 @@ unsigned int Sai2Model::linkIdRbdl(const string& link_name) {
 int Sai2Model::jointIndex(const string& joint_name) {
 	if (_joint_names_to_id_map.find(joint_name) ==
 		_joint_names_to_id_map.end()) {
-		throw runtime_error("joint [" + joint_name + "] does not exist");
+		throw invalid_argument("joint [" + joint_name + "] does not exist");
 	}
 	return _rbdl_model->mJoints[_joint_names_to_id_map[joint_name]].q_index;
 }
@@ -631,7 +665,7 @@ int Sai2Model::jointIndex(const string& joint_name) {
 int Sai2Model::sphericalJointIndexW(const string& joint_name) {
 	if (_joint_names_to_id_map.find(joint_name) ==
 		_joint_names_to_id_map.end()) {
-		throw runtime_error("joint [" + joint_name + "] does not exist");
+		throw invalid_argument("joint [" + joint_name + "] does not exist");
 	}
 	for (auto it = _spherical_joints.cbegin(); it != _spherical_joints.cend();
 		 ++it) {
@@ -639,7 +673,7 @@ int Sai2Model::sphericalJointIndexW(const string& joint_name) {
 			return it->w_index;
 		}
 	}
-	throw runtime_error("joint [" + joint_name + "] is not spherical");
+	throw invalid_argument("joint [" + joint_name + "] is not spherical");
 }
 
 std::string Sai2Model::jointName(const int joint_id) {

@@ -136,7 +136,8 @@ public:
 	// getter and setter for world gravity
 	const Eigen::Vector3d& worldGravity() const { return _rbdl_model->gravity; }
 	void setWorldGravity(const Vector3d& world_gravity) {
-		_rbdl_model->gravity = world_gravity;
+		_rbdl_model->gravity =
+			_T_world_robot.linear().transpose() * world_gravity;
 	}
 
 	// getter for the joint limits
@@ -149,7 +150,7 @@ public:
 
 	// getter and setter for robot base transform
 	const Eigen::Affine3d& TRobotBase() const { return _T_world_robot; }
-	void setTRobotBase(const Affine3d& T) { _T_world_robot = T; }
+	void setTRobotBase(const Affine3d& T);
 
 	// getter for joint names
 	std::vector<std::string> jointNames() const;

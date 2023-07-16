@@ -39,9 +39,9 @@
     <joint name="j1" type="revolute">
         <parent link="link0" />
         <child link="link1" />
-        <origin xyz="0.000000 0.000000 0.000000" rpy="-0.000000 0.000000 -0.000000" />
-        <axis xyz="0 1 0" />
-        <limit lower="-1.5707" upper="1.5707" effort="150" velocity="1.5709" />
+        <origin xyz="0.000000 0.000000 1.000000" rpy="-0.000000 0.000000 -0.000000" />
+        <axis xyz="1 0 0" />
+        <limit lower="-2.5707" upper="2.5707" effort="250" velocity="1.5709" />
     </joint>
     <joint name="j2" type="prismatic">
         <parent link="link1" />
