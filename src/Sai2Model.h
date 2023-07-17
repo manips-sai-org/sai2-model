@@ -103,8 +103,7 @@ private:
 
 class Sai2Model {
 public:
-	Sai2Model(const string path_to_model_file,
-			  bool verbose = false);
+	Sai2Model(const string path_to_model_file, bool verbose = false);
 	~Sai2Model();
 
 	// disallow empty, copy and asssign constructors
@@ -134,7 +133,9 @@ public:
 	const Eigen::MatrixXd& MInv() const { return _M_inv; }
 
 	// getter and setter for world gravity
-	const Eigen::Vector3d& worldGravity() const { return _rbdl_model->gravity; }
+	const Eigen::Vector3d worldGravity() const {
+		return _T_world_robot.linear() * _rbdl_model->gravity;
+	}
 	void setWorldGravity(const Vector3d& world_gravity) {
 		_rbdl_model->gravity =
 			_T_world_robot.linear().transpose() * world_gravity;

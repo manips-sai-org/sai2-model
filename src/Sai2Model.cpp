@@ -30,35 +30,29 @@ bool isValidQuaternion(double x, double y, double z, double w) {
 	return true;
 }
 
-bool isPositiveDefinite(const MatrixXd& matrix)
-{
+bool isPositiveDefinite(const MatrixXd& matrix) {
 	// square
-    if (matrix.rows() != matrix.cols())
-        return false;
+	if (matrix.rows() != matrix.cols()) return false;
 
-    // symmetric
-    if (!matrix.transpose().isApprox(matrix))
-        return false;
+	// symmetric
+	if (!matrix.transpose().isApprox(matrix)) return false;
 
-    // positive eigenvalues
-    SelfAdjointEigenSolver<MatrixXd> eigensolver(matrix);
-    const auto& eigenvalues = eigensolver.eigenvalues();
+	// positive eigenvalues
+	SelfAdjointEigenSolver<MatrixXd> eigensolver(matrix);
+	const auto& eigenvalues = eigensolver.eigenvalues();
 
-    for (int i = 0; i < eigenvalues.size(); ++i)
-    {
-        if (eigenvalues(i) <= 0)
-            return false;
-    }
+	for (int i = 0; i < eigenvalues.size(); ++i) {
+		if (eigenvalues(i) <= 0) return false;
+	}
 
-    return true;
+	return true;
 }
 
 }  // namespace
 
 namespace Sai2Model {
 
-Sai2Model::Sai2Model(const string path_to_model_file,
-					 bool verbose) {
+Sai2Model::Sai2Model(const string path_to_model_file, bool verbose) {
 	_rbdl_model = new RigidBodyDynamics::Model();
 
 	// parse rbdl model from urdf
@@ -102,7 +96,10 @@ Sai2Model::Sai2Model(const string path_to_model_file,
 
 	// set the base position in the world
 	_T_world_robot = Affine3d::Identity();
-	_rbdl_model->gravity = Vector3d(0,0,-9.81);
+
+	// set the gravity in rbdl model
+	// it is the world gravity expressed in robot base frame
+	_rbdl_model->gravity = Vector3d(0, 0, -9.81);
 
 	// set the number of degrees of freedom
 	_dof = _rbdl_model->dof_count;
@@ -148,7 +145,7 @@ void Sai2Model::setQ(const Eigen::VectorXd& q) {
 							   q(sph_joint.index + 2), q(sph_joint.w_index))) {
 			throw invalid_argument(
 				"trying to set an invalid quaternion for joint " +
-				sph_joint.name + "at index " + std::to_string(sph_joint.index) +
+				sph_joint.name + " at index " + std::to_string(sph_joint.index) +
 				", and w_index: " + std::to_string(sph_joint.w_index));
 			return;
 		}
@@ -205,10 +202,10 @@ void Sai2Model::setSphericalQuat(const std::string& joint_name,
 }
 
 void Sai2Model::setTRobotBase(const Affine3d& T) {
+	Vector3d world_gravity = worldGravity();
 	_T_world_robot = T;
-	Vector3d prev_world_gravity = worldGravity();
-	_rbdl_model->gravity =
-		_T_world_robot.linear().transpose() * prev_world_gravity;
+	// world gravity in robot base frame changes
+	_rbdl_model->gravity = _T_world_robot.linear().transpose() * world_gravity;
 }
 
 bool Sai2Model::isLinkInRobot(const std::string& link_name) const {
@@ -272,8 +269,7 @@ void Sai2Model::jointGravityVector(VectorXd& g) {
 		CalcPointJacobian(*_rbdl_model, _q, body_id, it_body->mCenterOfMass, Jv,
 						  false);
 
-		g += Jv.transpose() * _T_world_robot.linear().transpose() *
-			 (-mass * worldGravity());
+		g += Jv.transpose() * (-mass * _rbdl_model->gravity);
 	}
 }
 
