@@ -145,7 +145,8 @@ void Sai2Model::setQ(const Eigen::VectorXd& q) {
 							   q(sph_joint.index + 2), q(sph_joint.w_index))) {
 			throw invalid_argument(
 				"trying to set an invalid quaternion for joint " +
-				sph_joint.name + " at index " + std::to_string(sph_joint.index) +
+				sph_joint.name + " at index " +
+				std::to_string(sph_joint.index) +
 				", and w_index: " + std::to_string(sph_joint.w_index));
 			return;
 		}
@@ -610,35 +611,35 @@ void Sai2Model::rotationInWorld(Matrix3d& rot, const string& link_name,
 	rot = _T_world_robot.linear() * rot * rot_in_link;
 }
 
-void Sai2Model::angularVelocity(Vector3d& avel, const string& link_name,
-								const Vector3d& pos_in_link) {
+void Sai2Model::angularVelocity(Vector3d& avel, const string& link_name) {
 	VectorXd v_tmp = VectorXd::Zero(6);
 	v_tmp = CalcPointVelocity6D(*_rbdl_model, _q, _dq, linkIdRbdl(link_name),
-								pos_in_link, false);
+								Vector3d::Zero(), false);
 	avel = v_tmp.head(3);
 }
-void Sai2Model::angularVelocityInWorld(Vector3d& avel, const string& link_name,
-									   const Vector3d& pos_in_link) {
+
+void Sai2Model::angularVelocityInWorld(Vector3d& avel,
+									   const string& link_name) {
 	VectorXd v_tmp = VectorXd::Zero(6);
 	v_tmp = CalcPointVelocity6D(*_rbdl_model, _q, _dq, linkIdRbdl(link_name),
-								pos_in_link, false);
+								Vector3d::Zero(), false);
 	avel = v_tmp.head(3);
 	avel = _T_world_robot.linear() * avel;
 }
 
-void Sai2Model::angularAcceleration(Vector3d& aaccel, const string& link_name,
-									const Vector3d& pos_in_link) {
+void Sai2Model::angularAcceleration(Vector3d& aaccel, const string& link_name) {
 	VectorXd a_tmp = VectorXd::Zero(6);
-	a_tmp = CalcPointAcceleration6D(*_rbdl_model, _q, _dq, _ddq,
-									linkIdRbdl(link_name), pos_in_link, false);
+	a_tmp =
+		CalcPointAcceleration6D(*_rbdl_model, _q, _dq, _ddq,
+								linkIdRbdl(link_name), Vector3d::Zero(), false);
 	aaccel = a_tmp.head(3);
 }
 void Sai2Model::angularAccelerationInWorld(Vector3d& aaccel,
-										   const string& link_name,
-										   const Vector3d& pos_in_link) {
+										   const string& link_name) {
 	VectorXd a_tmp = VectorXd::Zero(6);
-	a_tmp = CalcPointAcceleration6D(*_rbdl_model, _q, _dq, _ddq,
-									linkIdRbdl(link_name), pos_in_link, false);
+	a_tmp =
+		CalcPointAcceleration6D(*_rbdl_model, _q, _dq, _ddq,
+								linkIdRbdl(link_name), Vector3d::Zero(), false);
 	aaccel = a_tmp.head(3);
 	aaccel = _T_world_robot.linear() * aaccel;
 }
@@ -771,18 +772,18 @@ void Sai2Model::URangeJacobian(MatrixXd& URange, const MatrixXd& task_jacobian,
 		return;
 	}
 
-	const int task_size = task_jacobian.rows();
+	const int max_range = min(task_jacobian.rows(), task_jacobian.cols());
 
 	JacobiSVD<MatrixXd> svd(task_jacobian * N_prec,
 							ComputeThinU | ComputeThinV);
 
 	double sigma_0 = svd.singularValues()(0);
 	if (sigma_0 < tolerance) {
-		URange = MatrixXd::Zero(task_size, 1);
+		URange = MatrixXd::Zero(max_range, 1);
 		return;
 	}
 
-	int task_dof = task_size;
+	int task_dof = max_range;
 	for (int i = svd.singularValues().size() - 1; i > 0; i--) {
 		if (svd.singularValues()(i) / sigma_0 < tolerance) {
 			task_dof -= 1;
@@ -791,8 +792,8 @@ void Sai2Model::URangeJacobian(MatrixXd& URange, const MatrixXd& task_jacobian,
 		}
 	}
 
-	if (task_dof == task_size) {
-		URange = MatrixXd::Identity(task_size, task_size);
+	if (task_dof == task_jacobian.rows()) {
+		URange = MatrixXd::Identity(task_dof, task_dof);
 	} else {
 		URange = svd.matrixU().leftCols(task_dof);
 	}

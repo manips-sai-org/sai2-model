@@ -5,17 +5,20 @@ namespace Sai2Model {
 
 using namespace Eigen;
 
+const std::string rr_urdf = "./urdf/rrbot.urdf";
 const std::string rrp_urdf = "./urdf/rrpbot.urdf";
 const std::string rpspr_urdf = "./urdf/rpsprbot.urdf";
 
 class Sai2ModelTest : public ::testing::Test {
 protected:
 	void SetUp() override {
+		model_rrbot = new Sai2Model(rr_urdf);
 		model_rrpbot = new Sai2Model(rrp_urdf);
 		model_rpsprbot = new Sai2Model(rpspr_urdf);
 	}
 
 	void TearDown() override {
+		delete model_rrbot;
 		delete model_rrpbot;
 		delete model_rpsprbot;
 	}
@@ -23,9 +26,10 @@ protected:
 	void MoveModelsBaseFrame() {
 		Affine3d new_T_robot_base = Affine3d::Identity();
 		new_T_robot_base.translation() = Vector3d(0.5, -0.3, 1.2);
-		new_T_robot_base.linear() = AngleAxisd(M_PI/2, Vector3d::UnitX()).toRotationMatrix();
-		model_rrpbot->setTRobotBase(new_T_robot_base);		
-		model_rpsprbot->setTRobotBase(new_T_robot_base);		
+		new_T_robot_base.linear() =
+			AngleAxisd(M_PI / 2, Vector3d::UnitX()).toRotationMatrix();
+		model_rrpbot->setTRobotBase(new_T_robot_base);
+		model_rpsprbot->setTRobotBase(new_T_robot_base);
 	}
 
 	void SetNewQSphericalModel() {
@@ -41,6 +45,7 @@ protected:
 					  Vector3d(1.0 / sqrt(3), 1.0 / sqrt(3), 1.0 / sqrt(3)))));
 	}
 
+	Sai2Model* model_rrbot;
 	Sai2Model* model_rrpbot;
 	Sai2Model* model_rpsprbot;
 };
@@ -361,21 +366,22 @@ TEST_F(Sai2ModelTest, UpdateModel) {
 	q << 0, 0, 0;
 	model_rrpbot->setQ(q);
 	// incorrect size
-	MatrixXd external_M = MatrixXd::Identity(model_rrpbot->dof()-1, model_rrpbot->dof()-1);
+	MatrixXd external_M =
+		MatrixXd::Identity(model_rrpbot->dof() - 1, model_rrpbot->dof() - 1);
 	EXPECT_THROW(model_rrpbot->updateModel(external_M), invalid_argument);
 	// non symmetric
 	external_M.setIdentity(model_rrpbot->dof(), model_rrpbot->dof());
-	external_M(0,1) = 1.0;
+	external_M(0, 1) = 1.0;
 	EXPECT_THROW(model_rrpbot->updateModel(external_M), invalid_argument);
 	// non positive definite
 	external_M.setIdentity(model_rrpbot->dof(), model_rrpbot->dof());
-	external_M(0,0) = -1.0;
+	external_M(0, 0) = -1.0;
 	EXPECT_THROW(model_rrpbot->updateModel(external_M), invalid_argument);
 	// valid external M
 	external_M.setIdentity(model_rrpbot->dof(), model_rrpbot->dof());
-	external_M(0,0) = 3.5;
-	external_M(0,1) = 1.5;
-	external_M(1,0) = 1.5;
+	external_M(0, 0) = 3.5;
+	external_M(0, 1) = 1.5;
+	external_M(1, 0) = 1.5;
 	MatrixXd external_M_inv = external_M.inverse();
 	model_rrpbot->updateModel(external_M);
 	model_rrpbot->Jv(Jv, eef_link, pos_in_link);
@@ -386,7 +392,6 @@ TEST_F(Sai2ModelTest, UpdateModel) {
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_Jv, Jv));
 	EXPECT_TRUE(checkEigenMatricesEqual(external_M, model_rrpbot->M()));
 	EXPECT_TRUE(checkEigenMatricesEqual(external_M_inv, model_rrpbot->MInv()));
-
 }
 
 // TODO
@@ -407,7 +412,8 @@ TEST_F(Sai2ModelTest, JointGravity) {
 
 	// change gravity magnitude and direction
 	model_rrpbot->setWorldGravity(Vector3d(1.0, -2.0, 3.0));
-	EXPECT_TRUE(checkEigenMatricesEqual(Vector3d(1.0, -2.0, 3.0), model_rrpbot->worldGravity()));
+	EXPECT_TRUE(checkEigenMatricesEqual(Vector3d(1.0, -2.0, 3.0),
+										model_rrpbot->worldGravity()));
 	model_rrpbot->jointGravityVector(joint_gravity);
 	expected_gravity << 9, 3, -2;
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_gravity, joint_gravity));
@@ -466,7 +472,7 @@ TEST_F(Sai2ModelTest, CoriolisPlusGravity) {
 	}
 }
 
-// TODO: looks like this function does not work as intended 
+// TODO: looks like this function does not work as intended
 // TEST_F(Sai2ModelTest, factorizedChristoffelMatrix) {
 // 	VectorXd coriolis = VectorXd::Zero(model_rrpbot->dof());
 // 	MatrixXd C = MatrixXd::Zero(model_rrpbot->dof(), model_rrpbot->dof());
@@ -563,15 +569,15 @@ TEST_F(Sai2ModelTest, Jacobian) {
 	const int dof = model_rpsprbot->dof();
 	const std::string link_name = "link4";
 	const Vector3d pos_in_link(0.1, 0.2, 0.5);
-	const Matrix3d rot_in_link = AngleAxisd(M_PI/4, Vector3d::UnitY()).toRotationMatrix();
+	const Matrix3d rot_in_link =
+		AngleAxisd(M_PI / 4, Vector3d::UnitY()).toRotationMatrix();
 	MoveModelsBaseFrame();
 	MatrixXd J = MatrixXd::Zero(6, dof);
 	MatrixXd Jv = MatrixXd::Zero(3, dof);
 	MatrixXd Jw = MatrixXd::Zero(3, dof);
 	for (int i = 0; i < 10; i++) {
 		VectorXd q = VectorXd::Random(model_rpsprbot->qSize());
-		std::cout << q.transpose() << std::endl;
-		q(7) = sqrt(1 - q(2)*q(2) - q(3)*q(3) - q(4)*q(4));
+		q(7) = sqrt(1 - q(2) * q(2) - q(3) * q(3) - q(4) * q(4));
 		model_rpsprbot->setQ(q);
 		model_rpsprbot->updateKinematics();
 
@@ -579,28 +585,22 @@ TEST_F(Sai2ModelTest, Jacobian) {
 		model_rpsprbot->Jv(Jv, link_name, pos_in_link);
 		model_rpsprbot->Jw(Jw, link_name);
 		model_rpsprbot->J(J, link_name, pos_in_link);
-		EXPECT_TRUE(
-			checkEigenMatricesEqual(Jv, J.block(0,0,3,dof)));
-		EXPECT_TRUE(
-			checkEigenMatricesEqual(Jw, J.block(3,0,3,dof)));
+		EXPECT_TRUE(checkEigenMatricesEqual(Jv, J.block(0, 0, 3, dof)));
+		EXPECT_TRUE(checkEigenMatricesEqual(Jw, J.block(3, 0, 3, dof)));
 
 		// jacobians in world frame
 		model_rpsprbot->JvWorldFrame(Jv, link_name, pos_in_link);
 		model_rpsprbot->JwWorldFrame(Jw, link_name);
 		model_rpsprbot->JWorldFrame(J, link_name, pos_in_link);
-		EXPECT_TRUE(
-			checkEigenMatricesEqual(Jv, J.block(0,0,3,dof)));
-		EXPECT_TRUE(
-			checkEigenMatricesEqual(Jw, J.block(3,0,3,dof)));
+		EXPECT_TRUE(checkEigenMatricesEqual(Jv, J.block(0, 0, 3, dof)));
+		EXPECT_TRUE(checkEigenMatricesEqual(Jw, J.block(3, 0, 3, dof)));
 
 		// jacobians in local frame
 		model_rpsprbot->JvLocalFrame(Jv, link_name, pos_in_link, rot_in_link);
 		model_rpsprbot->JwLocalFrame(Jw, link_name, rot_in_link);
 		model_rpsprbot->JLocalFrame(J, link_name, pos_in_link, rot_in_link);
-		EXPECT_TRUE(
-			checkEigenMatricesEqual(Jv, J.block(0,0,3,dof)));
-		EXPECT_TRUE(
-			checkEigenMatricesEqual(Jw, J.block(3,0,3,dof)));
+		EXPECT_TRUE(checkEigenMatricesEqual(Jv, J.block(0, 0, 3, dof)));
+		EXPECT_TRUE(checkEigenMatricesEqual(Jw, J.block(3, 0, 3, dof)));
 	}
 }
 
@@ -623,27 +623,306 @@ TEST_F(Sai2ModelTest, ComputePosition) {
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_pos, pos));
 
 	model_rpsprbot->positionInWorld(pos, link_name, pos_in_link);
-	// expected_pos << 1.28666, -2.73082, 0.63235;
+	expected_pos << 1.28666, -2.73082, 0.63235;
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_pos, pos));
 }
 
-TEST_F(Sai2ModelTest, ComputeVelocity) {}
-TEST_F(Sai2ModelTest, ComputeAcceleration) {}
+TEST_F(Sai2ModelTest, ComputeVelocity) {
+	const int dof = model_rpsprbot->dof();
+	const std::string link_name = "link4";
+	const Vector3d pos_in_link(0.1, 0.2, 0.5);
+	MoveModelsBaseFrame();
 
-TEST_F(Sai2ModelTest, ComputeOrientation) {}
-TEST_F(Sai2ModelTest, ComputeAngularVelocity) {}
-TEST_F(Sai2ModelTest, ComputeAngularAcceleration) {}
+	Vector3d vel = Vector3d::Zero();
+	Vector3d expected_vel = Vector3d::Zero();
+	model_rpsprbot->linearVelocity(vel, link_name, pos_in_link);
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_vel, vel));
 
-TEST_F(Sai2ModelTest, ComputeTransform) {}
+	// change joint config
+	SetNewQSphericalModel();
+	VectorXd dq = VectorXd::Zero(model_rpsprbot->dof());
+	dq << 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7;
+	model_rpsprbot->setDq(dq);
+	model_rpsprbot->updateKinematics();
+	model_rpsprbot->linearVelocity(vel, link_name, pos_in_link);
+	expected_vel << 0.793804, -0.215092, 0.104006;
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_vel, vel));
+	// compare with J * dq
+	MatrixXd Jv = MatrixXd::Zero(3, dof);
+	model_rpsprbot->Jv(Jv, link_name, pos_in_link);
+	EXPECT_TRUE(checkEigenMatricesEqual(vel, Jv * model_rpsprbot->dq()));
 
-TEST_F(Sai2ModelTest, Velocity6d) {}
-TEST_F(Sai2ModelTest, Acceleration6d) {}
+	// compute values in world frame
+	model_rpsprbot->linearVelocityInWorld(vel, link_name, pos_in_link);
+	expected_vel << 0.793804, -0.104006, -0.215092;
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_vel, vel));
+	// compare with J * dq
+	model_rpsprbot->JvWorldFrame(Jv, link_name, pos_in_link);
+	EXPECT_TRUE(checkEigenMatricesEqual(vel, Jv * model_rpsprbot->dq()));
+}
 
-TEST_F(Sai2ModelTest, LinkMass) {}
-TEST_F(Sai2ModelTest, ComPosition) {}
-TEST_F(Sai2ModelTest, ComJacobian) {}
+TEST_F(Sai2ModelTest, ComputeAcceleration) {
+	const int dof = model_rpsprbot->dof();
+	const std::string link_name = "link4";
+	const Vector3d pos_in_link(0.1, 0.2, 0.5);
+	MoveModelsBaseFrame();
 
-TEST_F(Sai2ModelTest, MatrixRange) {}
+	Vector3d acc = Vector3d::Zero();
+	Vector3d expected_acc = Vector3d::Zero();
+	model_rpsprbot->linearAcceleration(acc, link_name, pos_in_link);
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_acc, acc));
+
+	// change joint config
+	SetNewQSphericalModel();
+	VectorXd dq = VectorXd::Zero(model_rpsprbot->dof());
+	VectorXd ddq = VectorXd::Zero(model_rpsprbot->dof());
+	dq << 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7;
+	ddq << 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7;
+	model_rpsprbot->setDq(dq);
+	model_rpsprbot->setDdq(ddq);
+	model_rpsprbot->updateKinematics();
+	model_rpsprbot->linearAcceleration(acc, link_name, pos_in_link);
+	expected_acc << 8.52875, -1.75075, 0.761736;
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_acc, acc));
+
+	// compute values in world frame
+	model_rpsprbot->linearAccelerationInWorld(acc, link_name, pos_in_link);
+	expected_acc << 8.52875, -0.761736, -1.75075;
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_acc, acc));
+}
+
+TEST_F(Sai2ModelTest, ComputeOrientation) {
+	const int dof = model_rpsprbot->dof();
+	const std::string link_name = "link4";
+	const Matrix3d rot_in_link =
+		AngleAxisd(M_PI / 4, Vector3d::UnitY()).toRotationMatrix();
+	MoveModelsBaseFrame();
+
+	Matrix3d rot = Matrix3d::Identity();
+	Matrix3d expected_rot = Matrix3d::Identity();
+	model_rpsprbot->rotation(rot, link_name, rot_in_link);
+	expected_rot << 0.707107, 0, 0.707107, 0, 1, 0, -0.707107, 0, 0.707107;
+
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_rot, rot));
+
+	// change joint config
+	SetNewQSphericalModel();
+	model_rpsprbot->updateKinematics();
+	model_rpsprbot->rotation(rot, link_name, rot_in_link);
+	expected_rot << -0.166249, -0.310617, 0.935884, 0.639827, 0.688194,
+		0.342068, -0.750322, 0.655672, 0.0843298;
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_rot, rot));
+
+	model_rpsprbot->rotationInWorld(rot, link_name, rot_in_link);
+	expected_rot << -0.166249, -0.310617, 0.935884, 0.750322, -0.655672,
+		-0.0843298, 0.639827, 0.688194, 0.342068;
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_rot, rot));
+}
+
+TEST_F(Sai2ModelTest, ComputeAngularVelocity) {
+	const int dof = model_rpsprbot->dof();
+	const std::string link_name = "link4";
+	MoveModelsBaseFrame();
+
+	Vector3d angvel = Vector3d::Zero();
+	Vector3d expected_angvel = Vector3d::Zero();
+	model_rpsprbot->angularVelocity(angvel, link_name);
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_angvel, angvel));
+
+	// change joint config
+	SetNewQSphericalModel();
+	VectorXd dq = VectorXd::Zero(model_rpsprbot->dof());
+	dq << 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7;
+	model_rpsprbot->setDq(dq);
+	model_rpsprbot->updateKinematics();
+	model_rpsprbot->angularVelocity(angvel, link_name);
+	expected_angvel << 0.252682, 0.692114, 1.02356;
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_angvel, angvel));
+	// compare with J * dq
+	MatrixXd Jw = MatrixXd::Zero(3, dof);
+	model_rpsprbot->Jw(Jw, link_name);
+	EXPECT_TRUE(checkEigenMatricesEqual(angvel, Jw * model_rpsprbot->dq()));
+
+	// compute values in world frame
+	model_rpsprbot->angularVelocityInWorld(angvel, link_name);
+	expected_angvel << 0.252682, -1.02356, 0.692114;
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_angvel, angvel));
+	// compare with J * dq
+	model_rpsprbot->JwWorldFrame(Jw, link_name);
+	EXPECT_TRUE(checkEigenMatricesEqual(angvel, Jw * model_rpsprbot->dq()));
+}
+
+TEST_F(Sai2ModelTest, ComputeAngularAcceleration) {
+	const int dof = model_rpsprbot->dof();
+	const std::string link_name = "link4";
+	MoveModelsBaseFrame();
+
+	Vector3d angacc = Vector3d::Zero();
+	Vector3d expected_angacc = Vector3d::Zero();
+	model_rpsprbot->angularAcceleration(angacc, link_name);
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_angacc, angacc));
+
+	// change joint config
+	SetNewQSphericalModel();
+	VectorXd dq = VectorXd::Zero(model_rpsprbot->dof());
+	VectorXd ddq = VectorXd::Zero(model_rpsprbot->dof());
+	dq << 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7;
+	ddq << 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7;
+	model_rpsprbot->setDq(dq);
+	model_rpsprbot->setDdq(ddq);
+	model_rpsprbot->updateKinematics();
+	model_rpsprbot->angularAcceleration(angacc, link_name);
+	expected_angacc << 2.60408, 7.21827, 11.5524;
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_angacc, angacc));
+
+	// compute values in world frame
+	model_rpsprbot->angularAccelerationInWorld(angacc, link_name);
+	expected_angacc << 2.60408, -11.5524, 7.21827;
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_angacc, angacc));
+}
+
+TEST_F(Sai2ModelTest, ComputeTransform) {
+	const int dof = model_rpsprbot->dof();
+	const std::string link_name = "link4";
+	const Vector3d pos_in_link(0.1, 0.2, 0.5);
+	const Matrix3d rot_in_link =
+		AngleAxisd(M_PI / 4, Vector3d::UnitY()).toRotationMatrix();
+	MoveModelsBaseFrame();
+	Affine3d T = Affine3d::Identity();
+	Vector3d pos = Vector3d::Zero();
+	Matrix3d ori = Matrix3d::Identity();
+	for (int i = 0; i < 10; i++) {
+		VectorXd q = VectorXd::Random(model_rpsprbot->qSize());
+		q(7) = sqrt(1 - q(2) * q(2) - q(3) * q(3) - q(4) * q(4));
+		model_rpsprbot->setQ(q);
+		model_rpsprbot->updateKinematics();
+
+		// in robot base frame
+		model_rpsprbot->position(pos, link_name, pos_in_link);
+		model_rpsprbot->rotation(ori, link_name, rot_in_link);
+		model_rpsprbot->transform(T, link_name, pos_in_link, rot_in_link);
+		EXPECT_TRUE(checkEigenMatricesEqual(pos, T.translation()));
+		EXPECT_TRUE(checkEigenMatricesEqual(ori, T.linear()));
+
+		// in world frame
+		model_rpsprbot->positionInWorld(pos, link_name, pos_in_link);
+		model_rpsprbot->rotationInWorld(ori, link_name, rot_in_link);
+		model_rpsprbot->transformInWorld(T, link_name, pos_in_link,
+										 rot_in_link);
+		EXPECT_TRUE(checkEigenMatricesEqual(pos, T.translation()));
+		EXPECT_TRUE(checkEigenMatricesEqual(ori, T.linear()));
+	}
+}
+
+TEST_F(Sai2ModelTest, Velocity6d) {
+	const int dof = model_rpsprbot->dof();
+	const std::string link_name = "link4";
+	const Vector3d pos_in_link(0.1, 0.2, 0.5);
+	MoveModelsBaseFrame();
+	Vector3d linvel = Vector3d::Zero();
+	Vector3d angvel = Vector3d::Zero();
+	VectorXd vel6d = VectorXd::Zero(6);
+	for (int i = 0; i < 10; i++) {
+		VectorXd q = VectorXd::Random(model_rpsprbot->qSize());
+		q(7) = sqrt(1 - q(2) * q(2) - q(3) * q(3) - q(4) * q(4));
+		VectorXd dq = VectorXd::Random(model_rpsprbot->dof());
+		model_rpsprbot->setQ(q);
+		model_rpsprbot->setDq(dq);
+		model_rpsprbot->updateKinematics();
+
+		// in robot base frame
+		model_rpsprbot->linearVelocity(linvel, link_name, pos_in_link);
+		model_rpsprbot->angularVelocity(angvel, link_name);
+		model_rpsprbot->velocity6d(vel6d, link_name, pos_in_link);
+		EXPECT_TRUE(checkEigenMatricesEqual(linvel, vel6d.head(3)));
+		EXPECT_TRUE(checkEigenMatricesEqual(angvel, vel6d.tail(3)));
+
+		// in world frame
+		model_rpsprbot->linearVelocityInWorld(linvel, link_name, pos_in_link);
+		model_rpsprbot->angularVelocityInWorld(angvel, link_name);
+		model_rpsprbot->velocity6dInWorld(vel6d, link_name, pos_in_link);
+		EXPECT_TRUE(checkEigenMatricesEqual(linvel, vel6d.head(3)));
+		EXPECT_TRUE(checkEigenMatricesEqual(angvel, vel6d.tail(3)));
+	}
+}
+
+TEST_F(Sai2ModelTest, Acceleration6d) {
+	const int dof = model_rpsprbot->dof();
+	const std::string link_name = "link4";
+	const Vector3d pos_in_link(0.1, 0.2, 0.5);
+	MoveModelsBaseFrame();
+	Vector3d linaccel = Vector3d::Zero();
+	Vector3d angaccel = Vector3d::Zero();
+	VectorXd accel6d = VectorXd::Zero(6);
+	for (int i = 0; i < 10; i++) {
+		VectorXd q = VectorXd::Random(model_rpsprbot->qSize());
+		q(7) = sqrt(1 - q(2) * q(2) - q(3) * q(3) - q(4) * q(4));
+		VectorXd dq = VectorXd::Random(model_rpsprbot->dof());
+		VectorXd ddq = VectorXd::Random(model_rpsprbot->dof());
+		model_rpsprbot->setQ(q);
+		model_rpsprbot->setDq(dq);
+		model_rpsprbot->setDdq(ddq);
+		model_rpsprbot->updateKinematics();
+
+		// in robot base frame
+		model_rpsprbot->linearAcceleration(linaccel, link_name, pos_in_link);
+		model_rpsprbot->angularAcceleration(angaccel, link_name);
+		model_rpsprbot->acceleration6d(accel6d, link_name, pos_in_link);
+		EXPECT_TRUE(checkEigenMatricesEqual(linaccel, accel6d.head(3)));
+		EXPECT_TRUE(checkEigenMatricesEqual(angaccel, accel6d.tail(3)));
+
+		// in world frame
+		model_rpsprbot->linearAccelerationInWorld(linaccel, link_name,
+												  pos_in_link);
+		model_rpsprbot->angularAccelerationInWorld(angaccel, link_name);
+		model_rpsprbot->acceleration6dInWorld(accel6d, link_name, pos_in_link);
+		EXPECT_TRUE(checkEigenMatricesEqual(linaccel, accel6d.head(3)));
+		EXPECT_TRUE(checkEigenMatricesEqual(angaccel, accel6d.tail(3)));
+	}
+}
+
+TEST_F(Sai2ModelTest, LinkMass) {
+	double mass = 0;
+	Vector3d center_of_mass = Vector3d::Zero();
+	Matrix3d inertia = Matrix3d::Identity();
+
+	model_rrbot->getLinkMass(mass, center_of_mass, inertia, "link1");
+	EXPECT_DOUBLE_EQ(1.5, mass);
+	EXPECT_TRUE(
+		checkEigenMatricesEqual(Vector3d(0.1, 0.2, 0.3), center_of_mass));
+	EXPECT_TRUE(checkEigenMatricesEqual(0.1 * Matrix3d::Identity(), inertia));
+}
+
+TEST_F(Sai2ModelTest, ComPosition) {
+	Vector3d robot_com, expected_com;
+	SetNewQSphericalModel();
+	model_rpsprbot->updateKinematics();
+	model_rpsprbot->comPosition(robot_com);
+	expected_com << 0.161881, -0.38698, 1.40872;
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_com, robot_com));
+}
+
+TEST_F(Sai2ModelTest, ComJacobian) {
+	MatrixXd com_jacobian = MatrixXd::Zero(3, model_rpsprbot->dof());
+	MatrixXd expected_com_jacobian = com_jacobian;
+	SetNewQSphericalModel();
+	model_rpsprbot->updateKinematics();
+	model_rpsprbot->comJacobian(com_jacobian);
+	expected_com_jacobian << 0, 0, 0.0993975, 0.257516, 0, 0.202352, 0,
+		-1.40872, -0.158935, -0.220222, 0.178402, 0, -0.185721, 0, -0.38698,
+		0.784053, -0.209815, -0.0652553, 0, 0.290795, 0;
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_com_jacobian, com_jacobian));
+}
+
+TEST_F(Sai2ModelTest, MatrixRange) {
+	MatrixXd JRange, J;
+	model_rrbot->Jv(J, "link1");
+	model_rrbot->URangeJacobian(JRange, J);
+	std::cout << JRange << std::endl;
+	MatrixXd expected_Range = MatrixXd::Zero(3, 1);
+	expected_Range(1,0) = -1;
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_Range, JRange));
+}
 
 TEST_F(Sai2ModelTest, TaskInertia) {}
 TEST_F(Sai2ModelTest, TaskInertiaPseudoInv) {}

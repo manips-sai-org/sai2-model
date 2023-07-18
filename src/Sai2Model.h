@@ -478,10 +478,8 @@ public:
 	 *                          rotation
 	 * @param[in]  rot_in_link  Local frame of interest expressed in link frame
 	 */
-	void angularVelocity(Vector3d& avel, const string& link_name,
-						 const Vector3d& pos_in_link = Vector3d::Zero());
-	void angularVelocityInWorld(Vector3d& avel, const string& link_name,
-								const Vector3d& pos_in_link = Vector3d::Zero());
+	void angularVelocity(Vector3d& avel, const string& link_name);
+	void angularVelocityInWorld(Vector3d& avel, const string& link_name);
 
 	/**
 	 * @brief      Angular Acceleration of a link (possibly a local frame
@@ -497,11 +495,8 @@ public:
 	 *                          rotation
 	 * @param[in]  rot_in_link  Local frame of interest expressed in link frame
 	 */
-	void angularAcceleration(Vector3d& aaccel, const string& link_name,
-							 const Vector3d& pos_in_link = Vector3d::Zero());
-	void angularAccelerationInWorld(
-		Vector3d& aaccel, const string& link_name,
-		const Vector3d& pos_in_link = Vector3d::Zero());
+	void angularAcceleration(Vector3d& aaccel, const string& link_name);
+	void angularAccelerationInWorld(Vector3d& aaccel, const string& link_name);
 
 	/**
 	 * @brief      Gives the joint index for a given name. For spherical joints,
@@ -983,4 +978,4 @@ void graspMatrixAtGeometricCenter(MatrixXd& G, MatrixXd& G_inv, Matrix3d& R,
 
 } /* namespace Sai2Model */
 
-#endif /* RBDLMODEL_H_ */
+#endif /* SAI2MODEL_H_ */
