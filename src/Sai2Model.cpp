@@ -1763,7 +1763,7 @@ void graspMatrix(MatrixXd& G, MatrixXd& G_inv, Matrix3d& R,
 void graspMatrixAtGeometricCenter(MatrixXd& G, MatrixXd& G_inv, Matrix3d& R,
 								  Vector3d& geometric_center,
 								  const vector<Vector3d>& contact_locations,
-								  const vector<ContactType> contact_types) {
+								  const vector<ContactType>& contact_types) {
 	G = MatrixXd::Zero(1, 1);
 	G_inv = MatrixXd::Zero(1, 1);
 	R = Matrix3d::Identity();

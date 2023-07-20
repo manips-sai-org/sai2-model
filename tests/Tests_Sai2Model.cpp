@@ -73,9 +73,9 @@ bool checkEigenMatricesEqual(const Eigen::MatrixBase<DerivedA>& expected,
 			if (fabs(expected(i, j) - actual(i, j)) > epsilon) {
 				equal = false;
 				std::cout << "Mismatch found at index (" << i << ", " << j
-						  << "):\n"
-						  << "Expected: " << expected(i, j) << "\n"
-						  << "Actual:   " << actual(i, j) << "\n";
+						  << "): "
+						  << "Expected: " << expected(i, j) << " "
+						  << "Actual:   " << actual(i, j) << std::endl;
 			}
 		}
 	}
@@ -918,21 +918,435 @@ TEST_F(Sai2ModelTest, MatrixRange) {
 	MatrixXd JRange, J;
 	model_rrbot->Jv(J, "link1");
 	model_rrbot->URangeJacobian(JRange, J);
-	std::cout << JRange << std::endl;
 	MatrixXd expected_Range = MatrixXd::Zero(3, 1);
-	expected_Range(1,0) = -1;
+	expected_Range(1, 0) = -1;
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_Range, JRange));
 }
 
-TEST_F(Sai2ModelTest, TaskInertia) {}
-TEST_F(Sai2ModelTest, TaskInertiaPseudoInv) {}
-TEST_F(Sai2ModelTest, DynConsistentJacobian) {}
-TEST_F(Sai2ModelTest, Nullspace) {}
-TEST_F(Sai2ModelTest, OpSpaceMatrices) {}
+TEST_F(Sai2ModelTest, TaskInertia) {
+	const int dof = model_rpsprbot->dof();
+	const std::string link_name = "link4";
+	const Vector3d pos_in_link(0.1, 0.2, 0.5);
+	MatrixXd Lambda, J;
+	J.setZero(6, dof);
+	Lambda.setZero(6, 6);
+	SetNewQSphericalModel();
+	model_rpsprbot->updateModel();
 
-TEST_F(Sai2ModelTest, OrientationError) {}
-TEST_F(Sai2ModelTest, CrossProductOperator) {}
-TEST_F(Sai2ModelTest, GraspMatrixAtGeometricCenter) {}
+	model_rpsprbot->J(J, link_name, pos_in_link);
+	model_rpsprbot->taskInertiaMatrix(Lambda, J);
+	MatrixXd expected_lambda = MatrixXd::Zero(6, 6);
+	expected_lambda << 2.45598, -0.388523, -0.565437, -0.591744, -1.4949,
+		0.525617, -0.388523, 3.1234, 0.987834, 2.07603, 1.21213, -1.48404,
+		-0.565437, 0.987834, 3.02436, 1.04979, 2.05066, -0.684001, -0.591744,
+		2.07603, 1.04979, 2.19218, 1.52106, -1.12447, -1.4949, 1.21213, 2.05066,
+		1.52106, 2.4057, -1.01646, 0.525617, -1.48404, -0.684001, -1.12447,
+		-1.01646, 1.0047;
+
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_lambda, Lambda));
+}
+
+TEST_F(Sai2ModelTest, TaskInertiaPseudoInv) {
+	const int dof = model_rrbot->dof();
+	const std::string link_name = "link1";
+	const Vector3d pos_in_link(0.0, 0.0, 0.3);
+	MatrixXd Lambda, Lambda_pseudo_inv;
+	Lambda.setZero(2, 2);
+	Lambda_pseudo_inv.setZero(2, 2);
+	MatrixXd Jv, Jv_2d;
+	Jv.setZero(3, dof);
+	Jv_2d.setZero(2, dof);
+
+	// default configuration is singular
+	model_rrbot->Jv(Jv, link_name, pos_in_link);
+	Jv_2d = Jv.block(1, 0, 2, dof);
+	model_rrbot->taskInertiaMatrix(Lambda, Jv_2d);
+	model_rrbot->taskInertiaMatrixWithPseudoInv(Lambda_pseudo_inv, Jv_2d);
+	MatrixXd expected_Lambda_pseudo_inv = MatrixXd::Zero(2, 2);
+	expected_Lambda_pseudo_inv << 1.59467, 0, 0, 0;
+	EXPECT_TRUE(isnan(Lambda(0, 0)));
+	EXPECT_TRUE(
+		checkEigenMatricesEqual(expected_Lambda_pseudo_inv, Lambda_pseudo_inv));
+
+	// non singular configuration
+	VectorXd q = model_rrbot->q();
+	q(1) += 0.5;
+	model_rrbot->setQ(q);
+	model_rrbot->updateModel();
+	model_rrbot->Jv(Jv, link_name, pos_in_link);
+	Jv_2d = Jv.block(1, 0, 2, dof);
+	model_rrbot->taskInertiaMatrix(Lambda, Jv_2d);
+	model_rrbot->taskInertiaMatrixWithPseudoInv(Lambda_pseudo_inv, Jv_2d);
+
+	expected_Lambda_pseudo_inv << 1.6, 0.816951, 0.816951, 5.90864;
+	EXPECT_TRUE(
+		checkEigenMatricesEqual(expected_Lambda_pseudo_inv, Lambda_pseudo_inv));
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_Lambda_pseudo_inv, Lambda));
+}
+
+TEST_F(Sai2ModelTest, DynConsistentJacobian) {
+	const int dof = model_rpsprbot->dof();
+	const std::string link_name = "link4";
+	const Vector3d pos_in_link(0.1, 0.2, 0.5);
+	MatrixXd Jbar, J;
+	J.setZero(6, dof);
+	Jbar.setZero(dof, 6);
+	SetNewQSphericalModel();
+	model_rpsprbot->updateModel();
+
+	model_rpsprbot->J(J, link_name, pos_in_link);
+	model_rpsprbot->dynConsistentInverseJacobian(Jbar, J);
+	MatrixXd expected_Jbar = MatrixXd::Zero(dof, 6);
+	expected_Jbar << 0.157377, -0.414018, -0.373932, -0.49165, -0.460724,
+		0.268614, -0.238489, 0.372479, 0.403845, 0.483299, 0.510137, -0.263651,
+		-0.126647, 0.333176, 0.300917, 1.20039, 0.928268, -0.420086, 1.11148,
+		0.320198, -0.568935, -0.141244, -0.860789, 0.0720711, -0.0796136,
+		0.209443, 0.189164, 0.754595, -0.231231, 0.5911, 0.624475, -0.571149,
+		0.576222, -0.409894, -0.10998, 0.315857, -1.0626, -0.448799, 0.452785,
+		-0.322088, 1.40587, 0.667037;
+
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_Jbar, Jbar));
+}
+
+TEST_F(Sai2ModelTest, Nullspace) {
+	const int dof = model_rpsprbot->dof();
+	const std::string link_name = "link4";
+	const Vector3d pos_in_link(0.1, 0.2, 0.5);
+	MatrixXd N, J;
+	J.setZero(6, dof);
+	N.setZero(dof, dof);
+	SetNewQSphericalModel();
+	model_rpsprbot->updateModel();
+
+	model_rpsprbot->J(J, link_name, pos_in_link);
+	model_rpsprbot->nullspaceMatrix(N, J);
+	MatrixXd expected_N = MatrixXd::Zero(dof, dof);
+	expected_N << 0.272981, 0.284225, 0, 0.0223339, 0, 0, 0, 0.651376, 0.678205,
+		0, 0.0532922, 0, 0, 0, -0.219678, -0.228727, 0, -0.017973, 0, 0, 0,
+		0.596632, 0.621207, 0, 0.0488134, 0, 0, 0, -0.138096, -0.143784, 0,
+		-0.0112983, 0, 0, 0, -0.651376, -0.678205, 0, -0.0532922, 0, 0, 0,
+		-0.51184, -0.532922, 0, -0.0418761, 0, 0, 0;
+
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_N, N));
+}
+
+TEST_F(Sai2ModelTest, OpSpaceMatrices) {
+	const int dof = model_rpsprbot->dof();
+	const std::string link_name = "link4";
+	const Vector3d pos_in_link(0.1, 0.2, 0.5);
+	MatrixXd Lambda, Jbar, N, J;
+	MatrixXd Lambda2, Jbar2, N2;
+	J.setZero(3, dof);
+	Jbar.setZero(dof, 3);
+	N.setZero(dof, dof);
+	Lambda.setZero(3, 3);
+	for (int i = 0; i < 10; i++) {
+		VectorXd q = VectorXd::Random(model_rpsprbot->qSize());
+		q(7) = sqrt(1 - q(2) * q(2) - q(3) * q(3) - q(4) * q(4));
+		model_rpsprbot->setQ(q);
+		model_rpsprbot->updateModel();
+
+		model_rpsprbot->Jv(J, link_name, pos_in_link);
+		model_rpsprbot->taskInertiaMatrix(Lambda, J);
+		model_rpsprbot->dynConsistentInverseJacobian(Jbar, J);
+		model_rpsprbot->nullspaceMatrix(N, J);
+		model_rpsprbot->operationalSpaceMatrices(Lambda2, Jbar2, N2, J);
+
+		EXPECT_TRUE(checkEigenMatricesEqual(Lambda, Lambda2));
+		EXPECT_TRUE(checkEigenMatricesEqual(Jbar, Jbar2));
+		EXPECT_TRUE(checkEigenMatricesEqual(N, N2));
+	}
+}
+
+TEST_F(Sai2ModelTest, OrientationError) {
+	Vector3d delta_phi = Vector3d::Zero();
+	Vector3d expected_delta_phi = Vector3d::Zero();
+	Matrix3d rotation1 = Matrix3d::Identity();
+	Matrix3d rotation2 = Matrix3d::Identity();
+
+	// incorrect rotation matrix
+	rotation1(0, 1) = 0.3;
+	EXPECT_THROW(orientationError(delta_phi, rotation1, rotation2),
+				 invalid_argument);
+
+	// zero error
+	rotation1(0, 1) = 0.0;
+	orientationError(delta_phi, rotation1, rotation2);
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_delta_phi, delta_phi));
+	orientationError(delta_phi, Quaterniond(rotation1), Quaterniond(rotation2));
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_delta_phi, delta_phi));
+
+	// some error
+	rotation1 = AngleAxisd(M_PI / 4, Vector3d::UnitX()).toRotationMatrix() *
+				AngleAxisd(M_PI / 6, Vector3d::UnitY()).toRotationMatrix();
+	orientationError(delta_phi, rotation1, rotation2);
+	expected_delta_phi << -0.65974, -0.426777, -0.176777;
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_delta_phi, delta_phi));
+	orientationError(delta_phi, Quaterniond(rotation1), Quaterniond(rotation2));
+	// different error but colinear
+	expected_delta_phi << -0.739288, -0.478235, -0.198092;
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_delta_phi, delta_phi));
+}
+
+TEST_F(Sai2ModelTest, CrossProductOperator) {
+	Vector3d v = Vector3d::Random();
+	Matrix3d v_cross = Matrix3d::Zero();
+	v_cross << 0, -v(2), v(1), v(2), 0, -v(0), -v(1), v(0), 0;
+	EXPECT_TRUE(checkEigenMatricesEqual(v_cross, crossProductOperator(v)));
+}
+
+TEST_F(Sai2ModelTest, GraspMatrixAtGeometricCenter) {
+	// 2 point contact case
+	std::vector<Vector3d> contact_locations = {
+		Vector3d(0.1, 0.2, 0.5),
+		Vector3d(-1.1, 0.7, -0.5),
+	};
+	std::vector<ContactType> contact_types = {
+		PointContact,
+		PointContact,
+	};
+	MatrixXd G, Ginv, expected_G, expected_Ginv;
+	Matrix3d R, expected_R;
+	Vector3d geometric_center, expected_geometric_center;
+	graspMatrixAtGeometricCenter(G, Ginv, R, geometric_center,
+								 contact_locations, contact_types);
+	expected_G.setZero(6, 6);
+	expected_Ginv.setZero(6, 6);
+
+	expected_G << 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1,
+		-0.559017, -0.268328, 0.536656, 0.559017, 0.268328, -0.536656, -0,
+		0.733485, 0.366742, 0, -0.733485, -0.366742, 0.365826, -0.152428,
+		0.304855, -0.365826, 0.152428, -0.304855;
+
+	expected_Ginv << 0.5, 0, 0, -1.11803, -0, -0.731653, 0, 0.5, 0, -0.536656,
+		1.46697, 0.304855, 0, 0, 0.5, 1.07331, 0.733485, -0.609711, 0.5, 0, 0,
+		1.11803, 0, -0.731653, 0, 0.5, 0, 0.536656, -1.46697, 0.304855, 0, 0,
+		0.5, -1.07331, -0.733485, -0.609711;
+
+	expected_R << -0.731653, 0, -0.681677, 0.304855, -0.894427, -0.327205,
+		-0.609711, -0.447214, 0.65441;
+
+	expected_geometric_center << -0.5, 0.45, 0;
+
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_G, G));
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_Ginv, Ginv));
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_R, R));
+	EXPECT_TRUE(
+		checkEigenMatricesEqual(expected_geometric_center, geometric_center));
+
+	// 2 surface contact
+	contact_types = {
+		SurfaceContact,
+		SurfaceContact,
+	};
+	graspMatrixAtGeometricCenter(G, Ginv, R, geometric_center,
+								 contact_locations, contact_types);
+	expected_G.setZero(12, 12);
+	expected_Ginv.setZero(12, 12);
+
+	expected_G << 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, -0.5, -0.25, 0, 0.5,
+		0.25, 1, 0, 0, 1, 0, 0, 0.5, 0, -0.6, -0.5, 0, 0.6, 0, 1, 0, 0, 1, 0,
+		0.25, 0.6, 0, -0.25, -0.6, 0, 0, 0, 1, 0, 0, 1, 0.365826, -0.152428,
+		0.304855, -0.365826, 0.152428, -0.304855, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0.365826, -0.152428, 0.304855, -0.365826, 0.152428, -0.304855, 0,
+		0, 0, 0, 0, 0, 0, -0.894427, -0.447214, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		-0.681677, -0.327205, 0.65441, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		-0.894427, -0.447214, 0, 0, 0, 0, 0, 0, 0, 0, 0, -0.681677, -0.327205,
+		0.65441;
+
+	expected_Ginv << 0.5, 0, 0, 0, 0.371747, 0.185874, 0.731653, 0, 0.415626, 0,
+		0.415626, 0, 0, 0.5, 0, -0.371747, 0, 0.446097, -0.304855, 0, 0.1995,
+		-0.545342, 0.1995, -0.545342, 0, 0, 0.5, -0.185874, -0.446097, 0,
+		0.609711, 0, -0.399001, -0.272671, -0.399001, -0.272671, 0.5, 0, 0, -0,
+		-0.371747, -0.185874, -0.731653, 0, -0.415626, -0, -0.415626, -0, 0,
+		0.5, 0, 0.371747, -0, -0.446097, 0.304855, 0, -0.1995, 0.545342,
+		-0.1995, 0.545342, 0, 0, 0.5, 0.185874, 0.446097, -0, -0.609711, 0,
+		0.399001, 0.272671, 0.399001, 0.272671, 0, 0, 0, 0.267658, -0.111524,
+		0.223048, 0, 0.731653, 0, -0.681677, 0, 0, 0, 0, 0, -0.111524,
+		0.0464684, -0.0929368, 0, -0.304855, -0.894427, -0.327205, 0, 0, 0, 0,
+		0, 0.223048, -0.0929368, 0.185874, 0, 0.609711, -0.447214, 0.65441, 0,
+		0, 0, 0, 0, 0.267658, -0.111524, 0.223048, 0, -0.731653, 0, 0, 0,
+		-0.681677, 0, 0, 0, -0.111524, 0.0464684, -0.0929368, 0, 0.304855, 0, 0,
+		-0.894427, -0.327205, 0, 0, 0, 0.223048, -0.0929368, 0.185874, 0,
+		-0.609711, 0, 0, -0.447214, 0.65441;
+
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_G, G));
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_Ginv, Ginv));
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_R, R));
+	EXPECT_TRUE(
+		checkEigenMatricesEqual(expected_geometric_center, geometric_center));
+
+	// 3 contacts, one surface
+	contact_locations = {
+		Vector3d(0.1, 0.2, 0.5),
+		Vector3d(-1.1, 0.7, -0.5),
+		Vector3d(-0.4, 1.6, 0.0),
+	};
+	contact_types = {
+		PointContact,
+		PointContact,
+		SurfaceContact,
+	};
+
+	graspMatrixAtGeometricCenter(G, Ginv, R, geometric_center,
+								 contact_locations, contact_types);
+	expected_G.setZero(12, 12);
+	expected_Ginv.setZero(12, 12);
+
+	expected_G << 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0,
+		0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, -0.5, -0.633333, 0, 0.5,
+		-0.133333, 0, -0, 0.766667, 1, 0, 0, 0.5, 0, -0.566667, -0.5, 0,
+		0.633333, 0, 0, -0.0666667, 0, 1, 0, 0.633333, 0.566667, 0, 0.133333,
+		-0.633333, 0, -0.766667, 0.0666667, 0, 0, 0, 1, 0.369247, -0.0101124,
+		0.297654, -0.375595, 0.248363, -0.31942, 0.00634781, -0.238251,
+		0.0217658, 0, 0, 0, 0.0450953, -0.456166, 0.0681652, 0.169937,
+		-0.017152, 0.137862, -0.215032, 0.473318, -0.206027, 0, 0, 0,
+		-0.0880912, 0.0792948, -0.0763877, -0.227992, -0.412676, -0.154492,
+		0.316083, 0.333381, 0.23088, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		1;
+
+	expected_Ginv << 0.333333, 0, 0, 0.0926461, 0.319119, 0.351428, 0.731653,
+		0.318788, 0, -0.0926461, -0.319119, -0.351428, 0, 0.333333, 0,
+		-0.231937, -0.00828156, 0.247832, -0.304855, -0.892607, 0, 0.231937,
+		0.00828156, -0.247832, 0, 0, 0.333333, -0.398786, -0.372158, -0.0843646,
+		0.609711, 0.318788, 0, 0.398786, 0.372158, 0.0843646, 0.333333, 0, 0,
+		0.148803, -0.474833, 0.196917, -0.731653, 0, -0.562254, -0.148803,
+		0.474833, -0.196917, 0, 0.333333, 0, 0.210941, 0.021822, -0.295514,
+		0.304855, 0, -0.722897, -0.210941, -0.021822, 0.295514, 0, 0, 0.333333,
+		-0.244735, 0.595636, -0.170625, -0.609711, 0, -0.40161, 0.244735,
+		-0.595636, 0.170625, 0.333333, 0, 0, -0.241449, 0.155715, -0.548345, 0,
+		-0.318788, 0.562254, 0.241449, -0.155715, 0.548345, 0, 0.333333, 0,
+		0.0209956, -0.0135404, 0.0476822, 0, 0.892607, 0.722897, -0.0209956,
+		0.0135404, -0.0476822, 0, 0, 0.333333, 0.64352, -0.223478, 0.254989, 0,
+		-0.318788, 0.40161, -0.64352, 0.223478, -0.254989, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 1;
+
+	expected_R.setIdentity();
+	expected_geometric_center << -0.466667, 0.833333, 0;
+
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_G, G));
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_Ginv, Ginv));
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_R, R));
+	EXPECT_TRUE(
+		checkEigenMatricesEqual(expected_geometric_center, geometric_center));
+
+	// 4 surface contacts
+	contact_locations = {
+		Vector3d(0.1, 0.2, 0.5),
+		Vector3d(-1.1, 0.7, -0.5),
+		Vector3d(-0.4, 1.6, 0.0),
+		Vector3d(-0.6, 2.6, 1.0),
+	};
+	contact_types = {
+		SurfaceContact,
+		SurfaceContact,
+		SurfaceContact,
+		SurfaceContact,
+	};
+
+	graspMatrixAtGeometricCenter(G, Ginv, R, geometric_center,
+								 contact_locations, contact_types);
+	expected_G.setZero(24, 24);
+	expected_Ginv.setZero(24, 24);
+
+	expected_G << 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, -0.25, -1.075, 0, 0.75, -0.575, 0, 0.25, 0.325, 0, -0.75,
+		1.325, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0.25, 0, -0.6, -0.75, 0, 0.6,
+		-0.25, 0, -0.1, 0.75, 0, 0.1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1.075,
+		0.6, 0, 0.575, -0.6, 0, -0.325, 0.1, 0, -1.325, -0.1, 0, 0, 0, 1, 0, 0,
+		1, 0, 0, 1, 0, 0, 1, 0.377062, -0.00824457, 0.289692, -0.359027,
+		0.268573, -0.328715, -0.0382846, -0.222271, 0.105765, 0.0202501,
+		-0.0380577, -0.0667415, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -0.0268039,
+		-0.229673, 0.253064, 0.142026, -0.117018, 0.106796, -0.209622, 0.531822,
+		-0.568809, 0.0943999, -0.185131, 0.208948, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0.120967, -0.45763, -0.345996, 0.00463782, 0.147107, 0.0959672,
+		0.126929, -0.160838, 0.47906, -0.252533, 0.471361, -0.229031, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, -0.100724, -0.00569851, -0.0940131, -0.432,
+		-0.214748, 0.198992, 0.893101, 0.330254, -0.147172, -0.360377,
+		-0.109807, 0.0421928, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -0.0153849,
+		0.152878, 0.0763381, 0.259484, -0.391266, -0.525577, -0.750072,
+		-0.0433575, 0.261567, 0.505973, 0.281746, 0.187672, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, -0.0849719, 0.0662935, 0.131923, -0.244561, 0.0192546,
+		0.299911, 0.637213, -0.0269633, -0.851381, -0.30768, -0.0585847,
+		0.419547, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1;
+
+	expected_Ginv << 0.25, 0, 0, 0.0106179, 0.31036, 0.345919, 0.731653,
+		0.318788, 0.274563, 0, 0, 0, -0.0106179, -0.31036, -0.345919,
+		-0.0106179, -0.31036, -0.345919, -0.0106179, -0.31036, -0.345919,
+		-0.0106179, -0.31036, -0.345919, 0, 0.25, 0, -0.0448191, 0.0994754,
+		0.167468, -0.304855, -0.892607, -0.941357, 0, 0, 0, 0.0448191,
+		-0.0994754, -0.167468, 0.0448191, -0.0994754, -0.167468, 0.0448191,
+		-0.0994754, -0.167468, 0.0448191, -0.0994754, -0.167468, 0, 0, 0.25,
+		-0.218205, -0.31712, -0.110093, 0.609711, 0.318788, -0.196116, 0, 0, 0,
+		0.218205, 0.31712, 0.110093, 0.218205, 0.31712, 0.110093, 0.218205,
+		0.31712, 0.110093, 0.218205, 0.31712, 0.110093, 0.25, 0, 0, 0.0366046,
+		-0.356477, 0.0513981, -0.731653, 0, 0, -0.562254, -0.202278, 0,
+		-0.0366046, 0.356477, -0.0513981, -0.0366046, 0.356477, -0.0513981,
+		-0.0366046, 0.356477, -0.0513981, -0.0366046, 0.356477, -0.0513981, 0,
+		0.25, 0, 0.156076, -0.116973, -0.158461, 0.304855, 0, 0, -0.722897,
+		-0.768658, 0, -0.156076, 0.116973, 0.158461, -0.156076, 0.116973,
+		0.158461, -0.156076, 0.116973, 0.158461, -0.156076, 0.116973, 0.158461,
+		0, 0, 0.25, -0.148942, 0.37486, 0.080368, -0.609711, 0, 0, -0.40161,
+		-0.606835, 0, 0.148942, -0.37486, -0.080368, 0.148942, -0.37486,
+		-0.080368, 0.148942, -0.37486, -0.080368, 0.148942, -0.37486, -0.080368,
+		0.25, 0, 0, 0.00289362, -0.196951, -0.130954, 0, -0.318788, 0, 0.562254,
+		0, 0.140028, -0.00289362, 0.196951, 0.130954, -0.00289362, 0.196951,
+		0.130954, -0.00289362, 0.196951, 0.130954, -0.00289362, 0.196951,
+		0.130954, 0, 0.25, 0, 0.0574299, 0.00637253, 0.0331659, 0, 0.892607, 0,
+		0.722897, 0, -0.70014, -0.0574299, -0.00637253, -0.0331659, -0.0574299,
+		-0.00637253, -0.0331659, -0.0574299, -0.00637253, -0.0331659,
+		-0.0574299, -0.00637253, -0.0331659, 0, 0, 0.25, 0.0758163, -0.0704963,
+		-0.00926614, 0, -0.318788, 0, 0.40161, 0, -0.70014, -0.0758163,
+		0.0704963, 0.00926614, -0.0758163, 0.0704963, 0.00926614, -0.0758163,
+		0.0704963, 0.00926614, -0.0758163, 0.0704963, 0.00926614, 0.25, 0, 0,
+		-0.0501161, 0.243068, -0.266363, 0, 0, -0.274563, 0, 0.202278,
+		-0.140028, 0.0501161, -0.243068, 0.266363, 0.0501161, -0.243068,
+		0.266363, 0.0501161, -0.243068, 0.266363, 0.0501161, -0.243068,
+		0.266363, 0, 0.25, 0, -0.168687, 0.0111247, -0.0421735, 0, 0, 0.941357,
+		0, 0.768658, 0.70014, 0.168687, -0.0111247, 0.0421735, 0.168687,
+		-0.0111247, 0.0421735, 0.168687, -0.0111247, 0.0421735, 0.168687,
+		-0.0111247, 0.0421735, 0, 0, 0.25, 0.291331, 0.0127555, 0.0389915, 0, 0,
+		0.196116, 0, 0.606835, 0.70014, -0.291331, -0.0127555, -0.0389915,
+		-0.291331, -0.0127555, -0.0389915, -0.291331, -0.0127555, -0.0389915,
+		-0.291331, -0.0127555, -0.0389915, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1;
+
+	expected_geometric_center << -0.5, 1.275, 0.25;
+
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_G, G));
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_Ginv, Ginv));
+	EXPECT_TRUE(checkEigenMatricesEqual(expected_R, R));
+	EXPECT_TRUE(
+		checkEigenMatricesEqual(expected_geometric_center, geometric_center));
+}
 
 int main(int argc, char** argv) {
 	testing::InitGoogleTest(&argc, argv);

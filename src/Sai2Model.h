@@ -974,7 +974,7 @@ void graspMatrix(MatrixXd& G, MatrixXd& G_inv, Matrix3d& R,
 void graspMatrixAtGeometricCenter(MatrixXd& G, MatrixXd& G_inv, Matrix3d& R,
 								  Vector3d& geometric_center,
 								  const vector<Vector3d>& contact_locations,
-								  const vector<ContactType> contact_types);
+								  const vector<ContactType>& contact_types);
 
 } /* namespace Sai2Model */
 
