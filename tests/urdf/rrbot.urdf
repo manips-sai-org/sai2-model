@@ -1,0 +1,42 @@
+<?xml version="1.0" ?>
+<!--simple pbot-->
+
+<robot name="RRBot">
+    <link name="base_link">
+    </link>
+
+    <link name="link0">
+        <inertial>
+            <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+            <mass value="1" />
+            <inertia ixx="0.1" iyy="0.1" izz="0.1" ixy="0" ixz="0" iyz="0" />
+        </inertial>
+    </link>
+
+    <link name="link1">
+        <inertial>
+            <origin xyz="0.1 0.2 0.3" rpy="0 0 0" />
+            <mass value="1.5" />
+            <inertia ixx="0.1" iyy="0.1" izz="0.1" ixy="0" ixz="0" iyz="0" />
+        </inertial>
+    </link>
+
+    <joint name="j0" type="revolute">
+        <parent link="base_link" />
+        <child link="link0" />
+        <origin xyz="0.000000 0.000000 0.000000" rpy="-0.000000 0.000000 -0.000000" />
+        <axis xyz="1 0 0" />
+        <limit lower="-1.5707" upper="1.5707" effort="150" velocity="1.5709" />
+    </joint>
+    <joint name="j1" type="revolute">
+        <parent link="link0" />
+        <child link="link1" />
+        <origin xyz="0.000000 0.000000 1.000000" rpy="-0.000000 0.000000 -0.000000" />
+        <axis xyz="1 0 0" />
+        <limit lower="-2.5707" upper="2.5707" effort="250" velocity="1.5709" />
+    </joint>
+
+</robot>
+
+
+

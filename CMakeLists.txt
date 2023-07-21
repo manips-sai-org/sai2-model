@@ -13,6 +13,9 @@ IF(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 	SET_PROPERTY(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 ENDIF()
 
+option(BUILD_EXAMPLES "Build examples" ON)
+option(BUILD_TESTS "Build tests" ON)
+
 # include Eigen
 set(EIGEN3_INCLUDE_DIR $ENV{EIGEN3_INCLUDE_DIR})
 if(NOT EIGEN3_INCLUDE_DIR)
@@ -54,7 +57,6 @@ ADD_LIBRARY (sai2-model STATIC
 	)
 
 FIND_LIBRARY(RBDL_LIBRARIES rbdl PATHS ${RBDL_LOCAL_DIR}/build NO_DEFAULT_PATH)
-message("rbdl library : \n" ${RBDL_LIBRARIES})
 SET (SAI2-MODEL_LIBRARIES sai2-model 
 	${SAI2-URDF_LIBRARIES}
 	${RBDL_LIBRARIES} 
@@ -81,5 +83,12 @@ write_basic_package_version_file(
   COMPATIBILITY SameMajorVersion
 )
 
-# add examples
-ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/examples)
+if(BUILD_EXAMPLES)
+	# add examples
+	ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/examples)
+endif()
+
+if(BUILD_TESTS)
+	# add tests
+	ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/tests)
+endif()

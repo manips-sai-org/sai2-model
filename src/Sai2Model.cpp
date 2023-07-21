@@ -30,13 +30,29 @@ bool isValidQuaternion(double x, double y, double z, double w) {
 	return true;
 }
 
+bool isPositiveDefinite(const MatrixXd& matrix) {
+	// square
+	if (matrix.rows() != matrix.cols()) return false;
+
+	// symmetric
+	if (!matrix.transpose().isApprox(matrix)) return false;
+
+	// positive eigenvalues
+	SelfAdjointEigenSolver<MatrixXd> eigensolver(matrix);
+	const auto& eigenvalues = eigensolver.eigenvalues();
+
+	for (int i = 0; i < eigenvalues.size(); ++i) {
+		if (eigenvalues(i) <= 0) return false;
+	}
+
+	return true;
+}
+
 }  // namespace
 
 namespace Sai2Model {
 
-Sai2Model::Sai2Model(const string path_to_model_file, bool verbose,
-					 const Affine3d T_world_robot,
-					 const Vector3d world_gravity) {
+Sai2Model::Sai2Model(const string path_to_model_file, bool verbose) {
 	_rbdl_model = new RigidBodyDynamics::Model();
 
 	// parse rbdl model from urdf
@@ -47,7 +63,6 @@ Sai2Model::Sai2Model(const string path_to_model_file, bool verbose,
 		throw std::runtime_error("Error loading model [" + path_to_model_file +
 								 "]\n");
 	}
-	_rbdl_model->gravity = world_gravity;
 
 	// create joint id to name map
 	for (auto pair : _joint_names_to_id_map) {
@@ -80,7 +95,11 @@ Sai2Model::Sai2Model(const string path_to_model_file, bool verbose,
 	}
 
 	// set the base position in the world
-	_T_world_robot = T_world_robot;
+	_T_world_robot = Affine3d::Identity();
+
+	// set the gravity in rbdl model
+	// it is the world gravity expressed in robot base frame
+	_rbdl_model->gravity = Vector3d(0, 0, -9.81);
 
 	// set the number of degrees of freedom
 	_dof = _rbdl_model->dof_count;
@@ -123,11 +142,11 @@ void Sai2Model::setQ(const Eigen::VectorXd& q) {
 	}
 	for (const auto& sph_joint : _spherical_joints) {
 		if (!isValidQuaternion(q(sph_joint.index), q(sph_joint.index + 1),
-								 q(sph_joint.index + 2),
-								 q(sph_joint.w_index))) {
+							   q(sph_joint.index + 2), q(sph_joint.w_index))) {
 			throw invalid_argument(
 				"trying to set an invalid quaternion for joint " +
-				sph_joint.name + "at index " + std::to_string(sph_joint.index) +
+				sph_joint.name + " at index " +
+				std::to_string(sph_joint.index) +
 				", and w_index: " + std::to_string(sph_joint.w_index));
 			return;
 		}
@@ -143,12 +162,21 @@ void Sai2Model::setDq(const Eigen::VectorXd& dq) {
 	_dq = dq;
 }
 
-const Eigen::Quaterniond Sai2Model::sphericalQuat(const std::string& joint_name) const {
-	for(auto joint : _spherical_joints) {
-		if(joint.name == joint_name) {
+void Sai2Model::setDdq(const Eigen::VectorXd& ddq) {
+	if (ddq.size() != _dof) {
+		throw invalid_argument("ddq size inconsistent in Sai2Model::setDdq");
+		return;
+	}
+	_ddq = ddq;
+}
+
+const Eigen::Quaterniond Sai2Model::sphericalQuat(
+	const std::string& joint_name) const {
+	for (auto joint : _spherical_joints) {
+		if (joint.name == joint_name) {
 			int i = joint.index;
 			int iw = joint.w_index;
-			return Eigen::Quaterniond(_q(iw), _q(i), _q(i+1), _q(i+2));
+			return Eigen::Quaterniond(_q(iw), _q(i), _q(i + 1), _q(i + 2));
 		}
 	}
 	throw invalid_argument(
@@ -156,14 +184,15 @@ const Eigen::Quaterniond Sai2Model::sphericalQuat(const std::string& joint_name)
 		joint_name);
 }
 
-void Sai2Model::setSphericalQuat(const std::string& joint_name, const Eigen::Quaterniond quat) {
-	for(auto joint : _spherical_joints) {
-		if(joint.name == joint_name) {
+void Sai2Model::setSphericalQuat(const std::string& joint_name,
+								 const Eigen::Quaterniond quat) {
+	for (auto joint : _spherical_joints) {
+		if (joint.name == joint_name) {
 			int i = joint.index;
 			int iw = joint.w_index;
 			_q(i) = quat.x();
-			_q(i+1) = quat.y();
-			_q(i+2) = quat.z();
+			_q(i + 1) = quat.y();
+			_q(i + 2) = quat.z();
 			_q(iw) = quat.w();
 			return;
 		}
@@ -171,6 +200,13 @@ void Sai2Model::setSphericalQuat(const std::string& joint_name, const Eigen::Qua
 	throw invalid_argument(
 		"cannot set the quaternion for non existing spherical joint " +
 		joint_name);
+}
+
+void Sai2Model::setTRobotBase(const Affine3d& T) {
+	Vector3d world_gravity = worldGravity();
+	_T_world_robot = T;
+	// world gravity in robot base frame changes
+	_rbdl_model->gravity = _T_world_robot.linear().transpose() * world_gravity;
 }
 
 bool Sai2Model::isLinkInRobot(const std::string& link_name) const {
@@ -192,11 +228,15 @@ void Sai2Model::updateModel() {
 void Sai2Model::updateModel(const Eigen::MatrixXd& M) {
 	updateKinematics();
 
-	if (M.rows() != M.cols() || M.rows() != _dof) {
+	if (!isPositiveDefinite(M)) {
+		throw invalid_argument(
+			"M is not symmetric positive definite Sai2Model::updateModel");
+	}
+	if (M.rows() != _dof) {
 		throw invalid_argument(
 			"M matrix dimensions inconsistent in Sai2Model::updateModel");
-		return;
 	}
+	_M = M;
 	updateInverseInertia();
 }
 
@@ -230,8 +270,7 @@ void Sai2Model::jointGravityVector(VectorXd& g) {
 		CalcPointJacobian(*_rbdl_model, _q, body_id, it_body->mCenterOfMass, Jv,
 						  false);
 
-		g += Jv.transpose() * _T_world_robot.linear().transpose() *
-			 (-mass * worldGravity());
+		g += Jv.transpose() * (-mass * _rbdl_model->gravity);
 	}
 }
 
@@ -265,7 +304,7 @@ void Sai2Model::factorizedChristoffelMatrix(MatrixXd& C) {
 }
 
 void Sai2Model::J(MatrixXd& J, const string& link_name,
-					const Vector3d& pos_in_link) {
+				  const Vector3d& pos_in_link) {
 	J.setZero(6, _dof);
 	MatrixXd J_temp = MatrixXd::Zero(6, _dof);
 	CalcPointJacobian6D(*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link,
@@ -277,7 +316,7 @@ void Sai2Model::J(MatrixXd& J, const string& link_name,
 }
 
 void Sai2Model::JWorldFrame(MatrixXd& J, const string& link_name,
-							  const Vector3d& pos_in_link) {
+							const Vector3d& pos_in_link) {
 	J.setZero(6, _dof);
 	MatrixXd J_temp = MatrixXd::Zero(6, _dof);
 	CalcPointJacobian6D(*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link,
@@ -290,8 +329,8 @@ void Sai2Model::JWorldFrame(MatrixXd& J, const string& link_name,
 }
 
 void Sai2Model::JLocalFrame(MatrixXd& J, const string& link_name,
-							  const Vector3d& pos_in_link,
-							  const Matrix3d& rot_in_link) {
+							const Vector3d& pos_in_link,
+							const Matrix3d& rot_in_link) {
 	J.setZero(6, _dof);
 	MatrixXd J_temp = MatrixXd::Zero(6, _dof);
 	CalcPointJacobian6D(*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link,
@@ -421,8 +460,7 @@ void Sai2Model::computeIK3dJL(
 	}
 
 	InverseKinematicsJL(*_rbdl_model, _q, q_min, q_max, weights, link_ids,
-						 body_point, target_pos, q_result, 1.0e-12, 0.0001,
-						 500);
+						body_point, target_pos, q_result, 1.0e-12, 0.0001, 500);
 	// InverseKinematicsJL modifies the internal model so we need to re update
 	// the kinematics with the previous q value to keep it unchanged
 	updateKinematics();
@@ -573,42 +611,42 @@ void Sai2Model::rotationInWorld(Matrix3d& rot, const string& link_name,
 	rot = _T_world_robot.linear() * rot * rot_in_link;
 }
 
-void Sai2Model::angularVelocity(Vector3d& avel, const string& link_name,
-								const Vector3d& pos_in_link) {
+void Sai2Model::angularVelocity(Vector3d& avel, const string& link_name) {
 	VectorXd v_tmp = VectorXd::Zero(6);
 	v_tmp = CalcPointVelocity6D(*_rbdl_model, _q, _dq, linkIdRbdl(link_name),
-								pos_in_link, false);
+								Vector3d::Zero(), false);
 	avel = v_tmp.head(3);
 }
-void Sai2Model::angularVelocityInWorld(Vector3d& avel, const string& link_name,
-									   const Vector3d& pos_in_link) {
+
+void Sai2Model::angularVelocityInWorld(Vector3d& avel,
+									   const string& link_name) {
 	VectorXd v_tmp = VectorXd::Zero(6);
 	v_tmp = CalcPointVelocity6D(*_rbdl_model, _q, _dq, linkIdRbdl(link_name),
-								pos_in_link, false);
+								Vector3d::Zero(), false);
 	avel = v_tmp.head(3);
 	avel = _T_world_robot.linear() * avel;
 }
 
-void Sai2Model::angularAcceleration(Vector3d& aaccel, const string& link_name,
-									const Vector3d& pos_in_link) {
+void Sai2Model::angularAcceleration(Vector3d& aaccel, const string& link_name) {
 	VectorXd a_tmp = VectorXd::Zero(6);
-	a_tmp = CalcPointAcceleration6D(*_rbdl_model, _q, _dq, _ddq,
-									linkIdRbdl(link_name), pos_in_link, false);
+	a_tmp =
+		CalcPointAcceleration6D(*_rbdl_model, _q, _dq, _ddq,
+								linkIdRbdl(link_name), Vector3d::Zero(), false);
 	aaccel = a_tmp.head(3);
 }
 void Sai2Model::angularAccelerationInWorld(Vector3d& aaccel,
-										   const string& link_name,
-										   const Vector3d& pos_in_link) {
+										   const string& link_name) {
 	VectorXd a_tmp = VectorXd::Zero(6);
-	a_tmp = CalcPointAcceleration6D(*_rbdl_model, _q, _dq, _ddq,
-									linkIdRbdl(link_name), pos_in_link, false);
+	a_tmp =
+		CalcPointAcceleration6D(*_rbdl_model, _q, _dq, _ddq,
+								linkIdRbdl(link_name), Vector3d::Zero(), false);
 	aaccel = a_tmp.head(3);
 	aaccel = _T_world_robot.linear() * aaccel;
 }
 
 unsigned int Sai2Model::linkIdRbdl(const string& link_name) {
 	if (_link_names_to_id_map.find(link_name) == _link_names_to_id_map.end()) {
-		throw runtime_error("link [" + link_name + "] does not exist");
+		throw invalid_argument("link [" + link_name + "] does not exist");
 	}
 	return _link_names_to_id_map[link_name];
 }
@@ -616,7 +654,7 @@ unsigned int Sai2Model::linkIdRbdl(const string& link_name) {
 int Sai2Model::jointIndex(const string& joint_name) {
 	if (_joint_names_to_id_map.find(joint_name) ==
 		_joint_names_to_id_map.end()) {
-		throw runtime_error("joint [" + joint_name + "] does not exist");
+		throw invalid_argument("joint [" + joint_name + "] does not exist");
 	}
 	return _rbdl_model->mJoints[_joint_names_to_id_map[joint_name]].q_index;
 }
@@ -624,7 +662,7 @@ int Sai2Model::jointIndex(const string& joint_name) {
 int Sai2Model::sphericalJointIndexW(const string& joint_name) {
 	if (_joint_names_to_id_map.find(joint_name) ==
 		_joint_names_to_id_map.end()) {
-		throw runtime_error("joint [" + joint_name + "] does not exist");
+		throw invalid_argument("joint [" + joint_name + "] does not exist");
 	}
 	for (auto it = _spherical_joints.cbegin(); it != _spherical_joints.cend();
 		 ++it) {
@@ -632,7 +670,7 @@ int Sai2Model::sphericalJointIndexW(const string& joint_name) {
 			return it->w_index;
 		}
 	}
-	throw runtime_error("joint [" + joint_name + "] is not spherical");
+	throw invalid_argument("joint [" + joint_name + "] is not spherical");
 }
 
 std::string Sai2Model::jointName(const int joint_id) {
@@ -734,18 +772,18 @@ void Sai2Model::URangeJacobian(MatrixXd& URange, const MatrixXd& task_jacobian,
 		return;
 	}
 
-	const int task_size = task_jacobian.rows();
+	const int max_range = min(task_jacobian.rows(), task_jacobian.cols());
 
 	JacobiSVD<MatrixXd> svd(task_jacobian * N_prec,
 							ComputeThinU | ComputeThinV);
 
 	double sigma_0 = svd.singularValues()(0);
 	if (sigma_0 < tolerance) {
-		URange = MatrixXd::Zero(task_size, 1);
+		URange = MatrixXd::Zero(max_range, 1);
 		return;
 	}
 
-	int task_dof = task_size;
+	int task_dof = max_range;
 	for (int i = svd.singularValues().size() - 1; i > 0; i--) {
 		if (svd.singularValues()(i) / sigma_0 < tolerance) {
 			task_dof -= 1;
@@ -754,8 +792,8 @@ void Sai2Model::URangeJacobian(MatrixXd& URange, const MatrixXd& task_jacobian,
 		}
 	}
 
-	if (task_dof == task_size) {
-		URange = MatrixXd::Identity(task_size, task_size);
+	if (task_dof == task_jacobian.rows()) {
+		URange = MatrixXd::Identity(task_dof, task_dof);
 	} else {
 		URange = svd.matrixU().leftCols(task_dof);
 	}
@@ -1697,7 +1735,7 @@ void orientationError(Vector3d& delta_phi,
 	delta_phi = -2.0 * inv_dlambda.vec();
 }
 
-Matrix3d CrossProductOperator(const Vector3d& v) {
+Matrix3d crossProductOperator(const Vector3d& v) {
 	Matrix3d v_hat;
 	v_hat << 0, -v(2), v(1), v(2), 0, -v(0), -v(1), v(0), 0;
 	return v_hat;
@@ -1714,7 +1752,7 @@ void graspMatrix(MatrixXd& G, MatrixXd& G_inv, Matrix3d& R,
 
 	// transform the resultant forces and moments to the desired resolving point
 	Vector3d r_cg = geom_center - center_point;
-	Matrix3d Rcross_cg = CrossProductOperator(r_cg);
+	Matrix3d Rcross_cg = crossProductOperator(r_cg);
 
 	int n = G.rows();
 
@@ -1725,7 +1763,7 @@ void graspMatrix(MatrixXd& G, MatrixXd& G_inv, Matrix3d& R,
 void graspMatrixAtGeometricCenter(MatrixXd& G, MatrixXd& G_inv, Matrix3d& R,
 								  Vector3d& geometric_center,
 								  const vector<Vector3d>& contact_locations,
-								  const vector<ContactType> contact_types) {
+								  const vector<ContactType>& contact_types) {
 	G = MatrixXd::Zero(1, 1);
 	G_inv = MatrixXd::Zero(1, 1);
 	R = Matrix3d::Identity();
@@ -1770,7 +1808,7 @@ void graspMatrixAtGeometricCenter(MatrixXd& G, MatrixXd& G_inv, Matrix3d& R,
 	for (int i = 0; i < n; i++) {
 		Vector3d ri = contact_locations[i] - geometric_center;
 		Wf.block<3, 3>(0, 3 * i) = Matrix3d::Identity();
-		Wf.block<3, 3>(3, 3 * i) = CrossProductOperator(ri);
+		Wf.block<3, 3>(3, 3 * i) = crossProductOperator(ri);
 	}
 	for (int i = 0; i < k; i++) {
 		Wm.block<3, 3>(3, 3 * i) = Matrix3d::Identity();
@@ -1887,7 +1925,7 @@ void graspMatrixAtGeometricCenter(MatrixXd& G, MatrixXd& G_inv, Matrix3d& R,
 					G.block<5, 6>(7, 6) = I;
 
 					G_inv = MatrixXd::Zero(12, 12);
-					Matrix3d rx_cross = CrossProductOperator(x);
+					Matrix3d rx_cross = crossProductOperator(x);
 					Matrix3d rx_cross_square = rx_cross * rx_cross;
 					G_inv.block<3, 3>(0, 0) = 0.5 * Matrix3d::Identity();
 					G_inv.block<3, 3>(3, 0) = 0.5 * Matrix3d::Identity();

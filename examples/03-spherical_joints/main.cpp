@@ -15,7 +15,7 @@ const string robot_fname = "resources/rpspsbot.urdf";
 int main(int argc, char** argv) {
 	cout << "Loading robot file: " << robot_fname << endl;
 
-	auto robot = std::make_shared<Sai2Model::Sai2Model>(robot_fname, false);
+	auto robot = std::make_shared<Sai2Model::Sai2Model>(robot_fname);
 
 	cout << endl << endl;
 	cout << "Display links. The base link is 0, links attached to "

@@ -103,9 +103,7 @@ private:
 
 class Sai2Model {
 public:
-	Sai2Model(const string path_to_model_file, bool verbose = true,
-			  const Affine3d T_world_robot = Affine3d::Identity(),
-			  const Vector3d world_gravity = Vector3d(0.0, 0.0, -9.81));
+	Sai2Model(const string path_to_model_file, bool verbose = false);
 	~Sai2Model();
 
 	// disallow empty, copy and asssign constructors
@@ -124,17 +122,24 @@ public:
 	// setter and getter for spherical joint by name
 	const Eigen::Quaterniond sphericalQuat(const std::string& joint_name) const;
 	void setSphericalQuat(const std::string& joint_name,
-							Eigen::Quaterniond quat);
+						  Eigen::Quaterniond quat);
 
 	// getter for joint accelerations
 	const Eigen::VectorXd& ddq() const { return _ddq; }
+	void setDdq(const Eigen::VectorXd& ddq);
 
 	// getter for mass matrix
 	const Eigen::MatrixXd& M() const { return _M; }
 	const Eigen::MatrixXd& MInv() const { return _M_inv; }
 
-	// getter for world gravity
-	const Eigen::Vector3d& worldGravity() const { return _rbdl_model->gravity; }
+	// getter and setter for world gravity
+	const Eigen::Vector3d worldGravity() const {
+		return _T_world_robot.linear() * _rbdl_model->gravity;
+	}
+	void setWorldGravity(const Vector3d& world_gravity) {
+		_rbdl_model->gravity =
+			_T_world_robot.linear().transpose() * world_gravity;
+	}
 
 	// getter for the joint limits
 	const std::vector<JointLimit>& jointLimits() const { return _joint_limits; }
@@ -144,7 +149,9 @@ public:
 		return _spherical_joints;
 	}
 
-	const Eigen::Affine3d& TWorldRobot() const {return _T_world_robot;}
+	// getter and setter for robot base transform
+	const Eigen::Affine3d& TRobotBase() const { return _T_world_robot; }
+	void setTRobotBase(const Affine3d& T);
 
 	// getter for joint names
 	std::vector<std::string> jointNames() const;
@@ -192,7 +199,7 @@ public:
 	 *
 	 * @return     number of dof of robot
 	 */
-	const int& dof() const {return _dof;}
+	const int& dof() const { return _dof; }
 
 	/**
 	 * @brief      returns the number of values required for robot joint
@@ -202,7 +209,7 @@ public:
 	 * @return     number of values required for robot joint positions
 	 * description
 	 */
-	const int& qSize() const {return _q_size;}
+	const int& qSize() const { return _q_size; }
 
 	/**
 	 * @brief      Gives the joint gravity torques vector of the last updated
@@ -471,10 +478,8 @@ public:
 	 *                          rotation
 	 * @param[in]  rot_in_link  Local frame of interest expressed in link frame
 	 */
-	void angularVelocity(Vector3d& avel, const string& link_name,
-						 const Vector3d& pos_in_link = Vector3d::Zero());
-	void angularVelocityInWorld(Vector3d& avel, const string& link_name,
-								const Vector3d& pos_in_link = Vector3d::Zero());
+	void angularVelocity(Vector3d& avel, const string& link_name);
+	void angularVelocityInWorld(Vector3d& avel, const string& link_name);
 
 	/**
 	 * @brief      Angular Acceleration of a link (possibly a local frame
@@ -490,11 +495,8 @@ public:
 	 *                          rotation
 	 * @param[in]  rot_in_link  Local frame of interest expressed in link frame
 	 */
-	void angularAcceleration(Vector3d& aaccel, const string& link_name,
-							 const Vector3d& pos_in_link = Vector3d::Zero());
-	void angularAccelerationInWorld(
-		Vector3d& aaccel, const string& link_name,
-		const Vector3d& pos_in_link = Vector3d::Zero());
+	void angularAcceleration(Vector3d& aaccel, const string& link_name);
+	void angularAccelerationInWorld(Vector3d& aaccel, const string& link_name);
 
 	/**
 	 * @brief      Gives the joint index for a given name. For spherical joints,
@@ -918,7 +920,7 @@ void orientationError(Vector3d& delta_phi,
 					  const Quaterniond& current_orientation);
 
 /// \brief compute the cross product operator of a 3d vector
-Matrix3d CrossProductOperator(const Vector3d& v);
+Matrix3d crossProductOperator(const Vector3d& v);
 
 /**
  * @brief      Computes the grasp matrix and its inverse in the cases where
@@ -972,8 +974,8 @@ void graspMatrix(MatrixXd& G, MatrixXd& G_inv, Matrix3d& R,
 void graspMatrixAtGeometricCenter(MatrixXd& G, MatrixXd& G_inv, Matrix3d& R,
 								  Vector3d& geometric_center,
 								  const vector<Vector3d>& contact_locations,
-								  const vector<ContactType> contact_types);
+								  const vector<ContactType>& contact_types);
 
 } /* namespace Sai2Model */
 
-#endif /* RBDLMODEL_H_ */
+#endif /* SAI2MODEL_H_ */

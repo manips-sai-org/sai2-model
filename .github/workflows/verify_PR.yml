@@ -1,11 +1,11 @@
-name: Verify PR builds
+name: Validate build and unit tests
 
 on:
   pull_request:
     branches: [ "master" ]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - name: checkout-repo
@@ -15,3 +15,8 @@ jobs:
         uses: ./.github/actions/build-repo
         with: 
           token: ${{ secrets.SAI2_TOKEN }}
+
+      - name: Run tests
+        run: |
+          cd build/tests
+          ctest --output-on-failure          

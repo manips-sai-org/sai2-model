@@ -16,7 +16,7 @@ const string robot_fname = "resources/rprbot.urdf";
 int main(int argc, char** argv) {
 	cout << "Loading robot file: " << robot_fname << endl;
 
-	Sai2Model::Sai2Model* robot = new Sai2Model::Sai2Model(robot_fname, false);
+	Sai2Model::Sai2Model* robot = new Sai2Model::Sai2Model(robot_fname);
 	int dof = robot->dof();
 
 	const string ee_link = "link2";
