@@ -49,25 +49,25 @@ struct GraspMatrixData {
 	Vector3d resultant_point;
 
 	GraspMatrixData(const MatrixXd& G, const MatrixXd& G_inv, const MatrixXd& R,
-				  const VectorXd& resultant_point)
+					const VectorXd& resultant_point)
 		: G(G), G_inv(G_inv), R(R), resultant_point(resultant_point) {}
 };
 
 // Basic data structure for force sensor data
 struct ForceSensorData {
-	std::string robot_name;  // name of robot to which sensor is attached
-	std::string link_name;	  // name of link to which sensor is attached
+	std::string robot_name;	 // name of robot to which sensor is attached
+	std::string link_name;	 // name of link to which sensor is attached
 	// transform from link to sensor frame. Measured moments are with respect to
 	// the sensor frame origin
 	Eigen::Affine3d transform_in_link;
 	Eigen::Vector3d
-		force_local_frame;	 // force applied to the environment in sensor frame
-	Eigen::Vector3d moment_local_frame;  // moment applied to the environment
-										  // in sensor frame
+		force_local_frame;	// force applied to the environment in sensor frame
+	Eigen::Vector3d moment_local_frame;	 // moment applied to the environment
+										 // in sensor frame
 	Eigen::Vector3d
-		force_world_frame;	 // force applied to the environment in world frame
-	Eigen::Vector3d moment_world_frame;  // moment applied to the environment
-										  // in world frame
+		force_world_frame;	// force applied to the environment in world frame
+	Eigen::Vector3d moment_world_frame;	 // moment applied to the environment
+										 // in world frame
 
 	ForceSensorData()
 		: robot_name(""),
@@ -97,8 +97,7 @@ class ContactModel {
 public:
 	ContactModel() = delete;
 	ContactModel(const string& link_name, const Vector3d& pos,
-				 const Matrix3d& orientation, const ContactType& contact_type)
-	{
+				 const Matrix3d& orientation, const ContactType& contact_type) {
 		_link_name = link_name;
 		_contact_position = pos;
 		_contact_orientation = orientation;
@@ -248,7 +247,7 @@ public:
 	 * @param      g     Vector to which the joint gravity torques will be
 	 *                   written
 	 */
-	void jointGravityVector(VectorXd& g);
+	VectorXd jointGravityVector();
 
 	/**
 	 * @brief      Gives the joint coriolis and centrifugal forces of the last
@@ -257,7 +256,7 @@ public:
 	 * @param      b     Vector to which the joint coriolis and centrifugal
 	 *                   forces will be written
 	 */
-	void coriolisForce(VectorXd& b);
+	VectorXd coriolisForce();
 
 	/**
 	 * @brief      Computes the nonlinear effects for the last updated
@@ -266,7 +265,7 @@ public:
 	 * @param      h     vector to which the centrifugal + coriolis + gravity
 	 *                   forces will be written
 	 */
-	void coriolisPlusGravity(VectorXd& h);
+	VectorXd coriolisPlusGravity();
 
 	/**
 	 * @brief      Computes the matrix C such that the coriolis and centrifucal
@@ -274,7 +273,7 @@ public:
 	 *
 	 * @param      C     return matrix
 	 */
-	void factorizedChristoffelMatrix(MatrixXd& C);
+	MatrixXd factorizedChristoffelMatrix();
 
 	/**
 	 * @brief      Full jacobian for link, relative to base (id=0) in the form
@@ -520,10 +519,8 @@ public:
 	 *                          rotation
 	 * @param[in]  rot_in_link  Local frame of interest expressed in link frame
 	 */
-	Vector3d angularVelocity(
-		const string& link_name) const;
-	Vector3d angularVelocityInWorld(
-		const string& link_name) const;
+	Vector3d angularVelocity(const string& link_name) const;
+	Vector3d angularVelocityInWorld(const string& link_name) const;
 
 	/**
 	 * @brief      Angular Acceleration of a link (possibly a local frame
@@ -539,10 +536,8 @@ public:
 	 *                          rotation
 	 * @param[in]  rot_in_link  Local frame of interest expressed in link frame
 	 */
-	Vector3d angularAcceleration(
-		const string& link_name) const;
-	Vector3d angularAccelerationInWorld(
-		const string& link_name) const;
+	Vector3d angularAcceleration(const string& link_name) const;
+	Vector3d angularAccelerationInWorld(const string& link_name) const;
 
 	/**
 	 * @brief      Gives the joint index for a given name. For spherical joints,
@@ -601,22 +596,6 @@ public:
 	MatrixXd comJacobian() const;
 
 	/**
-	 * @brief      Computes the range space of the Jacobian (potentially
-	 *             constrained to the nullspace of previous tasks) where the
-	 *             singular directions have been removed. The computed URange
-	 *             matrix is a matrix whose columns corresponds to the
-	 *             directions of the jacobian associated with the singular
-	 *             values of magnitude higher than than the tolerance
-	 *
-	 * @param      URange     Return matrix U
-	 * @param[in]  J          The jacobian
-	 * @param[in]  N          The Nullspace of the previous tasks
-	 * @param[in]  tolerance  The tolerance
-	 */
-	MatrixXd JacobianRangeBasis(const MatrixXd& J,
-								const double tolerance = 1e-3) const;
-
-	/**
 	 * @brief      Computes the operational space matrix corresponding to a
 	 *             given Jacobian
 	 *
@@ -660,7 +639,7 @@ public:
 	 * specified)
 	 */
 	MatrixXd nullspaceMatrix(const MatrixXd& task_jacobian,
-						 const MatrixXd& N_prec) const;
+							 const MatrixXd& N_prec) const;
 	MatrixXd nullspaceMatrix(const MatrixXd& task_jacobian) const;
 
 	/**
@@ -680,8 +659,9 @@ public:
 	 * specified)
 	 */
 	OpSpaceMatrices operationalSpaceMatrices(const MatrixXd& task_jacobian,
-								  const MatrixXd& N_prec) const;
-	OpSpaceMatrices operationalSpaceMatrices(const MatrixXd& task_jacobian) const;
+											 const MatrixXd& N_prec) const;
+	OpSpaceMatrices operationalSpaceMatrices(
+		const MatrixXd& task_jacobian) const;
 
 	/**
 	 @brief      Adds an environmental (or manipulation) contact to the desired
@@ -814,9 +794,9 @@ private:
 	 * @param      dqa               auxiliary joint velocity
 	 * @param      ddq               joint acceleration
 	 */
-	void modifiedNewtonEuler(VectorXd& tau, const bool consider_gravity,
-							 const VectorXd& q, const VectorXd& dq,
-							 const VectorXd& dqa, const VectorXd& ddq);
+	VectorXd modifiedNewtonEuler(const bool consider_gravity, const VectorXd& q,
+								 const VectorXd& dq, const VectorXd& dqa,
+								 const VectorXd& ddq);
 
 	/**
 	 * @brief      Gives the link id for a given name with the right indexing
@@ -880,6 +860,20 @@ private:
 };
 
 /**
+ * @brief Computes the range space of the input matrix where the singular
+ * directions (directions with singular values lower than the tolerance) have
+ * been removed. The returned matrix is a of size n x k where n in the number of
+ * rows of the input matrix and k its range. Its columns correnpond to a basis
+ * of the matrix range
+ *
+ * @param matrix     the input matrix
+ * @param tolerance  the threshold to ignore singular values
+ * @return a matrix whose columns form the base of the input matrix range space
+ */
+MatrixXd matrixRangeBasis(const MatrixXd& matrix,
+						  const double& tolerance = 1e-3);
+
+/**
  * @brief      Gives orientation error from rotation matrices
  *
  * @param      delta_phi            Vector on which the orientation error will
@@ -887,8 +881,8 @@ private:
  * @param      desired_orientation  desired orientation rotation matrix
  * @param      current_orientation  current orientation matrix
  */
-void orientationError(Vector3d& delta_phi, const Matrix3d& desired_orientation,
-					  const Matrix3d& current_orientation);
+Vector3d orientationError(const Matrix3d& desired_orientation,
+						  const Matrix3d& current_orientation);
 
 /**
  * @brief      Gives orientation error from quaternions
@@ -898,9 +892,8 @@ void orientationError(Vector3d& delta_phi, const Matrix3d& desired_orientation,
  * @param      desired_orientation  desired orientation quaternion
  * @param      current_orientation  current orientation quaternion
  */
-void orientationError(Vector3d& delta_phi,
-					  const Quaterniond& desired_orientation,
-					  const Quaterniond& current_orientation);
+Vector3d orientationError(const Quaterniond& desired_orientation,
+						  const Quaterniond& current_orientation);
 
 /// \brief compute the cross product operator of a 3d vector
 Matrix3d crossProductOperator(const Vector3d& v);
@@ -931,8 +924,9 @@ Matrix3d crossProductOperator(const Vector3d& v);
  * @param[in]  contact_locations      The contact locations
  * @param[in]  constrained_rotations  The constrained rotations
  */
-GraspMatrixData graspMatrixAtGeometricCenter(const vector<Vector3d>& contact_locations,
-								  const vector<ContactType>& contact_types);
+GraspMatrixData graspMatrixAtGeometricCenter(
+	const vector<Vector3d>& contact_locations,
+	const vector<ContactType>& contact_types);
 
 } /* namespace Sai2Model */
 
