@@ -13,11 +13,11 @@ const string robot_file = "resources/linkage.urdf";
 
 int main() {
 	// load robot
-	auto linkage = std::make_shared<Sai2Model::Sai2Model>(robot_file, false);
+	auto linkage = std::make_shared<Sai2Model::Sai2Model>(robot_file);
 
 	// Make perfect tetrahedron
 	linkage->setQ(Vector3d(54.7356 / 180.0 * M_PI, 54.7356 / 180.0 * M_PI,
-							54.7356 / 180.0 * M_PI));
+						   54.7356 / 180.0 * M_PI));
 	linkage->updateModel();
 
 	MatrixXd G, G_inverse;
@@ -35,8 +35,8 @@ int main() {
 									 Matrix3d::Identity(),
 									 Sai2Model::ContactType::PointContact);
 
-	linkage->environmentalGraspMatrixAtGeometricCenter(G, G_inverse, R,
-													   center_point);
+	Sai2Model::GraspMatrixData grasp_matrix_data =
+		linkage->environmentalGraspMatrixAtGeometricCenter();
 
 	cout << "--------------------------------------------" << endl;
 	cout << "                  2 contacts                " << endl;
@@ -46,12 +46,14 @@ int main() {
 			"second contact. The R matrix gives the local frame in robot base "
 			"frame"
 		 << endl;
-	cout << "center point : " << center_point.transpose() << endl << endl;
-	cout << "Grasp matrix : \n" << G << endl << endl;
+	cout << "center point : " << grasp_matrix_data.resultant_point.transpose()
+		 << endl
+		 << endl;
+	cout << "Grasp matrix : \n" << grasp_matrix_data.G << endl << endl;
 	cout << "Grasp matrix inverse : \n"
-		 << G_inverse << endl
+		 << grasp_matrix_data.G_inv << endl
 		 << "R : \n"
-		 << R << endl
+		 << grasp_matrix_data.R << endl
 		 << endl;
 	cout << endl << endl;
 
@@ -64,8 +66,7 @@ int main() {
 									 Matrix3d::Identity(),
 									 Sai2Model::ContactType::PointContact);
 
-	linkage->environmentalGraspMatrixAtGeometricCenter(G, G_inverse, R,
-													   center_point);
+	grasp_matrix_data = linkage->environmentalGraspMatrixAtGeometricCenter();
 
 	cout << "--------------------------------------------" << endl;
 	cout << "                  3 contacts                " << endl;
@@ -74,12 +75,14 @@ int main() {
 			"in robot base frame. The tensions are in the order 1-2, 1-3, 2-3. "
 			"The R is identity."
 		 << endl;
-	cout << "center point : " << center_point.transpose() << endl << endl;
-	cout << "Grasp matrix : \n" << G << endl << endl;
+	cout << "center point : " << grasp_matrix_data.resultant_point.transpose()
+		 << endl
+		 << endl;
+	cout << "Grasp matrix : \n" << grasp_matrix_data.G << endl << endl;
 	cout << "Grasp matrix : \n"
-		 << G_inverse << endl
+		 << grasp_matrix_data.G_inv << endl
 		 << "R : \n"
-		 << R << endl
+		 << grasp_matrix_data.R << endl
 		 << endl;
 
 	return 0;

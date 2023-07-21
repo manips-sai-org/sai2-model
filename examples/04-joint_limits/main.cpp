@@ -11,7 +11,7 @@ const string robot_fname = "resources/rpspbot.urdf";
 int main(int argc, char** argv) {
 	cout << "Loading robot file: " << robot_fname << endl;
 
-	auto robot = std::make_shared<Sai2Model::Sai2Model>(robot_fname, false);
+	auto robot = std::make_shared<Sai2Model::Sai2Model>(robot_fname);
 
 	cout << endl
 		 << "Joint limits are parsed automatically in the urdf file. They must "

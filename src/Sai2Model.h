@@ -132,9 +132,7 @@ private:
 
 class Sai2Model {
 public:
-	Sai2Model(const string path_to_model_file, bool verbose = true,
-			  const Affine3d T_world_robot = Affine3d::Identity(),
-			  const Vector3d world_gravity = Vector3d(0.0, 0.0, -9.81));
+	Sai2Model(const string path_to_model_file, bool verbose = false);
 	~Sai2Model();
 
 	// disallow empty, copy and asssign constructors
@@ -157,13 +155,20 @@ public:
 
 	// getter for joint accelerations
 	const Eigen::VectorXd& ddq() const { return _ddq; }
+	void setDdq(const Eigen::VectorXd& ddq);
 
 	// getter for mass matrix
 	const Eigen::MatrixXd& M() const { return _M; }
 	const Eigen::MatrixXd& MInv() const { return _M_inv; }
 
-	// getter for world gravity
-	const Eigen::Vector3d& worldGravity() const { return _rbdl_model->gravity; }
+	// getter and setter for world gravity
+	const Eigen::Vector3d worldGravity() const {
+		return _T_world_robot.linear() * _rbdl_model->gravity;
+	}
+	void setWorldGravity(const Vector3d& world_gravity) {
+		_rbdl_model->gravity =
+			_T_world_robot.linear().transpose() * world_gravity;
+	}
 
 	// getter for the joint limits
 	const std::vector<JointLimit>& jointLimits() const { return _joint_limits; }
@@ -173,7 +178,9 @@ public:
 		return _spherical_joints;
 	}
 
-	const Eigen::Affine3d& TWorldRobot() const { return _T_world_robot; }
+	// getter and setter for robot base transform
+	const Eigen::Affine3d& TRobotBase() const { return _T_world_robot; }
+	void setTRobotBase(const Affine3d& T);
 
 	// getter for joint names
 	std::vector<std::string> jointNames() const;
@@ -512,12 +519,8 @@ public:
 	 *                          rotation
 	 * @param[in]  rot_in_link  Local frame of interest expressed in link frame
 	 */
-	Vector3d angularVelocity(
-		const string& link_name,
-		const Vector3d& pos_in_link = Vector3d::Zero()) const;
-	Vector3d angularVelocityInWorld(
-		const string& link_name,
-		const Vector3d& pos_in_link = Vector3d::Zero()) const;
+	Vector3d angularVelocity(const string& link_name) const;
+	Vector3d angularVelocityInWorld(const string& link_name) const;
 
 	/**
 	 * @brief      Angular Acceleration of a link (possibly a local frame
@@ -533,12 +536,8 @@ public:
 	 *                          rotation
 	 * @param[in]  rot_in_link  Local frame of interest expressed in link frame
 	 */
-	Vector3d angularAcceleration(
-		const string& link_name,
-		const Vector3d& pos_in_link = Vector3d::Zero()) const;
-	Vector3d angularAccelerationInWorld(
-		const string& link_name,
-		const Vector3d& pos_in_link = Vector3d::Zero()) const;
+	Vector3d angularAcceleration(const string& link_name) const;
+	Vector3d angularAccelerationInWorld(const string& link_name) const;
 
 	/**
 	 * @brief      Gives the joint index for a given name. For spherical joints,
@@ -795,9 +794,9 @@ private:
 	 * @param      dqa               auxiliary joint velocity
 	 * @param      ddq               joint acceleration
 	 */
-	VectorXd modifiedNewtonEuler(const bool consider_gravity,
-							 const VectorXd& q, const VectorXd& dq,
-							 const VectorXd& dqa, const VectorXd& ddq);
+	VectorXd modifiedNewtonEuler(const bool consider_gravity, const VectorXd& q,
+								 const VectorXd& dq, const VectorXd& dqa,
+								 const VectorXd& ddq);
 
 	/**
 	 * @brief      Gives the link id for a given name with the right indexing
@@ -872,7 +871,7 @@ private:
  * @return a matrix whose columns form the base of the input matrix range space
  */
 MatrixXd matrixRangeBasis(const MatrixXd& matrix,
-						  const double tolerance = 1e-3);
+						  const double& tolerance = 1e-3);
 
 /**
  * @brief      Gives orientation error from rotation matrices
@@ -927,8 +926,8 @@ Matrix3d crossProductOperator(const Vector3d& v);
  */
 GraspMatrixData graspMatrixAtGeometricCenter(
 	const vector<Vector3d>& contact_locations,
-	const vector<ContactType> contact_types);
+	const vector<ContactType>& contact_types);
 
 } /* namespace Sai2Model */
 
-#endif /* RBDLMODEL_H_ */
+#endif /* SAI2MODEL_H_ */

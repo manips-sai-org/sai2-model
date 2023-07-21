@@ -7,8 +7,6 @@
 
 #include <iostream>
 
-#include <iostream>
-
 using namespace std;
 
 const string robot_fname = "resources/rprbot.urdf";
@@ -16,27 +14,26 @@ const string robot_fname = "resources/rprbot.urdf";
 int main(int argc, char** argv) {
 	cout << "Loading robot file: " << robot_fname << endl;
 
-	Sai2Model::Sai2Model* robot = new Sai2Model::Sai2Model(robot_fname, false);
+	Sai2Model::Sai2Model* robot = new Sai2Model::Sai2Model(robot_fname);
 	int dof = robot->dof();
 
 	const string ee_link = "link2";
 	const Eigen::Vector3d ee_pos_in_link = Eigen::Vector3d(0.0, 0.0, 1.0);
 
-	// position and orientation of the frame attached to the second joint
-	Eigen::Vector3d position;
-	Eigen::Vector3d velocity;
-	Eigen::Matrix3d rotation;
-	Eigen::MatrixXd J(6, dof);
-	Eigen::VectorXd gravity(dof);
+	// Eigen::Vector3d position;
+	// Eigen::Vector3d velocity;
+	// Eigen::Matrix3d rotation;
+	// Eigen::MatrixXd J(6, dof);
+	// Eigen::VectorXd gravity(dof);
 
 	// position and orientation of the end effector
-	robot->position(position, ee_link, ee_pos_in_link);
-	robot->linearVelocity(velocity, ee_link, ee_pos_in_link);
-	robot->rotation(rotation, ee_link);
+	Eigen::Vector3d position = robot->position(ee_link, ee_pos_in_link);
+	Eigen::Vector3d velocity = robot->linearVelocity(ee_link, ee_pos_in_link);
+	Eigen::Matrix3d rotation = robot->rotation(ee_link);
 	// jacobian at the end effector (1m from second joint)
-	robot->J(J, ee_link, ee_pos_in_link);
+	Eigen::MatrixXd J = robot->J(ee_link, ee_pos_in_link);
 	// gravity and coriolis/centrifugal forces
-	robot->jointGravityVector(gravity);
+	Eigen::VectorXd gravity = robot->jointGravityVector();
 
 	cout << "------------------------------------------------------" << endl;
 	cout << "               Initial configuration                  " << endl;
@@ -58,11 +55,11 @@ int main(int argc, char** argv) {
 	new_dq << 0, 1, M_PI / 12;
 	robot->setQ(new_q);
 	robot->setDq(new_dq);
-	robot->position(position, ee_link, ee_pos_in_link);
-	robot->linearVelocity(velocity, ee_link, ee_pos_in_link);
-	robot->rotation(rotation, ee_link);
-	robot->J(J, ee_link, ee_pos_in_link);
-	robot->jointGravityVector(gravity);
+	position = robot->position(ee_link, ee_pos_in_link);
+	velocity = robot->linearVelocity(ee_link, ee_pos_in_link);
+	rotation = robot->rotation(ee_link);
+	J = robot->J(ee_link, ee_pos_in_link);
+	gravity = robot->jointGravityVector();
 
 	cout << endl;
 	cout << "------------------------------------------------------" << endl;
@@ -81,11 +78,11 @@ int main(int argc, char** argv) {
 
 	// update kinematics
 	robot->updateKinematics();
-	robot->position(position, ee_link, ee_pos_in_link);
-	robot->linearVelocity(velocity, ee_link, ee_pos_in_link);
-	robot->rotation(rotation, ee_link);
-	robot->J(J, ee_link, ee_pos_in_link);
-	robot->jointGravityVector(gravity);
+	position = robot->position(ee_link, ee_pos_in_link);
+	velocity = robot->linearVelocity(ee_link, ee_pos_in_link);
+	rotation = robot->rotation(ee_link);
+	J = robot->J(ee_link, ee_pos_in_link);
+	gravity = robot->jointGravityVector();
 
 	cout << endl;
 	cout << "------------------------------------------------------" << endl;
@@ -117,8 +114,8 @@ int main(int argc, char** argv) {
 
 	// operational space matrices
 	Eigen::MatrixXd J_task = J.row(2);
-	Eigen::MatrixXd Lambda, Jbar, N;
-	robot->operationalSpaceMatrices(Lambda, Jbar, N, J_task);
+	Sai2Model::OpSpaceMatrices op_space_matrices =
+		robot->operationalSpaceMatrices(J_task);
 	cout << endl;
 	cout << "------------------------------------------------------" << endl;
 	cout << "   operational space matrices in this configuration   " << endl;
@@ -126,9 +123,10 @@ int main(int argc, char** argv) {
 	cout << endl;
 	cout << "robot coordinates : " << robot->q().transpose() << endl;
 	cout << "position at end effector : " << position.transpose() << endl;
-	cout << "operational space inertia :\n" << Lambda << endl;
-	cout << "dynamically consistent inverse of the jacobian \n" << Jbar << endl;
-	cout << "nullspace matrix \n" << N << endl;
+	cout << "operational space inertia :\n" << op_space_matrices.Lambda << endl;
+	cout << "dynamically consistent inverse of the jacobian \n"
+		 << op_space_matrices.Jbar << endl;
+	cout << "nullspace matrix \n" << op_space_matrices.N << endl;
 	cout << endl;
 
 	// come back to initial position
@@ -138,11 +136,11 @@ int main(int argc, char** argv) {
 	robot->setDq(new_dq);
 	robot->updateModel();
 
-	robot->position(position, ee_link, ee_pos_in_link);
-	robot->linearVelocity(velocity, ee_link, ee_pos_in_link);
-	robot->rotation(rotation, ee_link);
-	robot->J(J, ee_link, ee_pos_in_link);
-	robot->jointGravityVector(gravity);
+	position = robot->position(ee_link, ee_pos_in_link);
+	velocity = robot->linearVelocity(ee_link, ee_pos_in_link);
+	rotation = robot->rotation(ee_link);
+	J = robot->J(ee_link, ee_pos_in_link);
+	gravity = robot->jointGravityVector();
 
 	cout << endl;
 	cout << "------------------------------------------------------" << endl;

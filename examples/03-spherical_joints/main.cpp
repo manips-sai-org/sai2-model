@@ -15,7 +15,7 @@ const string robot_fname = "resources/rpspsbot.urdf";
 int main(int argc, char** argv) {
 	cout << "Loading robot file: " << robot_fname << endl;
 
-	auto robot = std::make_shared<Sai2Model::Sai2Model>(robot_fname, false);
+	auto robot = std::make_shared<Sai2Model::Sai2Model>(robot_fname);
 
 	cout << endl << endl;
 	cout << "Display links. The base link is 0, links attached to "
@@ -81,15 +81,15 @@ int main(int argc, char** argv) {
 
 	cout << "spherical joint w indexes from individual call: " << endl;
 	for (const auto& sph_joint : robot->sphericalJoints()) {
-		cout << "name: " << sph_joint.name << " -  w_index: "
-			 << robot->sphericalJointIndexW(sph_joint.name) << endl;
+		cout << "name: " << sph_joint.name
+			 << " -  w_index: " << robot->sphericalJointIndexW(sph_joint.name)
+			 << endl;
 	}
 	cout << endl << endl;
 
 	// position of end effector
 	string eef_link_name = "link5";
-	Eigen::Vector3d pos;
-	robot->position(pos, eef_link_name);
+	Eigen::Vector3d pos = robot->position(eef_link_name);
 	cout << "position of end effector: " << endl;
 	cout << pos.transpose() << endl;
 	cout << endl << endl;
@@ -106,7 +106,7 @@ int main(int argc, char** argv) {
 	cout << "new model q vector: " << robot->q().transpose() << endl;
 
 	robot->updateKinematics();
-	robot->position(pos, eef_link_name);
+	pos = robot->position(eef_link_name);
 	cout << "new position of end effector:\n" << pos.transpose() << endl;
 	cout << endl << endl;
 
