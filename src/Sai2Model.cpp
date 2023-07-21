@@ -254,11 +254,8 @@ void Sai2Model::updateKinematicsCustom(
 	UpdateKinematicsCustom(*_rbdl_model, Q_set, dQ_set, ddQ_set);
 }
 
-void Sai2Model::jointGravityVector(VectorXd& g) {
-	if (g.size() != _dof) {
-		g.resize(_dof);
-	}
-	g.setZero();
+VectorXd Sai2Model::jointGravityVector() {
+	VectorXd g = VectorXd::Zero(_dof);
 
 	vector<RigidBodyDynamics::Body>::iterator it_body;
 	int body_id;
@@ -272,143 +269,99 @@ void Sai2Model::jointGravityVector(VectorXd& g) {
 
 		g += Jv.transpose() * (-mass * _rbdl_model->gravity);
 	}
+	return g;
 }
 
-void Sai2Model::coriolisForce(VectorXd& b) {
+VectorXd Sai2Model::coriolisForce() {
 	// returns v + g. Need to substract the gravity from it
+	VectorXd b = VectorXd::Zero(_dof);
 	NonlinearEffects(*_rbdl_model, _q, _dq, b);
 
-	VectorXd g = VectorXd::Zero(_dof);
-	jointGravityVector(g);
-
-	b -= g;
+	return b - jointGravityVector();
 }
 
-void Sai2Model::coriolisPlusGravity(VectorXd& h) {
+VectorXd Sai2Model::coriolisPlusGravity() {
+	VectorXd h = VectorXd::Zero(_dof);
 	NonlinearEffects(*_rbdl_model, _q, _dq, h);
+	return h;
 }
 
-void Sai2Model::factorizedChristoffelMatrix(MatrixXd& C) {
-	C.setZero(_dof, _dof);
+MatrixXd Sai2Model::factorizedChristoffelMatrix() {
+	MatrixXd C = MatrixXd::Zero(_dof, _dof);
 
 	VectorXd vi = VectorXd::Zero(_dof);
-	VectorXd u = VectorXd::Zero(_dof);
 
 	for (int i = 0; i < _dof; i++) {
 		vi.setZero();
-		u.setZero();
 		vi(i) = 1;
-		modifiedNewtonEuler(u, false, _q, _dq, vi, VectorXd::Zero(_dof));
-		C.col(i) = u;
+		C.col(i) =
+			modifiedNewtonEuler(false, _q, _dq, vi, VectorXd::Zero(_dof));
 	}
+	return C;
 }
 
-void Sai2Model::J(MatrixXd& J, const string& link_name,
-				  const Vector3d& pos_in_link) {
-	J.setZero(6, _dof);
-	MatrixXd J_temp = MatrixXd::Zero(6, _dof);
-	CalcPointJacobian6D(*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link,
-						J_temp, false);
-
+MatrixXd Sai2Model::J(const string& link_name,
+					  const Vector3d& pos_in_link) const {
+	MatrixXd J = MatrixXd::Zero(6, _dof);
+	CalcPointJacobian6D(*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link, J,
+						false);
 	// RBDL gives Jw as the top 3 rows and Jv as the bottom part. We need to
 	// swap it here
-	J << J_temp.block(3, 0, 3, _dof), J_temp.block(0, 0, 3, _dof);
+	J.block(0, 0, 3, _dof).swap(J.block(3, 0, 3, _dof));
+	return J;
 }
 
-void Sai2Model::JWorldFrame(MatrixXd& J, const string& link_name,
-							const Vector3d& pos_in_link) {
-	J.setZero(6, _dof);
-	MatrixXd J_temp = MatrixXd::Zero(6, _dof);
-	CalcPointJacobian6D(*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link,
-						J_temp, false);
-
-	// RBDL gives Jw as the top 3 rows and Jv as the bottom part. We need to
-	// swap it here
-	J << _T_world_robot.linear() * J_temp.block(3, 0, 3, _dof),
-		_T_world_robot.linear() * J_temp.block(0, 0, 3, _dof);
+MatrixXd Sai2Model::JWorldFrame(const string& link_name,
+								const Vector3d& pos_in_link) const {
+	MatrixXd J = this->J(link_name, pos_in_link);
+	J.topRows<3>() = _T_world_robot.linear() * J.topRows<3>();
+	J.bottomRows<3>() = _T_world_robot.linear() * J.bottomRows<3>();
+	return J;
 }
 
-void Sai2Model::JLocalFrame(MatrixXd& J, const string& link_name,
-							const Vector3d& pos_in_link,
-							const Matrix3d& rot_in_link) {
-	J.setZero(6, _dof);
-	MatrixXd J_temp = MatrixXd::Zero(6, _dof);
-	CalcPointJacobian6D(*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link,
-						J_temp, false);
-
-	Matrix3d R_0_link;
-	rotation(R_0_link, link_name);
-	MatrixXd R_link_ee = rot_in_link;
-
-	// RBDL gives Jw as the top 3 rows and Jv as the bottom part. We need to
-	// swap it here
-	J << R_link_ee.transpose() * R_0_link.transpose() *
-			 J_temp.block(3, 0, 3, _dof),
-		R_link_ee.transpose() * R_0_link.transpose() *
-			J_temp.block(0, 0, 3, _dof);
+MatrixXd Sai2Model::JLocalFrame(const string& link_name,
+								const Vector3d& pos_in_link,
+								const Matrix3d& rot_in_link) const {
+	MatrixXd J = this->J(link_name, pos_in_link);
+	Matrix3d R_base_ee = rotation(link_name) * rot_in_link;
+	J.topRows<3>() = R_base_ee.transpose() * J.topRows<3>();
+	J.bottomRows<3>() = R_base_ee.transpose() * J.bottomRows<3>();
+	return J;
 }
 
-void Sai2Model::Jv(MatrixXd& J, const string& link_name,
-				   const Vector3d& pos_in_link) {
-	J.setZero(3, _dof);
+MatrixXd Sai2Model::Jv(const string& link_name,
+					   const Vector3d& pos_in_link) const {
+	MatrixXd J = MatrixXd::Zero(3, _dof);
 	CalcPointJacobian(*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link, J,
 					  false);
+	return J;
 }
 
-void Sai2Model::JvWorldFrame(MatrixXd& J, const string& link_name,
-							 const Vector3d& pos_in_link) {
-	J.setZero(3, _dof);
-	CalcPointJacobian(*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link, J,
-					  false);
-
-	J = _T_world_robot.linear() * J;
+MatrixXd Sai2Model::JvWorldFrame(const string& link_name,
+								 const Vector3d& pos_in_link) const {
+	return _T_world_robot.linear() * Jv(link_name, pos_in_link);
 }
 
-void Sai2Model::JvLocalFrame(MatrixXd& J, const string& link_name,
-							 const Vector3d& pos_in_link,
-							 const Matrix3d& rot_in_link) {
-	J.setZero(3, _dof);
-	CalcPointJacobian(*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link, J,
-					  false);
-
-	Matrix3d link_rot =
-		CalcBodyWorldOrientation(*_rbdl_model, _q, linkIdRbdl(link_name), false)
-			.transpose();
-
-	J = rot_in_link.transpose() * link_rot.transpose() * J;
+MatrixXd Sai2Model::JvLocalFrame(const string& link_name,
+								 const Vector3d& pos_in_link,
+								 const Matrix3d& rot_in_link) const {
+	return rotation(link_name, rot_in_link).transpose() *
+		   Jv(link_name, pos_in_link);
 }
 
-void Sai2Model::Jw(MatrixXd& J, const string& link_name) {
+MatrixXd Sai2Model::Jw(const string& link_name) const {
 	// compute the full jacobian at the center of the link and take rotational
 	// part
-	MatrixXd J_temp = MatrixXd::Zero(6, _dof);
-	CalcPointJacobian6D(*_rbdl_model, _q, linkIdRbdl(link_name),
-						Vector3d::Zero(), J_temp, false);
-	J = J_temp.topRows<3>();
+	return J(link_name).bottomRows<3>();
 }
 
-void Sai2Model::JwWorldFrame(MatrixXd& J, const string& link_name) {
-	// compute the full jacobian at the center of the link and take rotational
-	// part
-	MatrixXd J_temp = MatrixXd::Zero(6, _dof);
-	CalcPointJacobian6D(*_rbdl_model, _q, linkIdRbdl(link_name),
-						Vector3d::Zero(), J_temp, false);
-	J = _T_world_robot.linear() * J_temp.topRows<3>();
+MatrixXd Sai2Model::JwWorldFrame(const string& link_name) const {
+	return _T_world_robot.linear() * Jw(link_name);
 }
 
-void Sai2Model::JwLocalFrame(MatrixXd& J, const string& link_name,
-							 const Matrix3d& rot_in_link) {
-	// compute the full jacobian at the center of the link and take rotational
-	// part
-	MatrixXd J_temp = MatrixXd::Zero(6, _dof);
-	CalcPointJacobian6D(*_rbdl_model, _q, linkIdRbdl(link_name),
-						Vector3d::Zero(), J_temp, false);
-
-	Matrix3d link_rot =
-		CalcBodyWorldOrientation(*_rbdl_model, _q, linkIdRbdl(link_name), false)
-			.transpose();
-
-	J = rot_in_link.transpose() * link_rot.transpose() * J_temp.topRows<3>();
+MatrixXd Sai2Model::JwLocalFrame(const string& link_name,
+								 const Matrix3d& rot_in_link) const {
+	return rotation(link_name, rot_in_link).transpose() * Jw(link_name);
 }
 
 void Sai2Model::computeIK3d(
@@ -504,162 +457,131 @@ void Sai2Model::computeIK6d(
 	updateKinematics();
 }
 
-void Sai2Model::transform(Affine3d& T, const string& link_name,
-						  const Vector3d& pos_in_link,
-						  const Matrix3d& rot_in_link) {
+Affine3d Sai2Model::transform(const string& link_name,
+							  const Vector3d& pos_in_link,
+							  const Matrix3d& rot_in_link) const {
 	unsigned int link_id = linkIdRbdl(link_name);
-	T.linear() =
+	Eigen::Affine3d T(
 		CalcBodyWorldOrientation(*_rbdl_model, _q, link_id, false).transpose() *
-		rot_in_link;
+		rot_in_link);
 	T.translation() = CalcBodyToBaseCoordinates(*_rbdl_model, _q, link_id,
 												pos_in_link, false);
-}
-void Sai2Model::transformInWorld(Affine3d& T, const string& link_name,
-								 const Vector3d& pos_in_link,
-								 const Matrix3d& rot_in_link) {
-	transform(T, link_name, pos_in_link, rot_in_link);
-	T = _T_world_robot * T;
+	return T;
 }
 
-void Sai2Model::velocity6d(VectorXd& vel6d, const string link_name,
-						   const Vector3d& pos_in_link) {
-	vel6d.setZero(6);
-	VectorXd v_tmp = VectorXd::Zero(6);
-	v_tmp = CalcPointVelocity6D(*_rbdl_model, _q, _dq, linkIdRbdl(link_name),
-								pos_in_link, false);
-	vel6d << v_tmp.tail(3), v_tmp.head(3);
+Affine3d Sai2Model::transformInWorld(const string& link_name,
+									 const Vector3d& pos_in_link,
+									 const Matrix3d& rot_in_link) const {
+	return _T_world_robot * transform(link_name, pos_in_link, rot_in_link);
 }
 
-void Sai2Model::velocity6dInWorld(VectorXd& vel6d, const string link_name,
-								  const Vector3d& pos_in_link) {
-	vel6d.setZero(6);
-	VectorXd v_tmp = VectorXd::Zero(6);
-	v_tmp = CalcPointVelocity6D(*_rbdl_model, _q, _dq, linkIdRbdl(link_name),
-								pos_in_link, false);
-	vel6d << _T_world_robot.linear() * v_tmp.tail(3),
-		_T_world_robot.linear() * v_tmp.head(3);
+Vector6d Sai2Model::velocity6d(const string link_name,
+							   const Vector3d& pos_in_link) const {
+	Vector6d vel6d = CalcPointVelocity6D(
+		*_rbdl_model, _q, _dq, linkIdRbdl(link_name), pos_in_link, false);
+	vel6d.head(3).swap(vel6d.tail(3));
+	return vel6d;
 }
 
-void Sai2Model::acceleration6d(VectorXd& accel6d, const string link_name,
-							   const Vector3d& pos_in_link) {
-	accel6d.setZero(6);
-	VectorXd a_tmp = VectorXd::Zero(6);
-	a_tmp = CalcPointAcceleration6D(*_rbdl_model, _q, _dq, _ddq,
-									linkIdRbdl(link_name), pos_in_link, false);
-	accel6d << a_tmp.tail(3), a_tmp.head(3);
-}
-void Sai2Model::acceleration6dInWorld(VectorXd& accel6d, const string link_name,
-									  const Vector3d& pos_in_link) {
-	accel6d.setZero(6);
-	VectorXd a_tmp = VectorXd::Zero(6);
-	a_tmp = CalcPointAcceleration6D(*_rbdl_model, _q, _dq, _ddq,
-									linkIdRbdl(link_name), pos_in_link, false);
-	accel6d << _T_world_robot.linear() * a_tmp.tail(3),
-		_T_world_robot.linear() * a_tmp.head(3);
+Vector6d Sai2Model::velocity6dInWorld(const string link_name,
+									  const Vector3d& pos_in_link) const {
+	Vector6d vel6d = velocity6d(link_name, pos_in_link);
+	vel6d.head(3) = _T_world_robot.linear() * vel6d.head(3);
+	vel6d.tail(3) = _T_world_robot.linear() * vel6d.tail(3);
+	return vel6d;
 }
 
-void Sai2Model::position(Vector3d& pos, const string& link_name,
-						 const Vector3d& pos_in_link) {
-	pos = CalcBodyToBaseCoordinates(*_rbdl_model, _q, linkIdRbdl(link_name),
-									pos_in_link, false);
+Vector6d Sai2Model::acceleration6d(const string link_name,
+								   const Vector3d& pos_in_link) const {
+	Vector6d acc6d = CalcPointAcceleration6D(
+		*_rbdl_model, _q, _dq, _ddq, linkIdRbdl(link_name), pos_in_link, false);
+	acc6d.head(3).swap(acc6d.tail(3));
+	return acc6d;
+}
+Vector6d Sai2Model::acceleration6dInWorld(const string link_name,
+										  const Vector3d& pos_in_link) const {
+	Vector6d accel6d = acceleration6d(link_name, pos_in_link);
+	accel6d.head(3) = _T_world_robot.linear() * accel6d.head(3);
+	accel6d.tail(3) = _T_world_robot.linear() * accel6d.tail(3);
+	return accel6d;
 }
 
-void Sai2Model::positionInWorld(Vector3d& pos, const string& link_name,
-								const Vector3d& pos_in_link) {
-	pos = CalcBodyToBaseCoordinates(*_rbdl_model, _q, linkIdRbdl(link_name),
-									pos_in_link, false);
-	pos = _T_world_robot * pos;
+Vector3d Sai2Model::position(const string& link_name,
+							 const Vector3d& pos_in_link) const {
+	return CalcBodyToBaseCoordinates(*_rbdl_model, _q, linkIdRbdl(link_name),
+									 pos_in_link, false);
 }
 
-void Sai2Model::linearVelocity(Vector3d& vel, const string& link_name,
-							   const Vector3d& pos_in_link) {
-	vel = CalcPointVelocity(*_rbdl_model, _q, _dq, linkIdRbdl(link_name),
-							pos_in_link, false);
-}
-void Sai2Model::linearVelocityInWorld(Vector3d& vel, const string& link_name,
-									  const Vector3d& pos_in_link) {
-	vel = CalcPointVelocity(*_rbdl_model, _q, _dq, linkIdRbdl(link_name),
-							pos_in_link, false);
-	vel = _T_world_robot.linear() * vel;
+Vector3d Sai2Model::positionInWorld(const string& link_name,
+									const Vector3d& pos_in_link) const {
+	return _T_world_robot * position(link_name, pos_in_link);
 }
 
-void Sai2Model::linearAcceleration(Vector3d& accel, const string& link_name,
-								   const Vector3d& pos_in_link) {
-	accel = CalcPointAcceleration(*_rbdl_model, _q, _dq, _ddq,
-								  linkIdRbdl(link_name), pos_in_link, false);
+Vector3d Sai2Model::linearVelocity(const string& link_name,
+								   const Vector3d& pos_in_link) const {
+	return CalcPointVelocity(*_rbdl_model, _q, _dq, linkIdRbdl(link_name),
+							 pos_in_link, false);
 }
-void Sai2Model::linearAccelerationInWorld(Vector3d& accel,
-										  const string& link_name,
-										  const Vector3d& pos_in_link) {
-	accel = CalcPointAcceleration(*_rbdl_model, _q, _dq, _ddq,
-								  linkIdRbdl(link_name), pos_in_link, false);
-	accel = _T_world_robot.linear() * accel;
+Vector3d Sai2Model::linearVelocityInWorld(const string& link_name,
+										  const Vector3d& pos_in_link) const {
+	return _T_world_robot.linear() * linearVelocity(link_name, pos_in_link);
 }
 
-void Sai2Model::rotation(Matrix3d& rot, const string& link_name,
-						 const Matrix3d& rot_in_link) {
-	rot =
-		CalcBodyWorldOrientation(*_rbdl_model, _q, linkIdRbdl(link_name), false)
-			.transpose();
-	rot = rot * rot_in_link;
+Vector3d Sai2Model::linearAcceleration(const string& link_name,
+									   const Vector3d& pos_in_link) const {
+	return CalcPointAcceleration(*_rbdl_model, _q, _dq, _ddq,
+								 linkIdRbdl(link_name), pos_in_link, false);
 }
-void Sai2Model::rotationInWorld(Matrix3d& rot, const string& link_name,
-								const Matrix3d& rot_in_link) {
-	rot =
-		CalcBodyWorldOrientation(*_rbdl_model, _q, linkIdRbdl(link_name), false)
-			.transpose();
-	rot = _T_world_robot.linear() * rot * rot_in_link;
+Vector3d Sai2Model::linearAccelerationInWorld(
+	const string& link_name, const Vector3d& pos_in_link) const {
+	return _T_world_robot.linear() * linearAcceleration(link_name, pos_in_link);
 }
 
-void Sai2Model::angularVelocity(Vector3d& avel, const string& link_name) {
-	VectorXd v_tmp = VectorXd::Zero(6);
-	v_tmp = CalcPointVelocity6D(*_rbdl_model, _q, _dq, linkIdRbdl(link_name),
-								Vector3d::Zero(), false);
-	avel = v_tmp.head(3);
+Matrix3d Sai2Model::rotation(const string& link_name,
+							 const Matrix3d& rot_in_link) const {
+	return CalcBodyWorldOrientation(*_rbdl_model, _q, linkIdRbdl(link_name),
+									false)
+			   .transpose() *
+		   rot_in_link;
 }
 
-void Sai2Model::angularVelocityInWorld(Vector3d& avel,
-									   const string& link_name) {
-	VectorXd v_tmp = VectorXd::Zero(6);
-	v_tmp = CalcPointVelocity6D(*_rbdl_model, _q, _dq, linkIdRbdl(link_name),
-								Vector3d::Zero(), false);
-	avel = v_tmp.head(3);
-	avel = _T_world_robot.linear() * avel;
+Matrix3d Sai2Model::rotationInWorld(const string& link_name,
+									const Matrix3d& rot_in_link) const {
+	return _T_world_robot.linear() * rotation(link_name, rot_in_link);
 }
 
-void Sai2Model::angularAcceleration(Vector3d& aaccel, const string& link_name) {
-	VectorXd a_tmp = VectorXd::Zero(6);
-	a_tmp =
-		CalcPointAcceleration6D(*_rbdl_model, _q, _dq, _ddq,
-								linkIdRbdl(link_name), Vector3d::Zero(), false);
-	aaccel = a_tmp.head(3);
-}
-void Sai2Model::angularAccelerationInWorld(Vector3d& aaccel,
-										   const string& link_name) {
-	VectorXd a_tmp = VectorXd::Zero(6);
-	a_tmp =
-		CalcPointAcceleration6D(*_rbdl_model, _q, _dq, _ddq,
-								linkIdRbdl(link_name), Vector3d::Zero(), false);
-	aaccel = a_tmp.head(3);
-	aaccel = _T_world_robot.linear() * aaccel;
+Vector3d Sai2Model::angularVelocity(const string& link_name) const {
+	return velocity6d(link_name, Vector3d::Zero()).tail(3);
 }
 
-unsigned int Sai2Model::linkIdRbdl(const string& link_name) {
+Vector3d Sai2Model::angularVelocityInWorld(const string& link_name) const {
+	return _T_world_robot.linear() * angularVelocity(link_name);
+}
+
+Vector3d Sai2Model::angularAcceleration(const string& link_name) const {
+	return acceleration6d(link_name, Vector3d::Zero()).tail(3);
+}
+Vector3d Sai2Model::angularAccelerationInWorld(const string& link_name) const {
+	return _T_world_robot.linear() * angularAcceleration(link_name);
+}
+
+unsigned int Sai2Model::linkIdRbdl(const string& link_name) const {
 	if (_link_names_to_id_map.find(link_name) == _link_names_to_id_map.end()) {
 		throw invalid_argument("link [" + link_name + "] does not exist");
 	}
-	return _link_names_to_id_map[link_name];
+	return _link_names_to_id_map.at(link_name);
 }
 
-int Sai2Model::jointIndex(const string& joint_name) {
+int Sai2Model::jointIndex(const string& joint_name) const {
 	if (_joint_names_to_id_map.find(joint_name) ==
 		_joint_names_to_id_map.end()) {
 		throw invalid_argument("joint [" + joint_name + "] does not exist");
 	}
-	return _rbdl_model->mJoints[_joint_names_to_id_map[joint_name]].q_index;
+	return _rbdl_model->mJoints.at(_joint_names_to_id_map.at(joint_name))
+		.q_index;
 }
 
-int Sai2Model::sphericalJointIndexW(const string& joint_name) {
+int Sai2Model::sphericalJointIndexW(const string& joint_name) const {
 	if (_joint_names_to_id_map.find(joint_name) ==
 		_joint_names_to_id_map.end()) {
 		throw invalid_argument("joint [" + joint_name + "] does not exist");
@@ -673,12 +595,12 @@ int Sai2Model::sphericalJointIndexW(const string& joint_name) {
 	throw invalid_argument("joint [" + joint_name + "] is not spherical");
 }
 
-std::string Sai2Model::jointName(const int joint_id) {
+std::string Sai2Model::jointName(const int joint_id) const {
 	if (joint_id < 0 || joint_id >= _q_size) {
 		throw std::invalid_argument(
 			"cannot get joint name for id out of bounds");
 	}
-	return _joint_id_to_names_map[joint_id];
+	return _joint_id_to_names_map.at(joint_id);
 }
 
 std::vector<std::string> Sai2Model::jointNames() const {
@@ -692,151 +614,73 @@ std::vector<std::string> Sai2Model::jointNames() const {
 	return names;
 }
 
-void Sai2Model::getLinkMass(double& mass, Vector3d& center_of_mass,
-							Matrix3d& inertia, const string& link_name) {
-	RigidBodyDynamics::Body b = _rbdl_model->mBodies[linkIdRbdl(link_name)];
-
-	mass = b.mMass;
-	center_of_mass = b.mCenterOfMass;
-	inertia = b.mInertia;
+LinkMassParams Sai2Model::getLinkMassParams(const string& link_name) const {
+	RigidBodyDynamics::Body b = _rbdl_model->mBodies.at(linkIdRbdl(link_name));
+	return LinkMassParams(b.mMass, b.mCenterOfMass, b.mInertia);
 }
 
-void Sai2Model::getLinkMass(double& mass, Vector3d& center_of_mass,
-							const string& link_name) {
-	RigidBodyDynamics::Body b = _rbdl_model->mBodies[linkIdRbdl(link_name)];
-
-	mass = b.mMass;
-	center_of_mass = b.mCenterOfMass;
-}
-
-void Sai2Model::comPosition(Vector3d& robot_com) {
-	robot_com.setZero();
-	double mass;
+Vector3d Sai2Model::comPosition() const {
+	Vector3d robot_com = Vector3d::Zero();
 	double robot_mass = 0.0;
-	Vector3d center_of_mass_local;
 	Vector3d center_of_mass_global_frame;
-	Matrix3d inertia;
 	int n_bodies = _rbdl_model->mBodies.size();
 	for (int i = 0; i < n_bodies; i++) {
-		RigidBodyDynamics::Body b = _rbdl_model->mBodies[i];
-
-		mass = b.mMass;
-		center_of_mass_local = b.mCenterOfMass;
+		RigidBodyDynamics::Body b = _rbdl_model->mBodies.at(i);
 
 		center_of_mass_global_frame = CalcBodyToBaseCoordinates(
-			*_rbdl_model, _q, i, center_of_mass_local, false);
+			*_rbdl_model, _q, i, b.mCenterOfMass, false);
 
-		robot_com += center_of_mass_global_frame * mass;
-		robot_mass += mass;
+		robot_com += center_of_mass_global_frame * b.mMass;
+		robot_mass += b.mMass;
 	}
-	robot_com = robot_com / robot_mass;
+	return robot_com / robot_mass;
 }
 
-void Sai2Model::comJacobian(MatrixXd& Jv_com) {
-	Jv_com.setZero(3, _dof);
+MatrixXd Sai2Model::comJacobian() const {
+	MatrixXd Jv_com = MatrixXd::Zero(3, _dof);
 	MatrixXd link_Jv;
-	double mass;
 	double robot_mass = 0.0;
-	Vector3d center_of_mass_local;
-	Matrix3d inertia;
 	int n_bodies = _rbdl_model->mBodies.size();
 	for (int i = 0; i < n_bodies; i++) {
 		RigidBodyDynamics::Body b = _rbdl_model->mBodies[i];
 
-		mass = b.mMass;
-		center_of_mass_local = b.mCenterOfMass;
-		inertia = b.mInertia;
-
 		link_Jv.setZero(3, _dof);
-		CalcPointJacobian(*_rbdl_model, _q, i, center_of_mass_local, link_Jv,
-						  false);
+		CalcPointJacobian(*_rbdl_model, _q, i, b.mCenterOfMass, link_Jv, false);
 
-		Jv_com += link_Jv * mass;
-		robot_mass += mass;
+		Jv_com += link_Jv * b.mMass;
+		robot_mass += b.mMass;
 	}
-	Jv_com = Jv_com / robot_mass;
+	return Jv_com / robot_mass;
 }
 
-void Sai2Model::URangeJacobian(MatrixXd& URange, const MatrixXd& task_jacobian,
-							   const MatrixXd& N_prec, const double tolerance) {
-	// check matrices dimmnsions
-	if (N_prec.rows() != N_prec.cols() || N_prec.rows() != _dof) {
-		throw invalid_argument(
-			"N_prec matrix dimensions inconsistent in "
-			"Sai2Model::nullspaceMatrix");
-		return;
-	} else if (task_jacobian.cols() != _dof) {
-		throw invalid_argument(
-			"jacobian matrix dimensions inconsistent with model dof in "
-			"Sai2Model::nullspaceMatrix");
-		return;
-	}
-
-	const int max_range = min(task_jacobian.rows(), task_jacobian.cols());
-
-	JacobiSVD<MatrixXd> svd(task_jacobian * N_prec,
-							ComputeThinU | ComputeThinV);
-
-	double sigma_0 = svd.singularValues()(0);
-	if (sigma_0 < tolerance) {
-		URange = MatrixXd::Zero(max_range, 1);
-		return;
-	}
-
-	int task_dof = max_range;
-	for (int i = svd.singularValues().size() - 1; i > 0; i--) {
-		if (svd.singularValues()(i) / sigma_0 < tolerance) {
-			task_dof -= 1;
-		} else {
-			break;
-		}
-	}
-
-	if (task_dof == task_jacobian.rows()) {
-		URange = MatrixXd::Identity(task_dof, task_dof);
-	} else {
-		URange = svd.matrixU().leftCols(task_dof);
-	}
-}
-
-void Sai2Model::URangeJacobian(MatrixXd& URange, const MatrixXd& task_jacobian,
-							   const double tolerance) {
-	MatrixXd N_prec = MatrixXd::Identity(_dof, _dof);
-	URangeJacobian(URange, task_jacobian, N_prec, tolerance);
-}
-
-void Sai2Model::taskInertiaMatrix(MatrixXd& Lambda,
-								  const MatrixXd& task_jacobian) {
+Eigen::MatrixXd Sai2Model::taskInertiaMatrix(
+	const MatrixXd& task_jacobian) const {
 	// check the task jacobian is compatible with the robot model
 	if (task_jacobian.cols() != _dof) {
 		throw invalid_argument(
 			"Jacobian size inconsistent with DOF of robot model in "
 			"Sai2Model::taksInertiaMatrix");
-		return;
 	}
 
 	// resize Matrices
 	int k = task_jacobian.rows();
-	Lambda.setZero(k, k);
 
 	// compute task inertia
 	MatrixXd inv_inertia = task_jacobian * _M_inv * task_jacobian.transpose();
-	Lambda = inv_inertia.llt().solve(MatrixXd::Identity(k, k));
+	return inv_inertia.llt().solve(MatrixXd::Identity(k, k));
 }
 
-void Sai2Model::taskInertiaMatrixWithPseudoInv(MatrixXd& Lambda,
-											   const MatrixXd& task_jacobian) {
+MatrixXd Sai2Model::taskInertiaMatrixWithPseudoInv(
+	const MatrixXd& task_jacobian) const {
 	// check the task jacobian is compatible with the robot model
 	if (task_jacobian.cols() != _dof) {
 		throw invalid_argument(
 			"Jacobian size inconsistent with DOF of robot model in "
 			"Sai2Model::taksInertiaMatrixWithPseudoInv");
-		return;
 	}
 
 	// resize Matrices
 	int k = task_jacobian.rows();
-	Lambda.setZero(k, k);
 
 	// compute task inertia
 	MatrixXd inv_inertia = task_jacobian * _M_inv * task_jacobian.transpose();
@@ -847,99 +691,72 @@ void Sai2Model::taskInertiaMatrixWithPseudoInv(MatrixXd& Lambda,
 	const double epsilon = numeric_limits<double>::epsilon();
 	double tolerance = epsilon * max(inv_inertia.cols(), inv_inertia.rows()) *
 					   svd.singularValues().array().abs()(0);
-	Lambda = svd.matrixV() *
-			 (svd.singularValues().array().abs() > tolerance)
-				 .select(svd.singularValues().array().inverse(), 0)
-				 .matrix()
-				 .asDiagonal() *
-			 svd.matrixU().adjoint();
+	return svd.matrixV() *
+		   (svd.singularValues().array().abs() > tolerance)
+			   .select(svd.singularValues().array().inverse(), 0)
+			   .matrix()
+			   .asDiagonal() *
+		   svd.matrixU().adjoint();
 }
 
-void Sai2Model::dynConsistentInverseJacobian(MatrixXd& Jbar,
-											 const MatrixXd& task_jacobian) {
+MatrixXd Sai2Model::dynConsistentInverseJacobian(
+	const MatrixXd& task_jacobian) const {
 	// check the task jacobian is compatible with the robot model
 	if (task_jacobian.cols() != _dof) {
 		throw invalid_argument(
 			"Jacobian size inconsistent with DOF of robot model in "
 			"Sai2Model::dynConsistentInverseJacobian");
-		return;
 	}
-
-	// resize Matrices
-	int k = task_jacobian.rows();
-	Jbar.setZero(_dof, k);
-
-	MatrixXd task_inertia(task_jacobian.rows(), task_jacobian.rows());
-	taskInertiaMatrix(task_inertia, task_jacobian);
-	Jbar = _M_inv * task_jacobian.transpose() * task_inertia;
+	return _M_inv * task_jacobian.transpose() *
+		   taskInertiaMatrix(task_jacobian);
 }
 
-void Sai2Model::nullspaceMatrix(MatrixXd& N, const MatrixXd& task_jacobian) {
-	MatrixXd N_prec = MatrixXd::Identity(dof(), dof());
-	nullspaceMatrix(N, task_jacobian, N_prec);
+MatrixXd Sai2Model::nullspaceMatrix(const MatrixXd& task_jacobian) const {
+	return nullspaceMatrix(task_jacobian, MatrixXd::Identity(_dof, _dof));
 }
 
-void Sai2Model::nullspaceMatrix(MatrixXd& N, const MatrixXd& task_jacobian,
-								const MatrixXd& N_prec) {
+MatrixXd Sai2Model::nullspaceMatrix(const MatrixXd& task_jacobian,
+									const MatrixXd& N_prec) const {
 	// check matrices dimmnsions
 	if (N_prec.rows() != N_prec.cols() || N_prec.rows() != _dof) {
 		throw invalid_argument(
 			"N_prec matrix dimensions inconsistent in "
 			"Sai2Model::nullspaceMatrix");
-		return;
 	} else if (task_jacobian.cols() != _dof) {
 		throw invalid_argument(
 			"jacobian matrix dimensions inconsistent with model dof in "
 			"Sai2Model::nullspaceMatrix");
-		return;
 	}
 
-	// resize Matrices
-	N.setIdentity(_dof, _dof);
-
-	MatrixXd Jbar = MatrixXd::Zero(task_jacobian.cols(), task_jacobian.rows());
-	dynConsistentInverseJacobian(Jbar, task_jacobian);
-	N = MatrixXd::Identity(_dof, _dof) - Jbar * task_jacobian;
-	N = N * N_prec;
+	MatrixXd Jbar = dynConsistentInverseJacobian(task_jacobian);
+	return (MatrixXd::Identity(_dof, _dof) - Jbar * task_jacobian) * N_prec;
 }
 
-void Sai2Model::operationalSpaceMatrices(MatrixXd& Lambda, MatrixXd& Jbar,
-										 MatrixXd& N,
-										 const MatrixXd& task_jacobian) {
-	MatrixXd N_prec = MatrixXd::Identity(dof(), dof());
-	operationalSpaceMatrices(Lambda, Jbar, N, task_jacobian, N_prec);
+OpSpaceMatrices Sai2Model::operationalSpaceMatrices(
+	const MatrixXd& task_jacobian) const {
+	return operationalSpaceMatrices(task_jacobian,
+									MatrixXd::Identity(_dof, _dof));
 }
 
-void Sai2Model::operationalSpaceMatrices(MatrixXd& Lambda, MatrixXd& Jbar,
-										 MatrixXd& N,
-										 const MatrixXd& task_jacobian,
-										 const MatrixXd& N_prec) {
+OpSpaceMatrices Sai2Model::operationalSpaceMatrices(
+	const MatrixXd& task_jacobian, const MatrixXd& N_prec) const {
 	// check matrices have the right size
 	if (task_jacobian.cols() != _dof) {
 		throw invalid_argument(
 			"Jacobian size inconsistent with DOF of robot model in "
 			"Sai2Model::operationalSpaceMatrices");
-		return;
 	} else if (N_prec.rows() != N_prec.cols() || N_prec.rows() != _dof) {
 		throw invalid_argument(
 			"N_prec matrix dimensions inconsistent in "
 			"Sai2Model::operationalSpaceMatrices");
-		return;
 	}
 
-	// resize matrices
-	int k = task_jacobian.rows();
-	Lambda.setZero(k, k);
-	Jbar.setZero(_dof, k);
-	N.setIdentity(_dof, _dof);
-
 	// Compute the matrices
-	MatrixXd inv_inertia = task_jacobian * _M_inv * task_jacobian.transpose();
-	Lambda = inv_inertia.llt().solve(MatrixXd::Identity(k, k));
-	Jbar = _M_inv * task_jacobian.transpose() * Lambda;
-	MatrixXd Ni = MatrixXd::Identity(_dof, _dof);
-	N = MatrixXd::Identity(_dof, _dof) - Jbar * task_jacobian;
-	N = N * N_prec;
+	MatrixXd Lambda = taskInertiaMatrix(task_jacobian);
+	MatrixXd Jbar = _M_inv * task_jacobian.transpose() * Lambda;
+	MatrixXd N =
+		(MatrixXd::Identity(_dof, _dof) - Jbar * task_jacobian) * N_prec;
+	return OpSpaceMatrices(task_jacobian, Lambda, Jbar, N);
 }
 
 void Sai2Model::addEnvironmentalContact(const string link,
@@ -1031,529 +848,200 @@ void Sai2Model::updateManipulationContact(const string link,
 		" does not exist in Sai2Model::updateManipulationContact()");
 }
 
-void Sai2Model::manipulationGraspMatrix(MatrixXd& G, MatrixXd& G_inv,
-										Matrix3d& R,
-										const Vector3d center_point) {
-	vector<Vector3d> contact_locations;
-	vector<ContactType> contact_types;
-	for (int i = 0; i < _manipulation_contacts.size(); i++) {
-		Vector3d pi;
-		position(pi, _manipulation_contacts[i]._link_name,
-				 _manipulation_contacts[i]._contact_position);
-		contact_locations.push_back(pi);
-		contact_types.push_back(_manipulation_contacts[i]._contact_type);
-	}
-	graspMatrix(G, G_inv, R, center_point, contact_locations, contact_types);
-}
-void Sai2Model::manipulationGraspMatrixInWorld(MatrixXd& G, MatrixXd& G_inv,
-											   Matrix3d& R,
-											   const Vector3d center_point) {
-	vector<Vector3d> contact_locations;
-	vector<ContactType> contact_types;
-	for (int i = 0; i < _manipulation_contacts.size(); i++) {
-		Vector3d pi;
-		positionInWorld(pi, _manipulation_contacts[i]._link_name,
-						_manipulation_contacts[i]._contact_position);
-		contact_locations.push_back(pi);
-		contact_types.push_back(_manipulation_contacts[i]._contact_type);
-	}
-	graspMatrix(G, G_inv, R, center_point, contact_locations, contact_types);
-}
-void Sai2Model::manipulationGraspMatrixLocalContactForces(
-	MatrixXd& G, MatrixXd& G_inv, Matrix3d& R, const Vector3d center_point) {
-	vector<Vector3d> contact_locations;
-	vector<ContactType> contact_types;
-	for (int i = 0; i < _manipulation_contacts.size(); i++) {
-		Vector3d pi;
-		position(pi, _manipulation_contacts[i]._link_name,
-				 _manipulation_contacts[i]._contact_position);
-		contact_locations.push_back(pi);
-		contact_types.push_back(_manipulation_contacts[i]._contact_type);
-	}
-	graspMatrix(G, G_inv, R, center_point, contact_locations, contact_types);
+GraspMatrixData Sai2Model::manipulationGraspMatrix(
+	const Vector3d& desired_resultant_point,
+	const bool resultant_in_world_frame,
+	const bool contact_forces_in_local_frames) const {
+	GraspMatrixData G_data = manipulationGraspMatrixAtGeometricCenter(
+		resultant_in_world_frame, contact_forces_in_local_frames);
 
-	int n = _manipulation_contacts.size();
-	int k = 0;
-	for (int i = 0; i < n; i++) {
-		if (_manipulation_contacts[i]._contact_type == SurfaceContact) {
-			k++;
+	Vector3d r_cg = G_data.resultant_point - desired_resultant_point;
+	Matrix3d Rcross_cg = crossProductOperator(r_cg);
+
+	int n = G_data.G.cols();
+
+	G_data.G.block(3, 0, 3, n) += Rcross_cg * G_data.G.block(0, 0, 3, n);
+	G_data.G_inv.block(0, 0, n, 3) -=
+		G_data.G_inv.block(0, 3, n, 3) * Rcross_cg;
+
+	G_data.resultant_point = desired_resultant_point;
+
+	return G_data;
+}
+
+GraspMatrixData Sai2Model::manipulationGraspMatrixAtGeometricCenter(
+	const bool resultant_in_world_frame,
+	const bool contact_forces_in_local_frames) const {
+	vector<Vector3d> contact_locations;
+	vector<ContactType> contact_types;
+	int num_surface_contacts = 0;
+	for (const auto& contact : _manipulation_contacts) {
+		if (resultant_in_world_frame) {
+			contact_locations.push_back(
+				positionInWorld(contact._link_name, contact._contact_position));
+
+		} else {
+			contact_locations.push_back(
+				position(contact._link_name, contact._contact_position));
+		}
+		contact_types.push_back(contact._contact_type);
+		if (contact._contact_type == SurfaceContact) {
+			num_surface_contacts++;
 		}
 	}
+	GraspMatrixData G_data =
+		graspMatrixAtGeometricCenter(contact_locations, contact_types);
 
-	int k_tmp = 0;
-	for (int i = 0; i < n; i++) {
-		Matrix3d R_tmp = Matrix3d::Identity();
-		rotation(R_tmp, _manipulation_contacts[i]._link_name,
-				 _manipulation_contacts[i]._contact_orientation);
-
-		G.block(0, 3 * i, 3 * (n + k), 3) =
-			G.block(0, 3 * i, 3 * (n + k), 3) * R_tmp;
-		G_inv.block(3 * i, 0, 3, 3 * (n + k)) =
-			R_tmp.transpose() * G_inv.block(3 * i, 0, 3, 3 * (n + k));
-		if (_manipulation_contacts[i]._contact_type == SurfaceContact) {
-			G.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) =
-				G.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) * R_tmp;
-			G_inv.block(3 * (n + k_tmp), 0, 3, 3 * (n + k)) =
-				R_tmp.transpose() *
-				G_inv.block(3 * (n + k_tmp), 0, 3, 3 * (n + k));
-
-			if (n > 2) {
-				G.block(3 * (n + k_tmp), 0, 3, 3 * (n + k)) =
-					R_tmp.transpose() *
-					G.block(3 * (n + k_tmp), 0, 3, 3 * (n + k));
-				G_inv.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) =
-					G_inv.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) * R_tmp;
+	if (contact_forces_in_local_frames) {
+		int n_contact_points = _manipulation_contacts.size();
+		int current_surface_contact = 0;
+		for (int i = 0; i < n_contact_points; i++) {
+			Matrix3d R_local;
+			if (resultant_in_world_frame) {
+				R_local = rotationInWorld(
+					_manipulation_contacts[i]._link_name,
+					_manipulation_contacts[i]._contact_orientation);
+			} else {
+				R_local =
+					rotation(_manipulation_contacts[i]._link_name,
+							 _manipulation_contacts[i]._contact_orientation);
 			}
 
-			k_tmp++;
+			G_data.G
+				.block(0, 3 * i, 3 * (n_contact_points + num_surface_contacts),
+					   3)
+				.applyOnTheRight(R_local);
+			G_data.G_inv
+				.block(3 * i, 0, 3,
+					   3 * (n_contact_points + num_surface_contacts))
+				.applyOnTheLeft(R_local.transpose());
+
+			if (_manipulation_contacts[i]._contact_type == SurfaceContact) {
+				G_data.G
+					.block(0, 3 * (n_contact_points + current_surface_contact),
+						   3 * (n_contact_points + num_surface_contacts), 3)
+					.applyOnTheRight(R_local);
+				G_data.G_inv
+					.block(3 * (n_contact_points + current_surface_contact), 0,
+						   3, 3 * (n_contact_points + num_surface_contacts))
+					.applyOnTheLeft(R_local.transpose());
+
+				if (n_contact_points > 2) {
+					G_data.G
+						.block(3 * (n_contact_points + current_surface_contact),
+							   0, 3,
+							   3 * (n_contact_points + num_surface_contacts))
+						.applyOnTheLeft(R_local.transpose());
+					G_data.G_inv
+						.block(0,
+							   3 * (n_contact_points + current_surface_contact),
+							   3 * (n_contact_points + num_surface_contacts), 3)
+						.applyOnTheRight(R_local);
+				}
+
+				current_surface_contact++;
+			}
 		}
 	}
+	return G_data;
 }
-void Sai2Model::manipulationGraspMatrixLocalContactForcesToWorld(
-	MatrixXd& G, MatrixXd& G_inv, Matrix3d& R, const Vector3d center_point) {
+
+GraspMatrixData Sai2Model::environmentalGraspMatrix(
+	const Vector3d& desired_resultant_point,
+	const bool resultant_in_world_frame,
+	const bool contact_forces_in_local_frames) const {
+	GraspMatrixData G_data = environmentalGraspMatrixAtGeometricCenter(
+		resultant_in_world_frame, contact_forces_in_local_frames);
+
+	Vector3d r_cg = G_data.resultant_point - desired_resultant_point;
+	Matrix3d Rcross_cg = crossProductOperator(r_cg);
+
+	int n = G_data.G.cols();
+
+	G_data.G.block(3, 0, 3, n) += Rcross_cg * G_data.G.block(0, 0, 3, n);
+	G_data.G_inv.block(0, 0, n, 3) -=
+		G_data.G_inv.block(0, 3, n, 3) * Rcross_cg;
+
+	G_data.resultant_point = desired_resultant_point;
+
+	return G_data;
+}
+
+GraspMatrixData Sai2Model::environmentalGraspMatrixAtGeometricCenter(
+	const bool resultant_in_world_frame,
+	const bool contact_forces_in_local_frames) const {
 	vector<Vector3d> contact_locations;
 	vector<ContactType> contact_types;
-	for (int i = 0; i < _manipulation_contacts.size(); i++) {
-		Vector3d pi;
-		positionInWorld(pi, _manipulation_contacts[i]._link_name,
-						_manipulation_contacts[i]._contact_position);
-		contact_locations.push_back(pi);
-		contact_types.push_back(_manipulation_contacts[i]._contact_type);
-	}
-	graspMatrix(G, G_inv, R, center_point, contact_locations, contact_types);
+	int num_surface_contacts = 0;
+	for (const auto& contact : _environmental_contacts) {
+		if (resultant_in_world_frame) {
+			contact_locations.push_back(
+				positionInWorld(contact._link_name, contact._contact_position));
 
-	int n = _manipulation_contacts.size();
-	int k = 0;
-	for (int i = 0; i < n; i++) {
-		if (_manipulation_contacts[i]._contact_type == SurfaceContact) {
-			k++;
+		} else {
+			contact_locations.push_back(
+				position(contact._link_name, contact._contact_position));
+		}
+		contact_types.push_back(contact._contact_type);
+		if (contact._contact_type == SurfaceContact) {
+			num_surface_contacts++;
 		}
 	}
+	GraspMatrixData G_data =
+		graspMatrixAtGeometricCenter(contact_locations, contact_types);
 
-	int k_tmp = 0;
-	for (int i = 0; i < n; i++) {
-		Matrix3d R_tmp = Matrix3d::Identity();
-		rotationInWorld(R_tmp, _manipulation_contacts[i]._link_name,
-						_manipulation_contacts[i]._contact_orientation);
-
-		G.block(0, 3 * i, 3 * (n + k), 3) =
-			G.block(0, 3 * i, 3 * (n + k), 3) * R_tmp;
-		G_inv.block(3 * i, 0, 3, 3 * (n + k)) =
-			R_tmp.transpose() * G_inv.block(3 * i, 0, 3, 3 * (n + k));
-		if (_manipulation_contacts[i]._contact_type == SurfaceContact) {
-			G.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) =
-				G.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) * R_tmp;
-			G_inv.block(3 * (n + k_tmp), 0, 3, 3 * (n + k)) =
-				R_tmp.transpose() *
-				G_inv.block(3 * (n + k_tmp), 0, 3, 3 * (n + k));
-
-			if (n > 2) {
-				G.block(3 * (n + k_tmp), 0, 3, 3 * (n + k)) =
-					R_tmp.transpose() *
-					G.block(3 * (n + k_tmp), 0, 3, 3 * (n + k));
-				G_inv.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) =
-					G_inv.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) * R_tmp;
+	if (contact_forces_in_local_frames) {
+		int n_contact_points = _environmental_contacts.size();
+		int current_surface_contact = 0;
+		for (int i = 0; i < n_contact_points; i++) {
+			Matrix3d R_local;
+			if (resultant_in_world_frame) {
+				R_local = rotationInWorld(
+					_environmental_contacts[i]._link_name,
+					_environmental_contacts[i]._contact_orientation);
+			} else {
+				R_local =
+					rotation(_environmental_contacts[i]._link_name,
+							 _environmental_contacts[i]._contact_orientation);
 			}
 
-			k_tmp++;
-		}
-	}
-}
+			G_data.G
+				.block(0, 3 * i, 3 * (n_contact_points + num_surface_contacts),
+					   3)
+				.applyOnTheRight(R_local);
+			G_data.G_inv
+				.block(3 * i, 0, 3,
+					   3 * (n_contact_points + num_surface_contacts))
+				.applyOnTheLeft(R_local.transpose());
 
-void Sai2Model::manipulationGraspMatrixAtGeometricCenter(
-	MatrixXd& G, MatrixXd& G_inv, Matrix3d& R, Vector3d& geometric_center) {
-	vector<Vector3d> contact_locations;
-	vector<ContactType> contact_types;
-	for (int i = 0; i < _manipulation_contacts.size(); i++) {
-		Vector3d pi;
-		position(pi, _manipulation_contacts[i]._link_name,
-				 _manipulation_contacts[i]._contact_position);
-		contact_locations.push_back(pi);
-		contact_types.push_back(_manipulation_contacts[i]._contact_type);
-	}
-	graspMatrixAtGeometricCenter(G, G_inv, R, geometric_center,
-								 contact_locations, contact_types);
-}
+			if (_environmental_contacts[i]._contact_type == SurfaceContact) {
+				G_data.G
+					.block(0, 3 * (n_contact_points + current_surface_contact),
+						   3 * (n_contact_points + num_surface_contacts), 3)
+					.applyOnTheRight(R_local);
+				G_data.G_inv
+					.block(3 * (n_contact_points + current_surface_contact), 0,
+						   3, 3 * (n_contact_points + num_surface_contacts))
+					.applyOnTheLeft(R_local.transpose());
 
-void Sai2Model::manipulationGraspMatrixAtGeometricCenterInWorld(
-	MatrixXd& G, MatrixXd& G_inv, Matrix3d& R, Vector3d& geometric_center) {
-	vector<Vector3d> contact_locations;
-	vector<ContactType> contact_types;
-	for (int i = 0; i < _manipulation_contacts.size(); i++) {
-		Vector3d pi;
-		positionInWorld(pi, _manipulation_contacts[i]._link_name,
-						_manipulation_contacts[i]._contact_position);
-		contact_locations.push_back(pi);
-		contact_types.push_back(_manipulation_contacts[i]._contact_type);
-	}
-	graspMatrixAtGeometricCenter(G, G_inv, R, geometric_center,
-								 contact_locations, contact_types);
-}
-void Sai2Model::manipulationGraspMatrixAtGeometricCenterLocalContactForces(
-	MatrixXd& G, MatrixXd& G_inv, Matrix3d& R, Vector3d& geometric_center) {
-	vector<Vector3d> contact_locations;
-	vector<ContactType> contact_types;
-	for (int i = 0; i < _manipulation_contacts.size(); i++) {
-		Vector3d pi;
-		position(pi, _manipulation_contacts[i]._link_name,
-				 _manipulation_contacts[i]._contact_position);
-		contact_locations.push_back(pi);
-		contact_types.push_back(_manipulation_contacts[i]._contact_type);
-	}
-	graspMatrixAtGeometricCenter(G, G_inv, R, geometric_center,
-								 contact_locations, contact_types);
+				if (n_contact_points > 2) {
+					G_data.G
+						.block(3 * (n_contact_points + current_surface_contact),
+							   0, 3,
+							   3 * (n_contact_points + num_surface_contacts))
+						.applyOnTheLeft(R_local.transpose());
+					G_data.G_inv
+						.block(0,
+							   3 * (n_contact_points + current_surface_contact),
+							   3 * (n_contact_points + num_surface_contacts), 3)
+						.applyOnTheRight(R_local);
+				}
 
-	int n = _manipulation_contacts.size();
-	int k = 0;
-	for (int i = 0; i < n; i++) {
-		if (_manipulation_contacts[i]._contact_type == SurfaceContact) {
-			k++;
-		}
-	}
-
-	int k_tmp = 0;
-	for (int i = 0; i < n; i++) {
-		Matrix3d R_tmp = Matrix3d::Identity();
-		rotation(R_tmp, _manipulation_contacts[i]._link_name,
-				 _manipulation_contacts[i]._contact_orientation);
-
-		G.block(0, 3 * i, 3 * (n + k), 3) =
-			G.block(0, 3 * i, 3 * (n + k), 3) * R_tmp;
-		G_inv.block(3 * i, 0, 3, 3 * (n + k)) =
-			R_tmp.transpose() * G_inv.block(3 * i, 0, 3, 3 * (n + k));
-		if (_manipulation_contacts[i]._contact_type == SurfaceContact) {
-			G.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) =
-				G.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) * R_tmp;
-			G_inv.block(3 * (n + k_tmp), 0, 3, 3 * (n + k)) =
-				R_tmp.transpose() *
-				G_inv.block(3 * (n + k_tmp), 0, 3, 3 * (n + k));
-
-			if (n > 2) {
-				G.block(3 * (n + k_tmp), 0, 3, 3 * (n + k)) =
-					R_tmp.transpose() *
-					G.block(3 * (n + k_tmp), 0, 3, 3 * (n + k));
-				G_inv.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) =
-					G_inv.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) * R_tmp;
+				current_surface_contact++;
 			}
-
-			k_tmp++;
 		}
 	}
-}
-void Sai2Model::
-	manipulationGraspMatrixAtGeometricCenterLocalContactForcesToWorld(
-		MatrixXd& G, MatrixXd& G_inv, Matrix3d& R, Vector3d& geometric_center) {
-	vector<Vector3d> contact_locations;
-	vector<ContactType> contact_types;
-	for (int i = 0; i < _manipulation_contacts.size(); i++) {
-		Vector3d pi;
-		positionInWorld(pi, _manipulation_contacts[i]._link_name,
-						_manipulation_contacts[i]._contact_position);
-		contact_locations.push_back(pi);
-		contact_types.push_back(_manipulation_contacts[i]._contact_type);
-	}
-	graspMatrixAtGeometricCenter(G, G_inv, R, geometric_center,
-								 contact_locations, contact_types);
-
-	int n = _manipulation_contacts.size();
-	int k = 0;
-	for (int i = 0; i < n; i++) {
-		if (_manipulation_contacts[i]._contact_type == SurfaceContact) {
-			k++;
-		}
-	}
-
-	int k_tmp = 0;
-	for (int i = 0; i < n; i++) {
-		Matrix3d R_tmp = Matrix3d::Identity();
-		rotationInWorld(R_tmp, _manipulation_contacts[i]._link_name,
-						_manipulation_contacts[i]._contact_orientation);
-
-		G.block(0, 3 * i, 3 * (n + k), 3) =
-			G.block(0, 3 * i, 3 * (n + k), 3) * R_tmp;
-		G_inv.block(3 * i, 0, 3, 3 * (n + k)) =
-			R_tmp.transpose() * G_inv.block(3 * i, 0, 3, 3 * (n + k));
-		if (_manipulation_contacts[i]._contact_type == SurfaceContact) {
-			G.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) =
-				G.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) * R_tmp;
-			G_inv.block(3 * (n + k_tmp), 0, 3, 3 * (n + k)) =
-				R_tmp.transpose() *
-				G_inv.block(3 * (n + k_tmp), 0, 3, 3 * (n + k));
-
-			if (n > 2) {
-				G.block(3 * (n + k_tmp), 0, 3, 3 * (n + k)) =
-					R_tmp.transpose() *
-					G.block(3 * (n + k_tmp), 0, 3, 3 * (n + k));
-				G_inv.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) =
-					G_inv.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) * R_tmp;
-			}
-
-			k_tmp++;
-		}
-	}
-}
-
-void Sai2Model::environmentalGraspMatrix(MatrixXd& G, MatrixXd& G_inv,
-										 Matrix3d& R,
-										 const Vector3d center_point) {
-	vector<Vector3d> contact_locations;
-	vector<ContactType> contact_types;
-	for (int i = 0; i < _environmental_contacts.size(); i++) {
-		Vector3d pi;
-		position(pi, _environmental_contacts[i]._link_name,
-				 _environmental_contacts[i]._contact_position);
-		contact_locations.push_back(pi);
-		contact_types.push_back(_environmental_contacts[i]._contact_type);
-	}
-	graspMatrix(G, G_inv, R, center_point, contact_locations, contact_types);
-}
-void Sai2Model::environmentalGraspMatrixInWorld(MatrixXd& G, MatrixXd& G_inv,
-												Matrix3d& R,
-												const Vector3d center_point) {
-	vector<Vector3d> contact_locations;
-	vector<ContactType> contact_types;
-	for (int i = 0; i < _environmental_contacts.size(); i++) {
-		Vector3d pi;
-		positionInWorld(pi, _environmental_contacts[i]._link_name,
-						_environmental_contacts[i]._contact_position);
-		contact_locations.push_back(pi);
-		contact_types.push_back(_environmental_contacts[i]._contact_type);
-	}
-	graspMatrix(G, G_inv, R, center_point, contact_locations, contact_types);
-}
-void Sai2Model::environmentalGraspMatrixLocalContactForces(
-	MatrixXd& G, MatrixXd& G_inv, Matrix3d& R, const Vector3d center_point) {
-	vector<Vector3d> contact_locations;
-	vector<ContactType> contact_types;
-	for (int i = 0; i < _environmental_contacts.size(); i++) {
-		Vector3d pi;
-		position(pi, _environmental_contacts[i]._link_name,
-				 _environmental_contacts[i]._contact_position);
-		contact_locations.push_back(pi);
-		contact_types.push_back(_environmental_contacts[i]._contact_type);
-	}
-	graspMatrix(G, G_inv, R, center_point, contact_locations, contact_types);
-
-	int n = _environmental_contacts.size();
-	int k = 0;
-	for (int i = 0; i < n; i++) {
-		if (_environmental_contacts[i]._contact_type == SurfaceContact) {
-			k++;
-		}
-	}
-
-	int k_tmp = 0;
-	for (int i = 0; i < n; i++) {
-		Matrix3d R_tmp = Matrix3d::Identity();
-		rotation(R_tmp, _environmental_contacts[i]._link_name,
-				 _environmental_contacts[i]._contact_orientation);
-
-		G.block(0, 3 * i, 3 * (n + k), 3) =
-			G.block(0, 3 * i, 3 * (n + k), 3) * R_tmp;
-		G_inv.block(3 * i, 0, 3, 3 * (n + k)) =
-			R_tmp.transpose() * G_inv.block(3 * i, 0, 3, 3 * (n + k));
-		if (_environmental_contacts[i]._contact_type == SurfaceContact) {
-			G.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) =
-				G.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) * R_tmp;
-			G_inv.block(3 * (n + k_tmp), 0, 3, 3 * (n + k)) =
-				R_tmp.transpose() *
-				G_inv.block(3 * (n + k_tmp), 0, 3, 3 * (n + k));
-
-			if (n > 2) {
-				G.block(3 * (n + k_tmp), 0, 3, 3 * (n + k)) =
-					R_tmp.transpose() *
-					G.block(3 * (n + k_tmp), 0, 3, 3 * (n + k));
-				G_inv.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) =
-					G_inv.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) * R_tmp;
-			}
-
-			k_tmp++;
-		}
-	}
-}
-void Sai2Model::environmentalGraspMatrixLocalContactForcesToWorld(
-	MatrixXd& G, MatrixXd& G_inv, Matrix3d& R, const Vector3d center_point) {
-	vector<Vector3d> contact_locations;
-	vector<ContactType> contact_types;
-	for (int i = 0; i < _environmental_contacts.size(); i++) {
-		Vector3d pi;
-		positionInWorld(pi, _environmental_contacts[i]._link_name,
-						_environmental_contacts[i]._contact_position);
-		contact_locations.push_back(pi);
-		contact_types.push_back(_environmental_contacts[i]._contact_type);
-	}
-	graspMatrix(G, G_inv, R, center_point, contact_locations, contact_types);
-
-	int n = _environmental_contacts.size();
-	int k = 0;
-	for (int i = 0; i < n; i++) {
-		if (_environmental_contacts[i]._contact_type == SurfaceContact) {
-			k++;
-		}
-	}
-
-	int k_tmp = 0;
-	for (int i = 0; i < n; i++) {
-		Matrix3d R_tmp = Matrix3d::Identity();
-		rotationInWorld(R_tmp, _environmental_contacts[i]._link_name,
-						_environmental_contacts[i]._contact_orientation);
-
-		G.block(0, 3 * i, 3 * (n + k), 3) =
-			G.block(0, 3 * i, 3 * (n + k), 3) * R_tmp;
-		G_inv.block(3 * i, 0, 3, 3 * (n + k)) =
-			R_tmp.transpose() * G_inv.block(3 * i, 0, 3, 3 * (n + k));
-		if (_environmental_contacts[i]._contact_type == SurfaceContact) {
-			G.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) =
-				G.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) * R_tmp;
-			G_inv.block(3 * (n + k_tmp), 0, 3, 3 * (n + k)) =
-				R_tmp.transpose() *
-				G_inv.block(3 * (n + k_tmp), 0, 3, 3 * (n + k));
-
-			if (n > 2) {
-				G.block(3 * (n + k_tmp), 0, 3, 3 * (n + k)) =
-					R_tmp.transpose() *
-					G.block(3 * (n + k_tmp), 0, 3, 3 * (n + k));
-				G_inv.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) =
-					G_inv.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) * R_tmp;
-			}
-
-			k_tmp++;
-		}
-	}
-}
-
-void Sai2Model::environmentalGraspMatrixAtGeometricCenter(
-	MatrixXd& G, MatrixXd& G_inv, Matrix3d& R, Vector3d& geometric_center) {
-	vector<Vector3d> contact_locations;
-	vector<ContactType> contact_types;
-	for (int i = 0; i < _environmental_contacts.size(); i++) {
-		Vector3d pi;
-		position(pi, _environmental_contacts[i]._link_name,
-				 _environmental_contacts[i]._contact_position);
-		contact_locations.push_back(pi);
-		contact_types.push_back(_environmental_contacts[i]._contact_type);
-	}
-	graspMatrixAtGeometricCenter(G, G_inv, R, geometric_center,
-								 contact_locations, contact_types);
-}
-void Sai2Model::environmentalGraspMatrixAtGeometricCenterInWorld(
-	MatrixXd& G, MatrixXd& G_inv, Matrix3d& R, Vector3d& geometric_center) {
-	vector<Vector3d> contact_locations;
-	vector<ContactType> contact_types;
-	for (int i = 0; i < _environmental_contacts.size(); i++) {
-		Vector3d pi;
-		positionInWorld(pi, _environmental_contacts[i]._link_name,
-						_environmental_contacts[i]._contact_position);
-		contact_locations.push_back(pi);
-		contact_types.push_back(_environmental_contacts[i]._contact_type);
-	}
-	graspMatrixAtGeometricCenter(G, G_inv, R, geometric_center,
-								 contact_locations, contact_types);
-}
-
-void Sai2Model::environmentalGraspMatrixAtGeometricCenterLocalContactForces(
-	MatrixXd& G, MatrixXd& G_inv, Matrix3d& R, Vector3d& geometric_center) {
-	vector<Vector3d> contact_locations;
-	vector<ContactType> contact_types;
-	for (int i = 0; i < _environmental_contacts.size(); i++) {
-		Vector3d pi;
-		position(pi, _environmental_contacts[i]._link_name,
-				 _environmental_contacts[i]._contact_position);
-		contact_locations.push_back(pi);
-		contact_types.push_back(_environmental_contacts[i]._contact_type);
-	}
-
-	graspMatrixAtGeometricCenter(G, G_inv, R, geometric_center,
-								 contact_locations, contact_types);
-
-	int n = _environmental_contacts.size();
-	int k = 0;
-	for (int i = 0; i < n; i++) {
-		if (_environmental_contacts[i]._contact_type == SurfaceContact) {
-			k++;
-		}
-	}
-
-	int k_tmp = 0;
-	for (int i = 0; i < n; i++) {
-		Matrix3d R_tmp = Matrix3d::Identity();
-		rotation(R_tmp, _environmental_contacts[i]._link_name,
-				 _environmental_contacts[i]._contact_orientation);
-
-		G.block(0, 3 * i, 3 * (n + k), 3) =
-			G.block(0, 3 * i, 3 * (n + k), 3) * R_tmp;
-		G_inv.block(3 * i, 0, 3, 3 * (n + k)) =
-			R_tmp.transpose() * G_inv.block(3 * i, 0, 3, 3 * (n + k));
-		if (_environmental_contacts[i]._contact_type == SurfaceContact) {
-			G.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) =
-				G.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) * R_tmp;
-			G_inv.block(3 * (n + k_tmp), 0, 3, 3 * (n + k)) =
-				R_tmp.transpose() *
-				G_inv.block(3 * (n + k_tmp), 0, 3, 3 * (n + k));
-
-			if (n > 2) {
-				G.block(3 * (n + k_tmp), 0, 3, 3 * (n + k)) =
-					R_tmp.transpose() *
-					G.block(3 * (n + k_tmp), 0, 3, 3 * (n + k));
-				G_inv.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) =
-					G_inv.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) * R_tmp;
-			}
-
-			k_tmp++;
-		}
-	}
-}
-void Sai2Model::
-	environmentalGraspMatrixAtGeometricCenterLocalContactForcesToWorld(
-		MatrixXd& G, MatrixXd& G_inv, Matrix3d& R, Vector3d& geometric_center) {
-	vector<Vector3d> contact_locations;
-	vector<ContactType> contact_types;
-	for (int i = 0; i < _environmental_contacts.size(); i++) {
-		Vector3d pi;
-		positionInWorld(pi, _environmental_contacts[i]._link_name,
-						_environmental_contacts[i]._contact_position);
-		contact_locations.push_back(pi);
-		contact_types.push_back(_environmental_contacts[i]._contact_type);
-	}
-	graspMatrixAtGeometricCenter(G, G_inv, R, geometric_center,
-								 contact_locations, contact_types);
-
-	int n = _environmental_contacts.size();
-	int k = 0;
-	for (int i = 0; i < n; i++) {
-		if (_environmental_contacts[i]._contact_type == SurfaceContact) {
-			k++;
-		}
-	}
-
-	int k_tmp = 0;
-	for (int i = 0; i < n; i++) {
-		Matrix3d R_tmp = Matrix3d::Identity();
-		rotationInWorld(R_tmp, _environmental_contacts[i]._link_name,
-						_environmental_contacts[i]._contact_orientation);
-
-		G.block(0, 3 * i, 3 * (n + k), 3) =
-			G.block(0, 3 * i, 3 * (n + k), 3) * R_tmp;
-		G_inv.block(3 * i, 0, 3, 3 * (n + k)) =
-			R_tmp.transpose() * G_inv.block(3 * i, 0, 3, 3 * (n + k));
-		if (_environmental_contacts[i]._contact_type == SurfaceContact) {
-			G.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) =
-				G.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) * R_tmp;
-			G_inv.block(3 * (n + k_tmp), 0, 3, 3 * (n + k)) =
-				R_tmp.transpose() *
-				G_inv.block(3 * (n + k_tmp), 0, 3, 3 * (n + k));
-
-			if (n > 2) {
-				G.block(3 * (n + k_tmp), 0, 3, 3 * (n + k)) =
-					R_tmp.transpose() *
-					G.block(3 * (n + k_tmp), 0, 3, 3 * (n + k));
-				G_inv.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) =
-					G_inv.block(0, 3 * (n + k_tmp), 3 * (n + k), 3) * R_tmp;
-			}
-
-			k_tmp++;
-		}
-	}
+	return G_data;
 }
 
 void Sai2Model::Sai2Model::displayJoints() {
@@ -1585,14 +1073,15 @@ void Sai2Model::updateDynamics() {
 
 void Sai2Model::updateInverseInertia() { _M_inv = _M.inverse(); }
 
-void Sai2Model::modifiedNewtonEuler(VectorXd& u, const bool consider_gravity,
-									const VectorXd& q, const VectorXd& dq,
-									const VectorXd& dqa, const VectorXd& ddq) {
-	u = VectorXd::Zero(_dof);
+VectorXd Sai2Model::modifiedNewtonEuler(const bool consider_gravity,
+										const VectorXd& q, const VectorXd& dq,
+										const VectorXd& dqa,
+										const VectorXd& ddq) {
+	VectorXd tau = VectorXd::Zero(_dof);
 
-	vector<Vector3d> w, wa, dw, ddO, ddB, f, tau;
+	vector<Vector3d> w, wa, dw, ddO, ddB, f, mom;
 	vector<Vector3d> ripi_list, rib_list, z_list;
-	Vector3d w_i, wa_i, dw_i, ddO_i, ddB_i, f_i, tau_i;
+	Vector3d w_i, wa_i, dw_i, ddO_i, ddB_i, f_i, mom_i;
 	Vector3d wp, wap, dwp, ddOp, ddBp, fc, tauc;
 	Vector3d z, r_ipi, r_ipb, r_ib;
 
@@ -1608,7 +1097,7 @@ void Sai2Model::modifiedNewtonEuler(VectorXd& u, const bool consider_gravity,
 	ddB_i = ddO_i;
 
 	f_i.setZero();
-	tau_i.setZero();
+	mom_i.setZero();
 
 	z.setZero();
 	r_ipi.setZero();
@@ -1625,7 +1114,7 @@ void Sai2Model::modifiedNewtonEuler(VectorXd& u, const bool consider_gravity,
 	ripi_list.push_back(r_ipi);
 
 	f.push_back(f_i);
-	tau.push_back(tau_i);
+	mom.push_back(mom_i);
 
 	for (int i = 1; i < _dof + 1; i++) {
 		int parent = _rbdl_model->lambda_q[i];
@@ -1667,20 +1156,20 @@ void Sai2Model::modifiedNewtonEuler(VectorXd& u, const bool consider_gravity,
 		ripi_list.push_back(r_ipi);
 
 		f.push_back(f_i);
-		tau.push_back(tau_i);
+		mom.push_back(mom_i);
 	}
 
 	// backward recursion
 	for (int i = _dof; i > 0; i--) {
-		Vector3d fip, tauip;
+		Vector3d fip, mom_ip;
 		vector<unsigned int> children = _rbdl_model->mu[i];
 		if (children.size() == 0) {
 			fip.setZero();
-			tauip.setZero();
+			mom_ip.setZero();
 		} else if (children.size() == 1) {
 			int child = children[0];
 			fip = _rbdl_model->X_lambda[child].E.transpose() * f[child];
-			tauip = _rbdl_model->X_lambda[child].E.transpose() * tau[child];
+			mom_ip = _rbdl_model->X_lambda[child].E.transpose() * mom[child];
 		} else {
 			throw("tree structures not implemented yet");
 		}
@@ -1689,19 +1178,47 @@ void Sai2Model::modifiedNewtonEuler(VectorXd& u, const bool consider_gravity,
 		Matrix3d I = _rbdl_model->mBodies[i].mInertia;
 
 		f_i = fip + m * ddB[i];
-		tau_i = tauip - f_i.cross(ripi_list[i] + rib_list[i]) +
+		mom_i = mom_ip - f_i.cross(ripi_list[i] + rib_list[i]) +
 				fip.cross(rib_list[i]) + I * dw[i] + wa[i].cross(I * w[i]);
 
 		Vector3d zp = z_list[i];
-		u(i - 1) = tau_i.dot(zp);
+		tau(i - 1) = mom_i.dot(zp);
 
 		f[i] = f_i;
-		tau[i] = tau_i;
+		mom[i] = mom_i;
+	}
+	return tau;
+}
+
+MatrixXd matrixRangeBasis(const MatrixXd& matrix, const double& tolerance) {
+	const int range_size = matrix.rows();
+
+	JacobiSVD<MatrixXd> svd(matrix, ComputeThinU | ComputeThinV);
+
+	double sigma_0 = svd.singularValues()(0);
+	if (sigma_0 < tolerance) {
+		return MatrixXd::Zero(range_size, 1);
+	}
+
+	const int max_range = min(matrix.rows(), matrix.cols());
+	int task_dof = max_range;
+	for (int i = svd.singularValues().size() - 1; i > 0; i--) {
+		if (svd.singularValues()(i) / sigma_0 < tolerance) {
+			task_dof -= 1;
+		} else {
+			break;
+		}
+	}
+
+	if (task_dof == matrix.rows()) {
+		return MatrixXd::Identity(max_range, max_range);
+	} else {
+		return svd.matrixU().leftCols(task_dof);
 	}
 }
 
-void orientationError(Vector3d& delta_phi, const Matrix3d& desired_orientation,
-					  const Matrix3d& current_orientation) {
+Vector3d orientationError(const Matrix3d& desired_orientation,
+						  const Matrix3d& current_orientation) {
 	// check that the matrices are valid rotations
 	Matrix3d Q1 = desired_orientation * desired_orientation.transpose() -
 				  Matrix3d::Identity();
@@ -1714,7 +1231,6 @@ void orientationError(Vector3d& delta_phi, const Matrix3d& desired_orientation,
 		cout << "Q2: " << Q2.norm() << endl;
 		throw invalid_argument(
 			"Invalid rotation matrices in Sai2Model::orientationError");
-		return;
 	} else {
 		Vector3d rc1 = current_orientation.block<3, 1>(0, 0);
 		Vector3d rc2 = current_orientation.block<3, 1>(0, 1);
@@ -1722,17 +1238,15 @@ void orientationError(Vector3d& delta_phi, const Matrix3d& desired_orientation,
 		Vector3d rd1 = desired_orientation.block<3, 1>(0, 0);
 		Vector3d rd2 = desired_orientation.block<3, 1>(0, 1);
 		Vector3d rd3 = desired_orientation.block<3, 1>(0, 2);
-		delta_phi =
-			-1.0 / 2.0 * (rc1.cross(rd1) + rc2.cross(rd2) + rc3.cross(rd3));
+		return -1.0 / 2.0 * (rc1.cross(rd1) + rc2.cross(rd2) + rc3.cross(rd3));
 	}
 }
 
-void orientationError(Vector3d& delta_phi,
-					  const Quaterniond& desired_orientation,
-					  const Quaterniond& current_orientation) {
+Vector3d orientationError(const Quaterniond& desired_orientation,
+						  const Quaterniond& current_orientation) {
 	Quaterniond inv_dlambda =
 		desired_orientation * current_orientation.conjugate();
-	delta_phi = -2.0 * inv_dlambda.vec();
+	return -2.0 * inv_dlambda.vec();
 }
 
 Matrix3d crossProductOperator(const Vector3d& v) {
@@ -1741,33 +1255,13 @@ Matrix3d crossProductOperator(const Vector3d& v) {
 	return v_hat;
 }
 
-void graspMatrix(MatrixXd& G, MatrixXd& G_inv, Matrix3d& R,
-				 const Vector3d center_point,
-				 const vector<Vector3d>& contact_locations,
-				 const vector<ContactType> contact_types) {
-	// compute grasp matrix at geometric center
-	Vector3d geom_center;
-	graspMatrixAtGeometricCenter(G, G_inv, R, geom_center, contact_locations,
-								 contact_types);
-
-	// transform the resultant forces and moments to the desired resolving point
-	Vector3d r_cg = geom_center - center_point;
-	Matrix3d Rcross_cg = crossProductOperator(r_cg);
-
-	int n = G.rows();
-
-	G.block(3, 0, 3, n) += Rcross_cg * G.block(0, 0, 3, n);
-	G_inv.block(0, 0, n, 3) -= G_inv.block(0, 3, n, 3) * Rcross_cg;
-}
-
-void graspMatrixAtGeometricCenter(MatrixXd& G, MatrixXd& G_inv, Matrix3d& R,
-								  Vector3d& geometric_center,
-								  const vector<Vector3d>& contact_locations,
-								  const vector<ContactType>& contact_types) {
-	G = MatrixXd::Zero(1, 1);
-	G_inv = MatrixXd::Zero(1, 1);
-	R = Matrix3d::Identity();
-	geometric_center.setZero();
+GraspMatrixData graspMatrixAtGeometricCenter(
+	const vector<Vector3d>& contact_locations,
+	const vector<ContactType>& contact_types) {
+	MatrixXd G = MatrixXd::Zero(1, 1);
+	MatrixXd G_inv = MatrixXd::Zero(1, 1);
+	Matrix3d R = Matrix3d::Identity();
+	Vector3d geometric_center = Vector3d::Zero();
 
 	// number of contact points
 	int n = contact_locations.size();
@@ -1864,7 +1358,8 @@ void graspMatrixAtGeometricCenter(MatrixXd& G, MatrixXd& G_inv, Matrix3d& R,
 
 			switch (k) {
 				case 0: {
-					// throw runtime_error("Case 2-0 not implemented yet\n");
+					// throw runtime_error("Case 2-0 not implemented
+					// yet\n");
 					G.setZero(6, 6);
 					G.block<3, 3>(0, 0) = Matrix3d::Identity();
 					G.block<3, 3>(0, 3) = Matrix3d::Identity();
@@ -1962,7 +1457,8 @@ void graspMatrixAtGeometricCenter(MatrixXd& G, MatrixXd& G_inv, Matrix3d& R,
 				}
 				default:
 					throw runtime_error(
-						"Should not arrive here (number of contact points is "
+						"Should not arrive here (number of contact points "
+						"is "
 						"2, number of surface contacts incoherent) in "
 						"Sai2Model::graspMatrixAtGeometricCenter\n");
 			}
@@ -2003,7 +1499,8 @@ void graspMatrixAtGeometricCenter(MatrixXd& G, MatrixXd& G_inv, Matrix3d& R,
 
 			if (k < 0 || k > 3) {
 				throw runtime_error(
-					"Should not happen (number of contact points is 3, number "
+					"Should not happen (number of contact points is 3, "
+					"number "
 					"of surface contacts incoherent) in "
 					"Sai2Model::graspMatrixAtGeometricCenter\n");
 			} else if (k == 0) {
@@ -2082,7 +1579,8 @@ void graspMatrixAtGeometricCenter(MatrixXd& G, MatrixXd& G_inv, Matrix3d& R,
 
 			if (k < 0 || k > 4) {
 				throw runtime_error(
-					"Should not arrive here (number of contact points is 4, "
+					"Should not arrive here (number of contact points is "
+					"4, "
 					"number of surface contacts incoherent) in "
 					"Sai2Model::graspMatrixAtGeometricCenter\n");
 			} else if (k == 0) {
@@ -2118,9 +1616,12 @@ void graspMatrixAtGeometricCenter(MatrixXd& G, MatrixXd& G_inv, Matrix3d& R,
 
 		default:
 			throw runtime_error(
-				"Should not arrive here (number of contact points is not 2, 3 "
+				"Should not arrive here (number of contact points is not "
+				"2, 3 "
 				"or 4) in Sai2Model::graspMatrixAtGeometricCenter \n");
 	}
+
+	return GraspMatrixData(G, G_inv, R, geometric_center);
 }
 
 }  // namespace Sai2Model
