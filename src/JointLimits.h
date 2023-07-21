@@ -15,7 +15,8 @@ struct JointLimit {
 
 	JointLimit(std::string joint_name, int index, double lower, double upper,
 			   double vel, double f)
-		: joint_index(index),
+		: joint_name(joint_name),
+		  joint_index(index),
 		  position_lower(lower),
 		  position_upper(upper),
 		  velocity(vel),
