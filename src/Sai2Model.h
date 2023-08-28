@@ -391,9 +391,9 @@ public:
 	 * @brief      transformation from base to link frame (possibly a local
 	 * frame expressed in link frame), in base coordinates (default) or world
 	 * coordinates. This represents the operator that "moves" the base frame to
-	 * the link frame, which it also meand it represents the coordinate
+	 * the link frame, which also means it represents the coordinate
 	 * transform matrix to express a point in base frame, if we know it in link
-	 * frame
+	 * frame:  p_base = T * p_link
 	 *
 	 * @param      link_name    name of the link where to compute the
 	 *                          transformation matrix
