@@ -628,38 +628,20 @@ public:
 	MatrixXd dynConsistentInverseJacobian(const MatrixXd& task_jacobian) const;
 
 	/**
-	 * @brief      Computes the nullspace matrix of the task, consistent with
-	 *             the previous nullspace Recomputes the dynamically consistent
-	 *             inverse and the task mass matrix at each call
+	 * @brief      Computes the dynamically consistent nullspace of the jacobian
 	 *
-	 * @param      N              Matrix to which the nullspace matrix will be
-	 *                            written
 	 * @param[in]  task_jacobian  The task jacobian
-	 * @param[in]  N_prec         The previous nullspace matrix (identity if not
-	 * specified)
 	 */
-	MatrixXd nullspaceMatrix(const MatrixXd& task_jacobian,
-							 const MatrixXd& N_prec) const;
 	MatrixXd nullspaceMatrix(const MatrixXd& task_jacobian) const;
 
 	/**
-	 * @brief      Computes the operational spce matrices (task inertia,
-	 *             dynamically consistent inverse of the jacobian and nullspace)
-	 *             for a given task, In the nullspace of the previous task. More
-	 *             efficient than calling the three individual functions.
+	 * @brief      	Computes the operational spce matrices (task inertia,
+	 *             	dynamically consistent inverse of the jacobian and nullspace)
+	 *             	for a given task. More efficient than calling the three
+	 *				individual functions.
 	 *
-	 * @param      Lambda         Matrix to which the operational space mass
-	 *                            matrix will be written
-	 * @param      Jbar           Matrix to which the dynamically consistent
-	 *                            inverse of the jacobian will be written
-	 * @param      N              Matrix to which the nullspace matrix will be
-	 *                            written
 	 * @param[in]  task_jacobian  Task jacobian
-	 * @param[in]  N_prec         Previous nullspace matrix (identity if not
-	 * specified)
 	 */
-	OpSpaceMatrices operationalSpaceMatrices(const MatrixXd& task_jacobian,
-											 const MatrixXd& N_prec) const;
 	OpSpaceMatrices operationalSpaceMatrices(
 		const MatrixXd& task_jacobian) const;
 
