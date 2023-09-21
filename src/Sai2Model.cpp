@@ -712,42 +712,23 @@ MatrixXd Sai2Model::dynConsistentInverseJacobian(
 }
 
 MatrixXd Sai2Model::nullspaceMatrix(const MatrixXd& task_jacobian) const {
-	return nullspaceMatrix(task_jacobian, MatrixXd::Identity(_dof, _dof));
-}
-
-MatrixXd Sai2Model::nullspaceMatrix(const MatrixXd& task_jacobian,
-									const MatrixXd& N_prec) const {
 	// check matrices dimmnsions
-	if (N_prec.rows() != N_prec.cols() || N_prec.rows() != _dof) {
-		throw invalid_argument(
-			"N_prec matrix dimensions inconsistent in "
-			"Sai2Model::nullspaceMatrix");
-	} else if (task_jacobian.cols() != _dof) {
+	if (task_jacobian.cols() != _dof) {
 		throw invalid_argument(
 			"jacobian matrix dimensions inconsistent with model dof in "
 			"Sai2Model::nullspaceMatrix");
 	}
 
 	MatrixXd Jbar = dynConsistentInverseJacobian(task_jacobian);
-	return (MatrixXd::Identity(_dof, _dof) - Jbar * task_jacobian) * N_prec;
+	return (MatrixXd::Identity(_dof, _dof) - Jbar * task_jacobian);
 }
 
 OpSpaceMatrices Sai2Model::operationalSpaceMatrices(
 	const MatrixXd& task_jacobian) const {
-	return operationalSpaceMatrices(task_jacobian,
-									MatrixXd::Identity(_dof, _dof));
-}
-
-OpSpaceMatrices Sai2Model::operationalSpaceMatrices(
-	const MatrixXd& task_jacobian, const MatrixXd& N_prec) const {
 	// check matrices have the right size
 	if (task_jacobian.cols() != _dof) {
 		throw invalid_argument(
 			"Jacobian size inconsistent with DOF of robot model in "
-			"Sai2Model::operationalSpaceMatrices");
-	} else if (N_prec.rows() != N_prec.cols() || N_prec.rows() != _dof) {
-		throw invalid_argument(
-			"N_prec matrix dimensions inconsistent in "
 			"Sai2Model::operationalSpaceMatrices");
 	}
 
@@ -755,7 +736,7 @@ OpSpaceMatrices Sai2Model::operationalSpaceMatrices(
 	MatrixXd Lambda = taskInertiaMatrix(task_jacobian);
 	MatrixXd Jbar = _M_inv * task_jacobian.transpose() * Lambda;
 	MatrixXd N =
-		(MatrixXd::Identity(_dof, _dof) - Jbar * task_jacobian) * N_prec;
+		(MatrixXd::Identity(_dof, _dof) - Jbar * task_jacobian);
 	return OpSpaceMatrices(task_jacobian, Lambda, Jbar, N);
 }
 
