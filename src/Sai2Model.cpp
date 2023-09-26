@@ -1173,6 +1173,9 @@ VectorXd Sai2Model::modifiedNewtonEuler(const bool consider_gravity,
 
 MatrixXd matrixRangeBasis(const MatrixXd& matrix, const double& tolerance) {
 	const int range_size = matrix.rows();
+	if(matrix.norm() < tolerance) {
+		return MatrixXd::Zero(range_size, 1);
+	}
 
 	JacobiSVD<MatrixXd> svd(matrix, ComputeThinU | ComputeThinV);
 
