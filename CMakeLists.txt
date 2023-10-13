@@ -3,7 +3,11 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
 PROJECT (SAI2-MODEL)
 SET (PROJECT_VERSION 0.1.0) #major version is zero for now since api will certainly change in future
 
-SET(CMAKE_CXX_FLAGS "-std=c++11 -I/usr/include -I/usr/local/include")
+if (${CMAKE_SYSTEM_NAME} MATCHES Linux)
+	SET(CMAKE_CXX_FLAGS "-std=c++11 -I/usr/include -I/usr/local/include -fPIC")
+elseif (${CMAKE_SYSTEM_NAME} MATCHES Darwin)
+	SET(CMAKE_CXX_FLAGS "-std=c++11 -I/usr/include -I/usr/local/include -I/opt/homebrew/include -fPIC")
+endif ()
 
 # set default build to release with debug info. mimic'ed from RBDL project.
 IF(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -14,17 +18,10 @@ IF(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 ENDIF()
 
 option(BUILD_EXAMPLES "Build examples" ON)
-option(BUILD_TESTS "Build tests" ON)
+option(BUILD_TESTS "Build tests" OFF)
 
 # include Eigen
-set(EIGEN3_INCLUDE_DIR $ENV{EIGEN3_INCLUDE_DIR})
-if(NOT EIGEN3_INCLUDE_DIR)
-	find_package(Eigen3 QUIET)
-	# TODO: Find automatic way to find for Ubuntu 14.04
-	if(NOT EIGEN3_INCLUDE_DIR)
-		set(EIGEN3_INCLUDE_DIR /usr/include/eigen3)
-	endif()
-endif()
+find_package(Eigen3 REQUIRED)
 
 # include RBDL
 set(RBDL_LOCAL_DIR ${PROJECT_SOURCE_DIR}/rbdl)

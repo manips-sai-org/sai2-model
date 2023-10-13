@@ -40,7 +40,9 @@ runs:
       shell: bash
       run: |
         export CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:dep/sai2-urdfreader/build/
-        sh install.sh
+        cd rbdl && mkdir build && cd build && cmake .. && make -j4
+        cd ../../
+        mkdir build && cd build && cmake -DBUILD_TESTS=ON .. && make -j4
 
     - name: Check build status
       shell: bash
