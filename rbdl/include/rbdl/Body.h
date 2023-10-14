@@ -121,9 +121,10 @@ struct RBDL_DLLAPI Body {
 
     Math::Vector3d other_com = transform.E.transpose() * other_body.mCenterOfMass + transform.r;
     Math::Vector3d new_com = (1 / new_mass ) * (mMass * mCenterOfMass + other_mass * other_com);
+    // std::cout << "new com = " << std::endl << new_com << std::endl;
 
     LOG << "other_com = " << std::endl << other_com.transpose() << std::endl;
-    LOG << "rotation = " << std::endl << transform.E << std::endl;
+    // std::cout << "rotation = " << std::endl << transform.E << std::endl;
 
     // We have to transform the inertia of other_body to the new COM. This
     // is done in 4 steps:
@@ -139,27 +140,30 @@ struct RBDL_DLLAPI Body {
     Math::SpatialRigidBodyInertia this_rbi = Math::SpatialRigidBodyInertia::createFromMassComInertiaC (mMass, mCenterOfMass, mInertia);
 
     Math::Matrix3d inertia_other = other_rbi.toMatrix().block<3,3>(0,0);
-    LOG << "inertia_other = " << std::endl << inertia_other << std::endl;
+    // std::cout << "inertia_other = " << std::endl << inertia_other << std::endl;
+    // std::cout << "inertia_this = " << std::endl << this_rbi.toMatrix().block<3,3>(0,0) << std::endl;
 
     // 1. Transform the inertia from other origin to other COM
     Math::Matrix3d other_com_cross = Math::VectorCrossMatrix(other_body.mCenterOfMass);
     Math::Matrix3d inertia_other_com = inertia_other - other_mass * other_com_cross * other_com_cross.transpose();
-    LOG << "inertia_other_com = " << std::endl << inertia_other_com << std::endl;
+    // std::cout << "inertia_other_com = " << std::endl << inertia_other_com << std::endl;
 
     // 2. Rotate the inertia that it is aligned to the frame of this body
     Math::Matrix3d inertia_other_com_rotated = transform.E.transpose() * inertia_other_com * transform.E;
-    LOG << "inertia_other_com_rotated = " << std::endl << inertia_other_com_rotated << std::endl;
+    // std::cout << "inertia_other_com_rotated = " << std::endl << inertia_other_com_rotated << std::endl;
 
     // 3. Transform inertia of other_body to the origin of the frame of this body
     Math::Matrix3d inertia_other_com_rotated_this_origin = Math::parallel_axis (inertia_other_com_rotated, other_mass, other_com);
-    LOG << "inertia_other_com_rotated_this_origin = " << std::endl << inertia_other_com_rotated_this_origin << std::endl;
+    // std::cout << "inertia_other_com_rotated_this_origin = " << std::endl << inertia_other_com_rotated_this_origin << std::endl;
 
     // 4. Sum the two inertias
     Math::Matrix3d inertia_summed = Math::Matrix3d (this_rbi.toMatrix().block<3,3>(0,0)) + inertia_other_com_rotated_this_origin;
-    LOG << "inertia_summed  = " << std::endl << inertia_summed << std::endl;
+    // std::cout << "inertia_summed  = " << std::endl << inertia_summed << std::endl;
 
     // 5. Transform the summed inertia to the new COM
     Math::Matrix3d new_inertia = inertia_summed - new_mass * Math::VectorCrossMatrix (new_com) * Math::VectorCrossMatrix(new_com).transpose();
+    // std::cout << "Contribution = " << new_mass * Math::VectorCrossMatrix (new_com) * Math::VectorCrossMatrix(new_com).transpose() << std::endl;
+    // std::cout << "new inertia = " << std::endl << new_inertia << std::endl;
 
     LOG << "new_mass = " << new_mass << std::endl;
     LOG << "new_com  = " << new_com.transpose() << std::endl;

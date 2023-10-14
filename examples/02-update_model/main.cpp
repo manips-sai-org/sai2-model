@@ -133,5 +133,13 @@ int main (int argc, char ** argv) {
 	cout << "joint gravity : " << gravity.transpose() << endl;
 	cout << endl;
 
+	// extra
+	robot->_q = VectorXd::Random(2);
+	robot->_dq = VectorXd::Random(2);
+	robot->updateModel();
+	Eigen::VectorXd JdotQdot(6);
+	robot->JdotQdot(JdotQdot, ee_link, ee_pos_in_link, false);
+	cout << "JdotQdot: \n" << JdotQdot << "\n";
+
 	return 0;
 }

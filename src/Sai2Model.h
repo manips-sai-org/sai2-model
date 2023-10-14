@@ -69,7 +69,7 @@ class Sai2Model
 public:
     // Sai2Model ();
     Sai2Model (const string path_to_model_file, 
-               bool verbose = true, 
+               bool verbose = false, 
                const Affine3d T_world_robot = Affine3d::Identity(),
                const Vector3d world_gravity = Vector3d(0.0,0.0,-9.81));
     ~Sai2Model ();
@@ -845,6 +845,17 @@ public:
                      Matrix3d& R,
                      Vector3d& geometric_center);
 
+    /**
+     * @brief   Computes ABA
+     * 
+     */
+    void forwardDynamics(VectorXd& ddq, const VectorXd& tau);
+
+    /**
+     * @brief   Computes the time derivative of the full jacobian 
+     * 
+     */
+    void JdotQdot(VectorXd& J, const string& link_name, const Vector3d& pos_in_link, const bool update_kinematics = false);
 
     /**
      * @brief displays the joints or links of the robot with the corresponding numbers

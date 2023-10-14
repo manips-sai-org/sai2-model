@@ -814,15 +814,18 @@ void Sai2Model::comPosition(Vector3d& robot_com)
 	int n_bodies = _rbdl_model->mBodies.size();
 	for(int i=0; i<n_bodies; i++) 
 	{
-		RigidBodyDynamics::Body b = _rbdl_model->mBodies[i];
-		
-		mass = b.mMass;
-		center_of_mass_local = b.mCenterOfMass;
+		// Stylistic choice to remove ground link 0
+		if (i > 0) {
+			RigidBodyDynamics::Body b = _rbdl_model->mBodies[i];
+			
+			mass = b.mMass;
+			center_of_mass_local = b.mCenterOfMass;
 
-		center_of_mass_global_frame = CalcBodyToBaseCoordinates(*_rbdl_model, _q, i, center_of_mass_local, false);
+			center_of_mass_global_frame = CalcBodyToBaseCoordinates(*_rbdl_model, _q, i, center_of_mass_local, false);
 
-		robot_com += center_of_mass_global_frame*mass;
-		robot_mass += mass;
+			robot_com += center_of_mass_global_frame*mass;
+			robot_mass += mass;
+		}
 	}
 	robot_com = robot_com/robot_mass;
 }
@@ -837,17 +840,20 @@ void Sai2Model::comJacobian(MatrixXd& Jv_com) {
 	int n_bodies = _rbdl_model->mBodies.size();
 	for(int i=0; i<n_bodies; i++) 
 	{
-		RigidBodyDynamics::Body b = _rbdl_model->mBodies[i];
+		// Stylistic choice to remove ground link 0
+		if (i > 0) {
+			RigidBodyDynamics::Body b = _rbdl_model->mBodies[i];
 
-		mass = b.mMass;
-		center_of_mass_local = b.mCenterOfMass;
-		inertia = b.mInertia;
+			mass = b.mMass;
+			center_of_mass_local = b.mCenterOfMass;
+			inertia = b.mInertia;
 
-		link_Jv.setZero(3, _dof);
-		CalcPointJacobian(*_rbdl_model, _q, i, center_of_mass_local, link_Jv, false);
+			link_Jv.setZero(3, _dof);
+			CalcPointJacobian(*_rbdl_model, _q, i, center_of_mass_local, link_Jv, false);
 
-		Jv_com += link_Jv*mass;
-		robot_mass += mass;
+			Jv_com += link_Jv*mass;
+			robot_mass += mass;
+		}
 	}
 	Jv_com = Jv_com/robot_mass;
 }
@@ -1672,6 +1678,18 @@ void Sai2Model::environmentalGraspMatrixAtGeometricCenterLocalContactForcesToWor
 	}	
 }
 
+void Sai2Model::Sai2Model::forwardDynamics(VectorXd& ddq, const VectorXd& tau)
+{
+	ForwardDynamics(*_rbdl_model, _q, _dq, tau, ddq);
+}
+
+void Sai2Model::Sai2Model::JdotQdot(VectorXd& JdotQdot, const string& link_name, const Vector3d& pos_in_link, const bool update_kinematics)
+{
+	JdotQdot.setZero();
+	VectorXd J_tmp = VectorXd::Zero(6);
+	calcPointJacobianDotQdot6D(*_rbdl_model, _q, _dq, linkId(link_name), pos_in_link, J_tmp, update_kinematics);
+	JdotQdot << J_tmp.tail(3), J_tmp.head(3);
+}
 
 void Sai2Model::Sai2Model::displayJoints()
 {

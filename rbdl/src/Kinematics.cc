@@ -113,6 +113,7 @@ RBDL_DLLAPI void UpdateKinematicsCustom(
   }
 
   if (QDot) {
+    // std::cout << "rbdl: \n";
     for (i = 1; i < model.mBodies.size(); i++) {
       unsigned int lambda = model.lambda[i];
 
@@ -126,6 +127,8 @@ RBDL_DLLAPI void UpdateKinematicsCustom(
         model.c[i] = model.c_J[i] + crossm(model.v[i],model.v_J[i]);
       }
       // LOG << "v[" << i << "] = " << model.v[i].transpose() << std::endl;
+      // std::cout << "lambda: \n" << model.X_lambda[i].toMatrix() << "\n";
+      // std::cout << "v: \n" << model.v[i].transpose() << "\n";
     }
   }
 
@@ -378,6 +381,18 @@ RBDL_DLLAPI void CalcPointJacobian6D (
   }
 }
 
+RBDL_DLLAPI void calcPointJacobianDotQdot6D(
+    Model& model, 
+    const VectorNd& Q, 
+    const VectorNd& QDot, 
+    unsigned int body_id,
+    const Vector3d &point_position, 
+    VectorNd& G, 
+    bool update_kinematics)
+{
+  G = CalcPointAcceleration6D(model, Q, QDot, VectorNd::Zero(Q.size()), body_id, point_position, update_kinematics);
+}
+
 RBDL_DLLAPI void CalcBodySpatialJacobian (
     Model &model,
     const VectorNd &Q,
@@ -517,6 +532,10 @@ RBDL_DLLAPI Math::SpatialVector CalcPointVelocity6D(
     reference_point = 
       CalcBaseToBodyCoordinates(model, Q, reference_body_id, base_coords,false);
   }
+
+  auto X = SpatialTransform (
+      CalcBodyWorldOrientation (model, Q, reference_body_id, false).transpose(), 
+      reference_point);
 
   return SpatialTransform (
       CalcBodyWorldOrientation (model, Q, reference_body_id, false).transpose(), 

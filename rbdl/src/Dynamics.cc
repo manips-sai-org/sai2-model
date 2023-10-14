@@ -169,6 +169,8 @@ RBDL_DLLAPI void CompositeRigidBodyAlgorithm (
 
   assert (H.rows() == model.dof_count && H.cols() == model.dof_count);
 
+  // std::cout << "rbdl\n";
+
   for (unsigned int i = 1; i < model.mBodies.size(); i++) {
     if (update_kinematics) {
       jcalc_X_lambda_S (model, i, Q);
@@ -179,7 +181,9 @@ RBDL_DLLAPI void CompositeRigidBodyAlgorithm (
   for (unsigned int i = model.mBodies.size() - 1; i > 0; i--) {
     if (model.lambda[i] != 0) {
       model.Ic[model.lambda[i]] = model.Ic[model.lambda[i]] + model.X_lambda[i].applyTranspose(model.Ic[i]);
-    }
+      // std::cout << "X_lambda: \n" << model.X_lambda[i].toMatrix() << "\n";
+      // std::cout << "I: \n" << model.Ic[model.lambda[i]].toMatrix() << "\n";
+    }   
 
     unsigned int dof_index_i = model.mJoints[i].q_index;
 
@@ -188,6 +192,8 @@ RBDL_DLLAPI void CompositeRigidBodyAlgorithm (
 
       SpatialVector F             = model.Ic[i] * model.S[i];
       H(dof_index_i, dof_index_i) = model.S[i].dot(F);
+
+      // std::cout << "f: " << F.transpose() << "\n";
 
       unsigned int j = i;
       unsigned int dof_index_j = dof_index_i;
