@@ -20,8 +20,6 @@ INCLUDE_DIRECTORIES (
 	${CMAKE_CURRENT_BINARY_DIR}/include
 )
 
-# SET (CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-
 INCLUDE(GNUInstallDirs)
 
 SET_TARGET_PROPERTIES ( ${PROJECT_EXECUTABLES} PROPERTIES
@@ -53,7 +51,7 @@ OPTION (RBDL_BUILD_TESTS "Build the test executables" OFF)
 OPTION (RBDL_ENABLE_LOGGING "Enable logging (warning: major impact on performance!)" OFF)
 OPTION (RBDL_USE_SIMPLE_MATH "Use slow math instead of the fast Eigen3 library (faster compilation)" OFF)
 OPTION (RBDL_STORE_VERSION "Enable storing of version information in the library (requires build from valid repository)" OFF)
-OPTION (RBDL_BUILD_ADDON_URDFREADER "Build the (experimental) urdf reader" OFF)
+OPTION (RBDL_BUILD_ADDON_URDFREADER "Build the (experimental) urdf reader" ON)
 OPTION (RBDL_BUILD_ADDON_BENCHMARK "Build the benchmarking tool" OFF)
 OPTION (RBDL_BUILD_ADDON_LUAMODEL "Build the lua model reader" OFF)
 OPTION (RBDL_BUILD_PYTHON_WRAPPER "Build experimental python wrapper" OFF)
