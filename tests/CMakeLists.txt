@@ -9,6 +9,7 @@ add_executable(tests
 
 target_link_libraries(tests
     PRIVATE ${SAI2-MODEL_LIBRARIES}
+    PRIVATE ${SAI2-URDF_LIBRARIES}
 	PRIVATE GTest::GTest
 	PRIVATE GTest::Main
 )
