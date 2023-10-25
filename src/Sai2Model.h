@@ -569,6 +569,14 @@ public:
 	std::string jointName(const int joint_id) const;
 
 	/**
+	 * @brief      Returns the link directly attached to the given joint id
+	 *
+	 * @param      joint_name  name of the joint
+	 * @return     the child link name
+	 */
+	std::string childLinkName(const std::string& joint_name) const;
+
+	/**
 	 * @brief      Gives the mass properties of a given link
 	 *
 	 * @param      mass            the returned mass value
@@ -827,6 +835,9 @@ private:
 
 	/// \brief map from joint id to joint names
 	map<int, string> _joint_id_to_names_map;
+
+	/// \brief map from joint names to child link names
+	map<string, string> _joint_names_to_child_link_names_map;
 
 	/// \brief vector of spherical joints
 	vector<SphericalJointDescription> _spherical_joints;

@@ -58,7 +58,7 @@ Sai2Model::Sai2Model(const string path_to_model_file, bool verbose) {
 	// parse rbdl model from urdf
 	bool success = RigidBodyDynamics::URDFReadFromFile(
 		path_to_model_file.c_str(), _rbdl_model, _link_names_to_id_map,
-		_joint_names_to_id_map, _joint_limits, false, verbose);
+		_joint_names_to_id_map, _joint_names_to_child_link_names_map, _joint_limits, false, verbose);
 	if (!success) {
 		throw std::runtime_error("Error loading model [" + path_to_model_file +
 								 "]\n");
@@ -601,6 +601,15 @@ std::string Sai2Model::jointName(const int joint_id) const {
 			"cannot get joint name for id out of bounds");
 	}
 	return _joint_id_to_names_map.at(joint_id);
+}
+
+std::string Sai2Model::childLinkName(const std::string& joint_name) const {
+	if (_joint_names_to_id_map.find(joint_name) ==
+		_joint_names_to_id_map.end()) {
+		throw invalid_argument("joint [" + joint_name + "] does not exist");
+	}
+	return _joint_names_to_child_link_names_map.at(joint_name);
+	
 }
 
 std::vector<std::string> Sai2Model::jointNames() const {

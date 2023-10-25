@@ -1,15 +1,12 @@
 # add the include directory to the include paths
 SET(EXAMPLE_NAME 04-joint_limits)
 
-# INCLUDE_DIRECTORIES (
-# 	${SAI2-MODELINCLUDE_DIRS})
-
 # create an executable
 ADD_EXECUTABLE (${EXAMPLE_NAME} main.cpp)
 
 # and link the library against the executable
 TARGET_LINK_LIBRARIES (${EXAMPLE_NAME}
-	${SAI2-MODEL_LIBRARIES})
+	${SAI2-MODEL_EXAMPLES_LIBRARIES})
 
 # export resources such as model files.
 # NOTE: this requires an install build

@@ -26,11 +26,13 @@ typedef vector<JointPtr> URDFJointVector;
 typedef map<string, LinkPtr> URDFLinkMap;
 typedef map<string, JointPtr> URDFJointMap;
 
-bool construct_model(Model* rbdl_model, ModelPtr urdf_model,
-					 std::map<std::string, int>& link_names_to_id_map,
-					 std::map<std::string, int>& joint_names_to_id_map,
-					 std::vector<Sai2Model::JointLimit>& joint_limits,
-					 bool floating_base, bool verbose) {
+bool construct_model(
+	Model* rbdl_model, ModelPtr urdf_model,
+	std::map<std::string, int>& link_names_to_id_map,
+	std::map<std::string, int>& joint_names_to_id_map,
+	std::map<std::string, std::string>& joint_names_to_child_link_names_map,
+	std::vector<Sai2Model::JointLimit>& joint_limits, bool floating_base,
+	bool verbose) {
 	LinkPtr urdf_root_link;
 
 	URDFLinkMap link_map;
@@ -140,14 +142,15 @@ bool construct_model(Model* rbdl_model, ModelPtr urdf_model,
 	}
 
 	unsigned int j;
+	unsigned int current_moveable_joint_id = 1; // start with 1 because 0 is the root joint
 	for (j = 0; j < joint_names.size(); j++) {
 		JointPtr urdf_joint = joint_map[joint_names[j]];
 		LinkPtr urdf_parent = link_map[urdf_joint->parent_link_name];
 		LinkPtr urdf_child = link_map[urdf_joint->child_link_name];
 		if (urdf_joint->type != urdf::Joint::FIXED &&
 			urdf_joint->type != urdf::Joint::UNKNOWN) {
-			joint_names_to_id_map[urdf_joint->name] =
-				j + 1;	// offset to take the root joint into account
+			joint_names_to_id_map[urdf_joint->name] = current_moveable_joint_id;
+			current_moveable_joint_id++;
 		}
 
 		// determine where to add the current joint and child body
@@ -284,6 +287,8 @@ bool construct_model(Model* rbdl_model, ModelPtr urdf_model,
 		}
 		link_names_to_id_map[urdf_child->name] =
 			rbdl_model->GetBodyId(urdf_child->name.c_str());
+		joint_names_to_child_link_names_map[urdf_joint->name] =
+			urdf_child->name;
 
 		// get the joint limits
 		if (urdf_joint->limits) {
@@ -318,6 +323,7 @@ RBDL_DLLAPI bool URDFReadFromFile(
 	const char* filename, Model* model,
 	std::map<std::string, int>& link_names_to_id_map,
 	std::map<std::string, int>& joint_names_to_id_map,
+	std::map<std::string, std::string>& joint_names_to_child_link_names_map,
 	std::vector<Sai2Model::JointLimit>& joint_limits, bool floating_base,
 	bool verbose) {
 	ifstream model_file(filename);
@@ -338,13 +344,15 @@ RBDL_DLLAPI bool URDFReadFromFile(
 
 	return URDFReadFromString(model_xml_string.c_str(), model,
 							  link_names_to_id_map, joint_names_to_id_map,
-							  joint_limits, floating_base, verbose);
+							  joint_names_to_child_link_names_map, joint_limits,
+							  floating_base, verbose);
 }
 
 RBDL_DLLAPI bool URDFReadFromString(
 	const char* model_xml_string, Model* model,
 	std::map<std::string, int>& link_names_to_id_map,
 	std::map<std::string, int>& joint_names_to_id_map,
+	std::map<std::string, std::string>& joint_names_to_child_link_names_map,
 	std::vector<Sai2Model::JointLimit>& joint_limits, bool floating_base,
 	bool verbose) {
 	assert(model);
@@ -352,8 +360,9 @@ RBDL_DLLAPI bool URDFReadFromString(
 	ModelPtr urdf_model = urdf::parseURDF(model_xml_string);
 
 	if (!construct_model(model, urdf_model, link_names_to_id_map,
-						 joint_names_to_id_map, joint_limits, floating_base,
-						 verbose)) {
+						 joint_names_to_id_map,
+						 joint_names_to_child_link_names_map, joint_limits,
+						 floating_base, verbose)) {
 		cerr << "Error constructing model from urdf file." << endl;
 		return false;
 	}
