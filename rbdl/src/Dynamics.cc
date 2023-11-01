@@ -1,6 +1,6 @@
 /*
  * RBDL - Rigid Body Dynamics Library
- * Copyright (c) 2011-2016 Martin Felis <martin.felis@iwr.uni-heidelberg.de>
+ * Copyright (c) 2011-2018 Martin Felis <martin@fysx.org>
  *
  * Licensed under the zlib license. See LICENSE for more details.
  */
@@ -60,7 +60,7 @@ RBDL_DLLAPI void InverseDynamics (
     }else if(model.mJoints[i].mJointType == JointTypeCustom){
       unsigned int k = model.mJoints[i].custom_joint_index;
       VectorNd customJointQDDot(model.mCustomJoints[k]->mDoFCount);
-      for(int z=0; z<model.mCustomJoints[k]->mDoFCount; ++z){
+      for(unsigned z = 0; z < model.mCustomJoints[k]->mDoFCount; ++z){
         customJointQDDot[z] = QDDot[q_index+z];
       }
       model.a[i] =  model.X_lambda[i].apply(model.a[lambda])
@@ -108,7 +108,8 @@ RBDL_DLLAPI void NonlinearEffects (
     Model &model,
     const VectorNd &Q,
     const VectorNd &QDot,
-    VectorNd &Tau) {
+    VectorNd &Tau,
+    std::vector<Math::SpatialVector> *f_ext) {
   LOG << "-------- " << __func__ << " --------" << std::endl;
 
   SpatialVector spatial_gravity (0., 0., 0., -model.gravity[0], -model.gravity[1], -model.gravity[2]);
@@ -133,6 +134,14 @@ RBDL_DLLAPI void NonlinearEffects (
 
     if (!model.mBodies[i].mIsVirtual) {
       model.f[i] = model.I[i] * model.a[i] + crossf(model.v[i],model.I[i] * model.v[i]);
+#ifdef RBDL_USE_CASADI_MATH
+      if (f_ext != NULL)
+#else
+      if (f_ext != NULL && (*f_ext)[i] != SpatialVector::Zero())
+#endif
+      {
+        model.f[i] -= model.X_base[i].toMatrixAdjoint() * (*f_ext)[i];
+      }            
     } else {
       model.f[i].setZero();
     }
@@ -354,7 +363,11 @@ RBDL_DLLAPI void ForwardDynamics (
 
     model.pA[i] = crossf(model.v[i],model.I[i] * model.v[i]);
 
-    if (f_ext != NULL && (*f_ext)[i] != SpatialVectorZero) {
+#ifdef RBDL_USE_CASADI_MATH
+    if (f_ext != NULL) {
+#else
+    if (f_ext != NULL && (*f_ext)[i] != SpatialVector::Zero()) {
+#endif
       LOG << "External force (" << i << ") = " << model.X_base[i].toMatrixAdjoint() * (*f_ext)[i] << std::endl;
       model.pA[i] -= model.X_base[i].toMatrixAdjoint() * (*f_ext)[i];
     }
@@ -385,35 +398,35 @@ RBDL_DLLAPI void ForwardDynamics (
           + Ia * model.c[i]
           + model.U[i] * model.u[i] / model.d[i];
 
-#ifdef EIGEN_CORE_H
-        model.IA[lambda].noalias()
-          += model.X_lambda[i].toMatrixTranspose()
-          * Ia * model.X_lambda[i].toMatrix();
-        model.pA[lambda].noalias()
-          += model.X_lambda[i].applyTranspose(pa);
-#else
+#ifdef RBDL_USE_CASADI_MATH
         model.IA[lambda]
           += model.X_lambda[i].toMatrixTranspose()
           * Ia * model.X_lambda[i].toMatrix();
 
         model.pA[lambda] += model.X_lambda[i].applyTranspose(pa);
+#else
+        model.IA[lambda].noalias()
+          += model.X_lambda[i].toMatrixTranspose()
+          * Ia * model.X_lambda[i].toMatrix();
+        model.pA[lambda].noalias()
+          += model.X_lambda[i].applyTranspose(pa);
 #endif
+
         LOG << "pA[" << lambda << "] = "
           << model.pA[lambda].transpose() << std::endl;
       }
     } else if (model.mJoints[i].mDoFCount == 3
         && model.mJoints[i].mJointType != JointTypeCustom) {
       model.multdof3_U[i] = model.IA[i] * model.multdof3_S[i];
-#ifdef EIGEN_CORE_H
-      model.multdof3_Dinv[i] = (model.multdof3_S[i].transpose()
-          * model.multdof3_U[i]).inverse().eval();
-#else
+
+#ifdef RBDL_USE_CASADI_MATH
       model.multdof3_Dinv[i] = (model.multdof3_S[i].transpose()
           * model.multdof3_U[i]).inverse();
+#else
+      model.multdof3_Dinv[i] = (model.multdof3_S[i].transpose()
+          * model.multdof3_U[i]).inverse().eval();
 #endif
-      Vector3d tau_temp (Tau[q_index],
-          Tau[q_index + 1],
-          Tau[q_index + 2]);
+      Vector3d tau_temp(Tau.block(q_index,0,3,1));
       model.multdof3_u[i] = tau_temp 
         - model.multdof3_S[i].transpose() * model.pA[i];
 
@@ -431,7 +444,14 @@ RBDL_DLLAPI void ForwardDynamics (
           + model.multdof3_U[i]
           * model.multdof3_Dinv[i]
           * model.multdof3_u[i];
-#ifdef EIGEN_CORE_H
+#ifdef RBDL_USE_CASADI_MATH
+        model.IA[lambda]
+          += model.X_lambda[i].toMatrixTranspose()
+          * Ia
+          * model.X_lambda[i].toMatrix();
+
+        model.pA[lambda] += model.X_lambda[i].applyTranspose(pa);
+#else
         model.IA[lambda].noalias()
           += model.X_lambda[i].toMatrixTranspose()
           * Ia
@@ -439,13 +459,6 @@ RBDL_DLLAPI void ForwardDynamics (
 
         model.pA[lambda].noalias()
           += model.X_lambda[i].applyTranspose(pa);
-#else
-        model.IA[lambda]
-          += model.X_lambda[i].toMatrixTranspose()
-          * Ia
-          * model.X_lambda[i].toMatrix();
-
-        model.pA[lambda] += model.X_lambda[i].applyTranspose(pa);
 #endif
         LOG << "pA[" << lambda << "] = "
           << model.pA[lambda].transpose()
@@ -457,19 +470,16 @@ RBDL_DLLAPI void ForwardDynamics (
       model.mCustomJoints[kI]->U =
         model.IA[i] * model.mCustomJoints[kI]->S;
 
-#ifdef EIGEN_CORE_H
-      model.mCustomJoints[kI]->Dinv
-        = (model.mCustomJoints[kI]->S.transpose()
-            * model.mCustomJoints[kI]->U).inverse().eval();
-#else
+#ifdef RBDL_USE_CASADI_MATH
       model.mCustomJoints[kI]->Dinv
         = (model.mCustomJoints[kI]->S.transpose()
             * model.mCustomJoints[kI]->U).inverse();
+#else
+      model.mCustomJoints[kI]->Dinv
+        = (model.mCustomJoints[kI]->S.transpose()
+            * model.mCustomJoints[kI]->U).inverse().eval();
 #endif
-      VectorNd tau_temp(dofI);
-      for(int z=0;z<dofI;++z){
-        tau_temp(z) = Tau[q_index+z];
-      }
+      VectorNd tau_temp(Tau.block(q_index,0,dofI,1));
       model.mCustomJoints[kI]->u = tau_temp
         - model.mCustomJoints[kI]->S.transpose() * model.pA[i];
 
@@ -487,16 +497,16 @@ RBDL_DLLAPI void ForwardDynamics (
               * model.mCustomJoints[kI]->Dinv
               * model.mCustomJoints[kI]->u);
 
-#ifdef EIGEN_CORE_H
-        model.IA[lambda].noalias() += model.X_lambda[i].toMatrixTranspose()
-          * Ia
-          * model.X_lambda[i].toMatrix();
-        model.pA[lambda].noalias() += model.X_lambda[i].applyTranspose(pa);
-#else
+#ifdef RBDL_USE_CASADI_MATH
         model.IA[lambda] += model.X_lambda[i].toMatrixTranspose()
           * Ia
           * model.X_lambda[i].toMatrix();
         model.pA[lambda] += model.X_lambda[i].applyTranspose(pa);
+#else
+        model.IA[lambda].noalias() += model.X_lambda[i].toMatrixTranspose()
+          * Ia
+          * model.X_lambda[i].toMatrix();
+        model.pA[lambda].noalias() += model.X_lambda[i].applyTranspose(pa);
 #endif
         LOG << "pA[" << lambda << "] = "
           << model.pA[lambda].transpose()
@@ -584,7 +594,9 @@ RBDL_DLLAPI void ForwardDynamicsLagrangian (
   LOG << "A = " << std::endl << *H << std::endl;
   LOG << "b = " << std::endl << *C * -1. + Tau << std::endl;
 
-#ifndef RBDL_USE_SIMPLE_MATH
+#ifdef RBDL_USE_CASADI_MATH
+    QDDot = H->inverse() * (*C * -1. + Tau);
+#else
   switch (linear_solver) {
     case (LinearSolverPartialPivLU) :
       QDDot = H->partialPivLu().solve (*C * -1. + Tau);
@@ -603,9 +615,6 @@ RBDL_DLLAPI void ForwardDynamicsLagrangian (
       assert (0);
       break;
   }
-#else
-  bool solve_successful = LinSolveGaussElimPivot (*H, *C * -1. + Tau, QDDot);
-  assert (solve_successful);
 #endif
 
   if (free_C) {
@@ -638,7 +647,7 @@ RBDL_DLLAPI void CalcMInvTimesTau ( Model &model,
 
       model.v_J[i].setZero();
       model.v[i].setZero();
-      model.c_J[i].setZero();
+      model.c[i].setZero();
       model.pA[i].setZero();
       model.I[i].setSpatialMatrix (model.IA[i]);
     }
@@ -665,12 +674,13 @@ RBDL_DLLAPI void CalcMInvTimesTau ( Model &model,
         if (lambda != 0) {
           SpatialMatrix Ia = model.IA[i] - 
             model.U[i] * (model.U[i] / model.d[i]).transpose();
-#ifdef EIGEN_CORE_H
-          model.IA[lambda].noalias() += model.X_lambda[i].toMatrixTranspose()
+
+#ifdef RBDL_USE_CASADI_MATH
+          model.IA[lambda] += model.X_lambda[i].toMatrixTranspose()
             * Ia
             * model.X_lambda[i].toMatrix();
 #else
-          model.IA[lambda] += model.X_lambda[i].toMatrixTranspose()
+          model.IA[lambda].noalias() += model.X_lambda[i].toMatrixTranspose()
             * Ia
             * model.X_lambda[i].toMatrix();
 #endif
@@ -680,12 +690,12 @@ RBDL_DLLAPI void CalcMInvTimesTau ( Model &model,
 
         model.multdof3_U[i] = model.IA[i] * model.multdof3_S[i];
 
-#ifdef EIGEN_CORE_H
-        model.multdof3_Dinv[i] = 
-          (model.multdof3_S[i].transpose()*model.multdof3_U[i]).inverse().eval();
-#else
+#ifdef RBDL_USE_CASADI_MATH
         model.multdof3_Dinv[i] = 
           (model.multdof3_S[i].transpose() * model.multdof3_U[i]).inverse();
+#else
+        model.multdof3_Dinv[i] = 
+          (model.multdof3_S[i].transpose()*model.multdof3_U[i]).inverse().eval();
 #endif
         //      LOG << "mCustomJoints[kI]->u[" << i << "] = "
         //<< model.mCustomJoints[kI]->u[i].transpose() << std::endl;
@@ -697,15 +707,16 @@ RBDL_DLLAPI void CalcMInvTimesTau ( Model &model,
             - ( model.multdof3_U[i]
                 * model.multdof3_Dinv[i]
                 * model.multdof3_U[i].transpose());
-#ifdef EIGEN_CORE_H
+
+#ifdef RBDL_USE_CASADI_MATH
+          model.IA[lambda] +=
+            model.X_lambda[i].toMatrixTranspose()
+            * Ia * model.X_lambda[i].toMatrix();
+#else
           model.IA[lambda].noalias() +=
             model.X_lambda[i].toMatrixTranspose()
             * Ia
             * model.X_lambda[i].toMatrix();
-#else
-          model.IA[lambda] +=
-            model.X_lambda[i].toMatrixTranspose()
-            * Ia * model.X_lambda[i].toMatrix();
 #endif
         }
       } else if (model.mJoints[i].mJointType == JointTypeCustom) {
@@ -713,14 +724,14 @@ RBDL_DLLAPI void CalcMInvTimesTau ( Model &model,
         unsigned int dofI   = model.mCustomJoints[kI]->mDoFCount;
         model.mCustomJoints[kI]->U = model.IA[i] * model.mCustomJoints[kI]->S;
 
-#ifdef EIGEN_CORE_H
+#ifdef RBDL_USE_CASADI_MATH
+        model.mCustomJoints[kI]->Dinv=(model.mCustomJoints[kI]->S.transpose()
+            * model.mCustomJoints[kI]->U
+            ).inverse();
+#else
         model.mCustomJoints[kI]->Dinv = (model.mCustomJoints[kI]->S.transpose()
             * model.mCustomJoints[kI]->U
             ).inverse().eval();
-#else
-        model.mCustomJoints[kI]->Dinv[i]=(model.mCustomJoints[kI]->S.transpose()
-            * model.mCustomJoints[kI]->U
-            ).inverse();
 #endif
         //      LOG << "mCustomJoints[kI]->u[" << i << "] = "
         //<< model.mCustomJoints[kI]->u.transpose() << std::endl;
@@ -731,13 +742,13 @@ RBDL_DLLAPI void CalcMInvTimesTau ( Model &model,
             - ( model.mCustomJoints[kI]->U
                 * model.mCustomJoints[kI]->Dinv
                 * model.mCustomJoints[kI]->U.transpose());
-#ifdef EIGEN_CORE_H
+#ifdef RBDL_USE_CASADI_MATH
+          model.IA[lambda] += model.X_lambda[i].toMatrixTranspose()
+            * Ia * model.X_lambda[i].toMatrix();
+#else
           model.IA[lambda].noalias() += model.X_lambda[i].toMatrixTranspose()
             * Ia
             * model.X_lambda[i].toMatrix();
-#else
-          model.IA[lambda] += model.X_lambda[i].toMatrixTranspose()
-            * Ia * model.X_lambda[i].toMatrix();
 #endif
         }
       }
@@ -757,10 +768,10 @@ RBDL_DLLAPI void CalcMInvTimesTau ( Model &model,
       if (lambda != 0) {
         SpatialVector pa = model.pA[i] + model.U[i] * model.u[i] / model.d[i];
 
-#ifdef EIGEN_CORE_H
-        model.pA[lambda].noalias() += model.X_lambda[i].applyTranspose(pa);
-#else
+#ifdef RBDL_USE_CASADI_MATH
         model.pA[lambda] += model.X_lambda[i].applyTranspose(pa);
+#else
+        model.pA[lambda].noalias() += model.X_lambda[i].applyTranspose(pa);
 #endif
         LOG << "pA[" << lambda << "] = "
           << model.pA[lambda].transpose() << std::endl;
@@ -783,11 +794,11 @@ RBDL_DLLAPI void CalcMInvTimesTau ( Model &model,
           * model.multdof3_Dinv[i]
           * model.multdof3_u[i];
 
-#ifdef EIGEN_CORE_H
+#ifdef RBDL_USE_CASADI_MATH
+        model.pA[lambda] += model.X_lambda[i].applyTranspose(pa);
+#else
         model.pA[lambda].noalias() +=
           model.X_lambda[i].applyTranspose(pa);
-#else
-        model.pA[lambda] += model.X_lambda[i].applyTranspose(pa);
 #endif
         LOG << "pA[" << lambda << "] = "
           << model.pA[lambda].transpose() << std::endl;
@@ -795,11 +806,8 @@ RBDL_DLLAPI void CalcMInvTimesTau ( Model &model,
     } else if (model.mJoints[i].mJointType == JointTypeCustom) {
       unsigned int kI     = model.mJoints[i].custom_joint_index;
       unsigned int dofI   = model.mCustomJoints[kI]->mDoFCount;
-      VectorNd tau_temp   = VectorNd::Zero(dofI);
+      VectorNd tau_temp(Tau.block(q_index,0,dofI,1));
 
-      for(int z=0; z<dofI;++z){
-        tau_temp(z) = Tau[q_index+z];
-      }
       model.mCustomJoints[kI]->u = 
         tau_temp - ( model.mCustomJoints[kI]->S.transpose()* model.pA[i]);
       //      LOG << "mCustomJoints[kI]->u"
@@ -812,11 +820,11 @@ RBDL_DLLAPI void CalcMInvTimesTau ( Model &model,
               * model.mCustomJoints[kI]->Dinv
               * model.mCustomJoints[kI]->u);
 
-#ifdef EIGEN_CORE_H
+#ifdef RBDL_USE_CASADI_MATH
+        model.pA[lambda] += model.X_lambda[i].applyTranspose(pa);
+#else
         model.pA[lambda].noalias() +=
           model.X_lambda[i].applyTranspose(pa);
-#else
-        model.pA[lambda] += model.X_lambda[i].applyTranspose(pa);
 #endif
         LOG << "pA[" << lambda << "] = "
           << model.pA[lambda].transpose() << std::endl;
@@ -856,7 +864,7 @@ RBDL_DLLAPI void CalcMInvTimesTau ( Model &model,
         * (  model.mCustomJoints[kI]->u 
             - model.mCustomJoints[kI]->U.transpose() * model.a[i]);
 
-      for(int z=0; z<dofI;++z){
+      for(unsigned z = 0; z < dofI; ++z){
         QDDot[q_index+z]      = qdd_temp[z];
       }
 

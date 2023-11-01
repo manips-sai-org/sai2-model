@@ -1091,10 +1091,10 @@ TEST_F(Sai2ModelTest, CrossProductOperator) {
 
 TEST_F(Sai2ModelTest, GraspMatrixAtGeometricCenter) {
 	// 2 point contact case
-	std::vector<Vector3d> contact_locations = {
-		Vector3d(0.1, 0.2, 0.5),
-		Vector3d(-1.1, 0.7, -0.5),
-	};
+	std::vector<Vector3d> contact_locations;
+	contact_locations.push_back(Vector3d(0.1, 0.2, 0.5));
+	contact_locations.push_back(Vector3d(-1.1, 0.7, -0.5));
+	
 	std::vector<ContactType> contact_types = {
 		PointContact,
 		PointContact,
@@ -1171,11 +1171,8 @@ TEST_F(Sai2ModelTest, GraspMatrixAtGeometricCenter) {
 										gm_data.resultant_point));
 
 	// 3 contacts, one surface
-	contact_locations = {
-		Vector3d(0.1, 0.2, 0.5),
-		Vector3d(-1.1, 0.7, -0.5),
-		Vector3d(-0.4, 1.6, 0.0),
-	};
+	contact_locations.push_back(Vector3d(-0.4, 1.6, 0.0));
+	
 	contact_types = {
 		PointContact,
 		PointContact,
@@ -1226,12 +1223,8 @@ TEST_F(Sai2ModelTest, GraspMatrixAtGeometricCenter) {
 										gm_data.resultant_point));
 
 	// 4 surface contacts
-	contact_locations = {
-		Vector3d(0.1, 0.2, 0.5),
-		Vector3d(-1.1, 0.7, -0.5),
-		Vector3d(-0.4, 1.6, 0.0),
-		Vector3d(-0.6, 2.6, 1.0),
-	};
+	contact_locations.push_back(Vector3d(-0.6, 2.6, 1.0));
+
 	contact_types = {
 		SurfaceContact,
 		SurfaceContact,

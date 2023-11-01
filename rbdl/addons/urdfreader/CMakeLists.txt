@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.10)
 
 LIST( APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMake )
 
@@ -8,7 +8,7 @@ SET_TARGET_PROPERTIES ( ${PROJECT_EXECUTABLES} PROPERTIES
 
 INCLUDE_DIRECTORIES (
 	${CMAKE_CURRENT_BINARY_DIR}/include/rbdl
-	${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/
+	${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/urdfparser/include
 )
 
 SET ( URDFREADER_SOURCES
@@ -24,62 +24,56 @@ ELSE ()
 ENDIF ()
 
 IF (RBDL_USE_ROS_URDF_LIBRARY)
-	#	find_package(Boost REQUIRED COMPONENTS system)
 	SET (URDFREADER_DEPENDENCIES
-		rbdl
 		${urdf_LIBRARIES}
-		#		${Boost_SYSTEM_LIBRARY}
 		)
 ELSE()
-	SET (URDFREADER_SOURCES
+  ADD_SUBDIRECTORY(thirdparty)			
+  SET(CMAKE_CXX_STANDARD 17)
+	SET (URDFREADER_SOURCES	
 		${URDFREADER_SOURCES}
-		thirdparty/urdf/urdfdom/urdf_parser/src/check_urdf.cpp	
-		thirdparty/urdf/urdfdom/urdf_parser/src/pose.cpp
-		thirdparty/urdf/urdfdom/urdf_parser/src/model.cpp
-		thirdparty/urdf/urdfdom/urdf_parser/src/link.cpp
-		thirdparty/urdf/urdfdom/urdf_parser/src/joint.cpp
-		thirdparty/urdf/urdfdom/urdf_parser/include/urdf_parser/urdf_parser.h
-		thirdparty/urdf/urdfdom_headers/urdf_exception/include/urdf_exception/exception.h	
-		thirdparty/urdf/urdfdom_headers/urdf_model/include/urdf_model/pose.h
-		thirdparty/urdf/urdfdom_headers/urdf_model/include/urdf_model/model.h
-		thirdparty/urdf/urdfdom_headers/urdf_model/include/urdf_model/link.h
-		thirdparty/urdf/urdfdom_headers/urdf_model/include/urdf_model/joint.h
-		thirdparty/tinyxml/tinystr.cpp
-		thirdparty/tinyxml/tinyxml.cpp
-		thirdparty/tinyxml/tinyxmlerror.cpp
-		thirdparty/tinyxml/tinyxmlparser.cpp
-		thirdparty/urdf/boost_replacement/lexical_cast.h
-		thirdparty/urdf/boost_replacement/shared_ptr.h
-		thirdparty/urdf/boost_replacement/printf_console.cpp
-		thirdparty/urdf/boost_replacement/printf_console.h
-		thirdparty/urdf/boost_replacement/string_split.cpp
-		thirdparty/urdf/boost_replacement/string_split.h
 		)
 	SET (URDFREADER_DEPENDENCIES
-		rbdl
+    urdfparser
 		)
 ENDIF()
 
+IF (MSVC)
+  SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj /permissive- /std:c++17")
+ENDIF (MSVC)
+
+IF(RBDL_BUILD_EXECUTABLES)
 ADD_EXECUTABLE (rbdl_urdfreader_util rbdl_urdfreader_util.cc)
+ENDIF(RBDL_BUILD_EXECUTABLES)
 
 IF (RBDL_BUILD_STATIC)
 	ADD_LIBRARY ( rbdl_urdfreader-static STATIC ${URDFREADER_SOURCES} )
 
-	SET_TARGET_PROPERTIES ( rbdl_urdfreader-static PROPERTIES PREFIX "lib")
+	IF (NOT WIN32)
+		SET_TARGET_PROPERTIES ( rbdl_urdfreader-static PROPERTIES PREFIX "lib")
+	ENDIF (NOT WIN32)
 	SET_TARGET_PROPERTIES ( rbdl_urdfreader-static PROPERTIES OUTPUT_NAME "rbdl_urdfreader")
 
 	TARGET_LINK_LIBRARIES (rbdl_urdfreader-static
 		rbdl-static
+		${URDFREADER_DEPENDENCIES}
 		)
 
+  IF(RBDL_BUILD_EXECUTABLES)
 	TARGET_LINK_LIBRARIES (rbdl_urdfreader_util
 		rbdl_urdfreader-static
 		rbdl-static
 		)
 
-	INSTALL (TARGETS rbdl_urdfreader-static rbdl_urdfreader_util
-		RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  	ARCHIVE DESTINATION lib
+	INSTALL (TARGETS rbdl_urdfreader_util
+		  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	)
+  ENDIF(RBDL_BUILD_EXECUTABLES)
+
+	INSTALL (TARGETS rbdl_urdfreader-static
+		  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	)
 ELSE (RBDL_BUILD_STATIC)
 	ADD_LIBRARY ( rbdl_urdfreader SHARED ${URDFREADER_SOURCES} )
@@ -89,18 +83,36 @@ ELSE (RBDL_BUILD_STATIC)
   )
 
 	TARGET_LINK_LIBRARIES (rbdl_urdfreader
+    rbdl
 		${URDFREADER_DEPENDENCIES}
 		)
-
+  IF(RBDL_BUILD_EXECUTABLES)
 	TARGET_LINK_LIBRARIES (rbdl_urdfreader_util
 		rbdl_urdfreader
 		)
-
-	INSTALL (TARGETS rbdl_urdfreader rbdl_urdfreader_util
+	INSTALL (TARGETS rbdl_urdfreader_util
 		RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 		LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+		)
+  ENDIF(RBDL_BUILD_EXECUTABLES)
+
+	INSTALL (TARGETS rbdl_urdfreader
+		RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+		LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 		)
 ENDIF (RBDL_BUILD_STATIC)
+
+IF (RUN_AUTOMATIC_TESTS)
+  IF (URDF_BUILD_TEST)
+  ADD_CUSTOM_COMMAND (TARGET rbdl_urdfreader
+    POST_BUILD
+    COMMAND ./thirdparty/urdfparser/test_library
+    COMMENT "Running automated tests..."
+    )
+  ENDIF(URDF_BUILD_TEST)
+ENDIF(RUN_AUTOMATIC_TESTS)
 
 FILE ( GLOB headers
 	"${CMAKE_CURRENT_SOURCE_DIR}/*.h"
@@ -108,5 +120,5 @@ FILE ( GLOB headers
 
 INSTALL ( FILES ${headers} 
 	DESTINATION
-	${CMAKE_INSTALL_INCLUDEDIR}/rbdl/addons/urdfreader 
+	${CMAKE_INSTALL_INCLUDEDIR}/rbdl/addons/urdfreader
 	)

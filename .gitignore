@@ -34,5 +34,5 @@
 # Directories
 build/
 
-# ds store file
+# DS store file
 *.DS_Store

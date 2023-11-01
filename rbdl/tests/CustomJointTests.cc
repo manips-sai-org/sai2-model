@@ -1,5 +1,3 @@
-#include <UnitTest++.h>
-
 #include <iostream>
 
 #include "Fixtures.h"
@@ -10,7 +8,9 @@
 #include "rbdl/Model.h"
 #include "rbdl/Kinematics.h"
 #include "rbdl/Dynamics.h"
-#include "rbdl/Contacts.h"
+#include "rbdl/Constraints.h"
+
+#include "rbdl_tests.h"
 
 using namespace std;
 using namespace RigidBodyDynamics;
@@ -25,10 +25,10 @@ struct CustomEulerZYXJoint : public CustomJoint {
   };
 
   virtual void jcalc (Model &model,
-      unsigned int joint_id,
-      const Math::VectorNd &q,
-      const Math::VectorNd &qdot
-      ) {
+    unsigned int joint_id,
+    const Math::VectorNd &q,
+    const Math::VectorNd &qdot
+    ) {
     double q0 = q[model.mJoints[joint_id].q_index];
     double q1 = q[model.mJoints[joint_id].q_index + 1];
     double q2 = q[model.mJoints[joint_id].q_index + 2];
@@ -69,9 +69,9 @@ struct CustomEulerZYXJoint : public CustomJoint {
         );
   }
   virtual void jcalc_X_lambda_S (Model &model,
-      unsigned int joint_id,
-      const Math::VectorNd &q
-      ) {
+    unsigned int joint_id,
+    const Math::VectorNd &q
+    ) {
     // TODO
     assert (false && "Not yet implemented!");
   }
@@ -86,10 +86,10 @@ struct CustomJointFixture {
     reference_body_id = reference_model.AddBody (0,SpatialTransform(), Joint(JointTypeEulerZYX), body);
     custom_body_id = custom_model.AddBodyCustomJoint (0, SpatialTransform(), custom_joint, body);
 
-    q = VectorNd::Zero (reference_model.q_size);		
-    qdot = VectorNd::Zero (reference_model.qdot_size);		
-    qddot = VectorNd::Zero (reference_model.qdot_size);		
-    tau = VectorNd::Zero (reference_model.qdot_size);		
+    q = VectorNd::Zero (reference_model.q_size);    
+    qdot = VectorNd::Zero (reference_model.qdot_size);    
+    qddot = VectorNd::Zero (reference_model.qdot_size);   
+    tau = VectorNd::Zero (reference_model.qdot_size);   
   }
 
   ~CustomJointFixture () {
@@ -111,7 +111,8 @@ struct CustomJointFixture {
   VectorNd tau;
 };
 
-TEST_FIXTURE ( CustomJointFixture, UpdateKinematics ) {
+TEST_CASE_METHOD ( CustomJointFixture,
+                   __FILE__"_UpdateKinematics", "") {
   for (unsigned int i = 0; i < 3; i++) {
     q[i] = i * 0.1;
     qdot[i] = i * 0.15;
@@ -121,11 +122,17 @@ TEST_FIXTURE ( CustomJointFixture, UpdateKinematics ) {
   UpdateKinematics (reference_model, q, qdot, qddot);
   UpdateKinematics (custom_model, q, qdot, qddot);
 
-  CHECK_ARRAY_EQUAL (reference_model.X_base[reference_body_id].E.data(), custom_model.X_base[custom_body_id].E.data(), 9);
+  CHECK_THAT (reference_model.X_base[reference_body_id].E,
+              AllCloseMatrix(custom_model.X_base[custom_body_id].E, 0., 0.)
+  );
 
-  CHECK_ARRAY_EQUAL (reference_model.v[reference_body_id].data(), custom_model.v[custom_body_id].data(), 6);
+  CHECK_THAT (reference_model.v[reference_body_id],
+              AllCloseVector(custom_model.v[custom_body_id], 0., 0.)
+  );
 
-  CHECK_ARRAY_EQUAL (reference_model.a[reference_body_id].data(), custom_model.a[custom_body_id].data(), 6);
+  CHECK_THAT (reference_model.a[reference_body_id],
+              AllCloseVector(custom_model.a[custom_body_id], 0., 0.)
+  );
 }
 
 // TODO: implement test for UpdateKinematicsCustom

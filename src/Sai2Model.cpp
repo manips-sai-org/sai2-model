@@ -391,33 +391,33 @@ void Sai2Model::computeIK3d(
 	updateKinematics();
 }
 
-void Sai2Model::computeIK3dJL(
-	VectorXd& q_result, const vector<string>& link_names,
-	const vector<Vector3d>& point_positions_in_links,
-	const vector<Vector3d>& desired_point_positions_in_robot_frame,
-	const VectorXd q_min, const VectorXd q_max, const VectorXd weights) {
-	if (link_names.size() != point_positions_in_links.size() ||
-		link_names.size() != desired_point_positions_in_robot_frame.size()) {
-		throw runtime_error(
-			"size of the 3 input vectors do not match in "
-			"Sai2Model::computeIK3d\n");
-	}
+// void Sai2Model::computeIK3dJL(
+// 	VectorXd& q_result, const vector<string>& link_names,
+// 	const vector<Vector3d>& point_positions_in_links,
+// 	const vector<Vector3d>& desired_point_positions_in_robot_frame,
+// 	const VectorXd q_min, const VectorXd q_max, const VectorXd weights) {
+// 	if (link_names.size() != point_positions_in_links.size() ||
+// 		link_names.size() != desired_point_positions_in_robot_frame.size()) {
+// 		throw runtime_error(
+// 			"size of the 3 input vectors do not match in "
+// 			"Sai2Model::computeIK3d\n");
+// 	}
 
-	vector<unsigned int> link_ids;
-	vector<RigidBodyDynamics::Math::Vector3d> body_point;
-	vector<RigidBodyDynamics::Math::Vector3d> target_pos;
-	for (int i = 0; i < link_names.size(); i++) {
-		link_ids.push_back(linkIdRbdl(link_names[i]));
-		body_point.push_back(point_positions_in_links[i]);
-		target_pos.push_back(desired_point_positions_in_robot_frame[i]);
-	}
+// 	vector<unsigned int> link_ids;
+// 	vector<RigidBodyDynamics::Math::Vector3d> body_point;
+// 	vector<RigidBodyDynamics::Math::Vector3d> target_pos;
+// 	for (int i = 0; i < link_names.size(); i++) {
+// 		link_ids.push_back(linkIdRbdl(link_names[i]));
+// 		body_point.push_back(point_positions_in_links[i]);
+// 		target_pos.push_back(desired_point_positions_in_robot_frame[i]);
+// 	}
 
-	InverseKinematicsJL(*_rbdl_model, _q, q_min, q_max, weights, link_ids,
-						body_point, target_pos, q_result, 1.0e-12, 0.0001, 500);
-	// InverseKinematicsJL modifies the internal model so we need to re update
-	// the kinematics with the previous q value to keep it unchanged
-	updateKinematics();
-}
+// 	InverseKinematicsJL(*_rbdl_model, _q, q_min, q_max, weights, link_ids,
+// 						body_point, target_pos, q_result, 1.0e-12, 0.0001, 500);
+// 	// InverseKinematicsJL modifies the internal model so we need to re update
+// 	// the kinematics with the previous q value to keep it unchanged
+// 	updateKinematics();
+// }
 
 void Sai2Model::computeIK6d(
 	VectorXd& q_result, const vector<string>& link_names,

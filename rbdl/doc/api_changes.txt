@@ -1,3 +1,48 @@
+3.1.3 -> 3.2.0 (05. May 2022)
+
+- Merging RBDL-ORB and RBDL \o/
+- Performance improvements of single DOF revolute joints around coordinate
+  axes.
+- Removed Model::X_J. All joints now have to compute X_lambda directly,
+  especially CustomJoints
+
+3.1.2 -> 3.1.3 (30. September 2021)
+- casadi math backend added tanh support
+
+3.0.0 -> 3.1.0 (13. August 2021)
+- introducing the casadi math backend, rbdl-casadi is build as a seperated library that can be installed parallel to rbdl
+- added install of cmake config files, so projects building on rbdl do not need to write their own FindRBDL.cmake files anymore
+
+2.6.0 -> 3.0.0 (24. September 2019)
+
+- Replaced aborting behaviour with actual error handling by providing an error
+  base class and some more specific error types derived from it 
+  (contributed by Felix Richter) 
+- Removed SimpleMath library to reduce code complexety
+  (contributed by Felix Richter) 
+- Refactored the constraint system to be polymorphic
+  (contributed by Matthew J. Millard) 
+- Python Wrapper has been updated to support python3 and python2 and the
+  api has been extended to include the muscle addons functionality
+
+
+2.5.0 -> 2.6.0
+- Added support for closed-loop models by replacing Contacts API by a new
+  Constraints API. Loop constraints can be stabilized using Baumgarte
+  stabilization. Special thanks to Davide Corradi for this contribution!
+- New constraint type CustomConstraint: a versatile interface to define
+  more general types of constraints (e.g. time dependent), contributed by
+  Matthew J. Millard.
+- New joint type JointTypeHelical that can be used for screwing motions
+  (translations and simultaneous rotations), contributed by Stuart Anderson.
+- Added support to specify external forces on bodies on constrained forward
+  dynamics and NonlinearEffects() (contributed by Matthew J. Millard)
+- Changed Quaternion multiplication behaviour for a more standard
+  convention: multiplying q1 (1,0,0,0) with q2 (0,1,0,0) results now in
+  (0,0,1,0) instead of the previous (0,0,-1,0).
+- Removed Model::SetFloatingBaseBody(). Use JointTypeFloatingBase instead.
+- LuaModel: extended specification to support ConstraintSets.
+
 2.4.1 -> 2.5.0 
 - Added an experimental Cython based Python wrapper of RBDL. The API is
   very close to the C++ API. For a brief glimpse of the API see the file

@@ -362,11 +362,11 @@ public:
 	 * @param[in]  q_max                                   Upper joint limits
 	 * @param[in]  weights                                 The weights
 	 */
-	void computeIK3dJL(
-		VectorXd& q_result, const vector<string>& link_names,
-		const vector<Vector3d>& point_positions_in_links,
-		const vector<Vector3d>& desired_point_positions_in_robot_frame,
-		const VectorXd q_min, const VectorXd q_max, const VectorXd weights);
+	// void computeIK3dJL(
+	// 	VectorXd& q_result, const vector<string>& link_names,
+	// 	const vector<Vector3d>& point_positions_in_links,
+	// 	const vector<Vector3d>& desired_point_positions_in_robot_frame,
+	// 	const VectorXd q_min, const VectorXd q_max, const VectorXd weights);
 
 	/**
 	 * @brief      Inverse kinematics that matches frames in the robot to
