@@ -33,3 +33,6 @@
 
 # Directories
 build/
+
+# ds store file
+*.DS_Store
