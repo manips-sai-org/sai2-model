@@ -43,3 +43,6 @@ Go to the build/examples/one_of_the_examples folder and run the example. For exa
 cd build/examples/01-create_model_from_file
 ./01-create_model_from_file
 ```
+
+## License
+Currently pending licensing. PLEASE DO NOT DISTRIBUTE.
