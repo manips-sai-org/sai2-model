@@ -231,7 +231,7 @@ TEST_F(Sai2ModelTest, JointLimits) {
 	std::vector<JointLimit> expected_joint_limits = {
 		JointLimit("j0", 0, -1.5707, 1.5707, 1.5709, 150),
 		JointLimit("j1", 1, -2.5707, 2.5707, 1.5709, 250),
-		JointLimit("j2", 2, 0, 2, 1, 200),
+		JointLimit("j2", 2, -0.9, 2, 1, 200),
 	};
 	for (int i = 0; i < joint_limits.size(); ++i) {
 		EXPECT_EQ(joint_limits[i].joint_name,
@@ -390,8 +390,113 @@ TEST_F(Sai2ModelTest, UpdateModel) {
 	EXPECT_TRUE(checkEigenMatricesEqual(external_M_inv, model_rrpbot->MInv()));
 }
 
-// TODO
-TEST_F(Sai2ModelTest, IK) {}
+TEST_F(Sai2ModelTest, InverseKinematicsPosition) {
+	Affine3d T_robot_base =
+		Affine3d(Translation3d(Vector3d(0.0, 0.3, 0.2))) *
+		Affine3d(AngleAxisd(M_PI / 3, Vector3d::UnitX()).toRotationMatrix());
+	model_rrbot->setTRobotBase(T_robot_base);
+	string eef_link = "link1";
+	Vector3d pos_in_link = Vector3d(0.0, 0.0, 1.0);
+	model_rrbot->setQ(Vector2d(0.7, -0.7));
+	model_rrbot->updateKinematics();
+
+	vector<string> vec_link_names = vector<string>{eef_link};
+	vector<Vector3d> vec_pos_in_links;
+	vec_pos_in_links.push_back(pos_in_link);
+	vector<Vector3d> vec_desired_pos;
+	vec_desired_pos.push_back(Vector3d::Zero());
+
+	// reacheable positions
+	for (int i = 0; i < 20; ++i) {
+		Vector3d desired_pos =
+			0.3 * Vector3d::Random() + Vector3d(0.0, 0.0, 1.0);
+		desired_pos(0) = 0.0;
+		vec_desired_pos.at(0) = T_robot_base * desired_pos;
+		VectorXd q_ik = model_rrbot->computeInverseKinematics(
+			vec_link_names, vec_pos_in_links, vec_desired_pos);
+
+		// check that the robot is at the desired position
+		model_rrbot->setQ(q_ik);
+		model_rrbot->updateKinematics();
+		EXPECT_TRUE(checkEigenMatricesEqual(
+			vec_desired_pos.at(0),
+			model_rrbot->positionInWorld(eef_link, pos_in_link), 1e-3));
+	}
+
+	// unreacheable position because it is out of the workspace
+	model_rrbot->setTRobotBase(Affine3d::Identity());
+	model_rrbot->setQ(Vector2d(0.7, -0.7));
+	model_rrbot->updateKinematics();
+	vec_desired_pos.at(0) = Vector3d(0.0, 0.0, 2.5);
+	VectorXd q_ik = model_rrbot->computeInverseKinematics(
+		vec_link_names, vec_pos_in_links, vec_desired_pos);
+
+	model_rrbot->setQ(q_ik);
+	model_rrbot->updateKinematics();
+	EXPECT_FALSE(checkEigenMatricesEqual(
+		vec_desired_pos.at(0),
+		model_rrbot->positionInWorld(eef_link, pos_in_link), 1e-3));
+	EXPECT_TRUE(checkEigenMatricesEqual(q_ik, Vector2d::Zero(), 1e-3));
+
+	// unreacheable position because of joint limits
+	model_rrbot->setQ(Vector2d(-1.0, -1.0));
+	model_rrbot->updateKinematics();
+	vec_desired_pos.at(0) = Vector3d(0.0, 0.0, -0.5);
+	q_ik = model_rrbot->computeInverseKinematics(
+		vec_link_names, vec_pos_in_links, vec_desired_pos);
+
+	model_rrbot->setQ(q_ik);
+	model_rrbot->updateKinematics();
+	EXPECT_FALSE(checkEigenMatricesEqual(
+		vec_desired_pos.at(0),
+		model_rrbot->positionInWorld(eef_link, pos_in_link), 1e-3));
+	EXPECT_DOUBLE_EQ(q_ik(0), model_rrbot->jointLimits().at(0).position_lower);
+	EXPECT_DOUBLE_EQ(q_ik(1), model_rrbot->jointLimits().at(1).position_lower);
+}
+
+TEST_F(Sai2ModelTest, InverseKinematicsPosAndOri) {
+	MoveModelsBaseFrame();
+	const string eef_link = "link2";
+	const Vector3d pos_in_link = Vector3d(0.0, 0.0, 0.0);
+	const Matrix3d ori_in_link =
+		// AngleAxisd(M_PI / 4, Vector3d::UnitX()).toRotationMatrix();
+		Matrix3d::Identity();
+	Affine3d pose_in_link = Affine3d::Identity();
+	pose_in_link.translation() = pos_in_link;
+	pose_in_link.linear() = ori_in_link;
+	model_rrpbot->setQ(Vector3d(0.7, -0.7, 0.5));
+	model_rrpbot->updateKinematics();
+	srand48(0);
+
+	vector<string> vec_link_names = vector<string>{eef_link};
+	vector<Affine3d> vec_pose_in_links;
+	vec_pose_in_links.push_back(pose_in_link);
+	vector<Affine3d> vec_desired_poses;
+	vec_desired_poses.push_back(Affine3d::Identity());
+
+	// reacheable positions
+	for (int i = 0; i < 20; ++i) {
+		Affine3d desired_pose;
+		desired_pose.translation() =
+			0.3 * Vector3d::Random() + Vector3d(0.0, 0.0, 1.5);
+		desired_pose.translation()(0) = 0.0;
+		desired_pose.linear() =
+			AngleAxisd((drand48() - 0.5) * M_PI / 4.0, Vector3d::UnitX())
+				.toRotationMatrix();
+		vec_desired_poses.at(0) = model_rrpbot->TRobotBase() * desired_pose;
+		VectorXd q_ik = model_rrpbot->computeInverseKinematics(
+			vec_link_names, vec_pose_in_links, vec_desired_poses);
+
+		// check that the robot is at the desired position
+		model_rrpbot->setQ(q_ik);
+		model_rrpbot->updateKinematics();
+		EXPECT_TRUE(checkEigenMatricesEqual(
+			vec_desired_poses.at(0).matrix(),
+			model_rrpbot->transformInWorld(eef_link, pos_in_link, ori_in_link)
+				.matrix(),
+			1e-3));
+	}
+}
 
 TEST_F(Sai2ModelTest, JointGravity) {
 	VectorXd joint_gravity = model_rrpbot->jointGravityVector();
@@ -866,12 +971,10 @@ TEST_F(Sai2ModelTest, Acceleration6d) {
 		EXPECT_TRUE(checkEigenMatricesEqual(angaccel, accel6d.tail(3)));
 
 		// in world frame
-		linaccel = model_rpsprbot->linearAccelerationInWorld(
-			link_name, pos_in_link);
-		angaccel =
-			model_rpsprbot->angularAccelerationInWorld(link_name);
-		accel6d = model_rpsprbot->acceleration6dInWorld(link_name,
-														pos_in_link);
+		linaccel =
+			model_rpsprbot->linearAccelerationInWorld(link_name, pos_in_link);
+		angaccel = model_rpsprbot->angularAccelerationInWorld(link_name);
+		accel6d = model_rpsprbot->acceleration6dInWorld(link_name, pos_in_link);
 		EXPECT_TRUE(checkEigenMatricesEqual(linaccel, accel6d.head(3)));
 		EXPECT_TRUE(checkEigenMatricesEqual(angaccel, accel6d.tail(3)));
 	}
@@ -1058,8 +1161,7 @@ TEST_F(Sai2ModelTest, OrientationError) {
 
 	// incorrect rotation matrix
 	rotation1(0, 1) = 0.3;
-	EXPECT_THROW(orientationError(rotation1, rotation2),
-				 invalid_argument);
+	EXPECT_THROW(orientationError(rotation1, rotation2), invalid_argument);
 
 	// zero error
 	rotation1(0, 1) = 0.0;
@@ -1094,7 +1196,7 @@ TEST_F(Sai2ModelTest, GraspMatrixAtGeometricCenter) {
 	std::vector<Vector3d> contact_locations;
 	contact_locations.push_back(Vector3d(0.1, 0.2, 0.5));
 	contact_locations.push_back(Vector3d(-1.1, 0.7, -0.5));
-	
+
 	std::vector<ContactType> contact_types = {
 		PointContact,
 		PointContact,
@@ -1172,7 +1274,7 @@ TEST_F(Sai2ModelTest, GraspMatrixAtGeometricCenter) {
 
 	// 3 contacts, one surface
 	contact_locations.push_back(Vector3d(-0.4, 1.6, 0.0));
-	
+
 	contact_types = {
 		PointContact,
 		PointContact,

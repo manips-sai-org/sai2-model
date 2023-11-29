@@ -1,20 +1,25 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.10)
+cmake_minimum_required(VERSION 3.10)
 
-PROJECT (SAI2-MODEL)
-SET (PROJECT_VERSION 0.1.0) #major version is zero for now since api will certainly change in future
+project(SAI2-MODEL)
+set(PROJECT_VERSION 0.1.0) # major version is zero for now since api will
+                           # certainly change in future
 
-SET(CMAKE_CXX_FLAGS "-std=c++11 -I/usr/include -I/usr/local/include -fPIC")
-if (${CMAKE_SYSTEM_NAME} MATCHES Darwin)
-	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I/opt/homebrew/include")
-endif ()
+set(CMAKE_CXX_FLAGS "-std=c++17 -I/usr/include -I/usr/local/include -fPIC")
+if(${CMAKE_SYSTEM_NAME} MATCHES Darwin)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I/opt/homebrew/include")
+endif()
 
 # set default build to release with debug info. mimic'ed from RBDL project.
-IF(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-	MESSAGE(STATUS "Setting build type to 'Release' as none was specified.")
-	# Set the default build, and also the possible values of build type for cmake-gui
-	SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
-	SET_PROPERTY(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
-ENDIF()
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  message(STATUS "Setting build type to 'Release' as none was specified.")
+  # Set the default build, and also the possible values of build type for
+  # cmake-gui
+  set(CMAKE_BUILD_TYPE
+      Release
+      CACHE STRING "Choose the type of build." FORCE)
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release"
+                                               "MinSizeRel" "RelWithDebInfo")
+endif()
 
 option(BUILD_EXAMPLES "Build examples" ON)
 option(BUILD_TESTS "Build tests" OFF)
@@ -30,60 +35,59 @@ set(RBDL_INCLUDE_DIR ${RBDL_LOCAL_DIR}/include ${RBDL_LOCAL_DIR}/build/include)
 find_package(SAI2-URDF REQUIRED)
 
 # include Parser
-SET(PARSER_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/src/parser)
-SET(PARSER_SOURCE ${PROJECT_SOURCE_DIR}/src/parser/UrdfToSai2Model.cpp)
+set(PARSER_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/src/parser)
+set(PARSER_SOURCE ${PROJECT_SOURCE_DIR}/src/parser/UrdfToSai2Model.cpp)
 
 # include Model
-SET(SAI2-MODEL_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/src)
-SET(MODEL_SOURCE ${PROJECT_SOURCE_DIR}/src/Sai2Model.cpp)
+set(SAI2-MODEL_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/src)
+set(MODEL_SOURCE ${PROJECT_SOURCE_DIR}/src/Sai2Model.cpp
+                 ${PROJECT_SOURCE_DIR}/src/RBDLExtensions.cpp)
 
 # Add the include directory to the include paths
-INCLUDE_DIRECTORIES (
-	${SAI2-MODEL_INCLUDE_DIRS}
-	${SAI2-URDF_INCLUDE_DIRS}
-	${PARSER_INCLUDE_DIR}
-	${EIGEN3_INCLUDE_DIR}
-	${RBDL_INCLUDE_DIR}
-	)
+include_directories(
+  ${SAI2-MODEL_INCLUDE_DIRS}
+  ${SAI2-URDF_INCLUDE_DIRS}
+  ${PARSER_INCLUDE_DIR}
+  ${EIGEN3_INCLUDE_DIR}
+  ${RBDL_INCLUDE_DIR}
+)
 
 # Create the library
-ADD_LIBRARY (sai2-model STATIC
-	${MODEL_SOURCE}
-	${PARSER_SOURCE}
-	)
+add_library(sai2-model STATIC ${MODEL_SOURCE} ${PARSER_SOURCE})
 
-FIND_LIBRARY(RBDL_LIBRARIES rbdl PATHS ${RBDL_LOCAL_DIR}/build NO_DEFAULT_PATH)
-SET (SAI2-MODEL_LIBRARIES sai2-model 
-	${RBDL_LIBRARIES} 
-	)
+find_library(
+  RBDL_LIBRARIES rbdl
+  PATHS ${RBDL_LOCAL_DIR}/build
+  NO_DEFAULT_PATH)
+set(SAI2-MODEL_LIBRARIES sai2-model ${RBDL_LIBRARIES})
 
-# 
+#
 # export package
-# 
+#
 
 # export package for use from the build tree
-EXPORT (TARGETS sai2-model FILE ${PROJECT_BINARY_DIR}/SAI2-MODELTargets.cmake)
-EXPORT (PACKAGE SAI2-MODEL)
+export(TARGETS sai2-model FILE ${PROJECT_BINARY_DIR}/SAI2-MODELTargets.cmake)
+export(PACKAGE SAI2-MODEL)
 
 # configure package
-SET (CONF_INCLUDE_DIRS ${SAI2-MODEL_INCLUDE_DIRS} ${RBDL_INCLUDE_DIR})
-SET (CONF_LIBRARIES ${SAI2-MODEL_LIBRARIES})
+set(CONF_INCLUDE_DIRS ${SAI2-MODEL_INCLUDE_DIRS} ${RBDL_INCLUDE_DIR})
+set(CONF_LIBRARIES ${SAI2-MODEL_LIBRARIES})
 
 # create package configuration and version files
-CONFIGURE_FILE(SAI2-MODELConfig.cmake.in "${PROJECT_BINARY_DIR}/SAI2-MODELConfig.cmake" @ONLY)
-INCLUDE(CMakePackageConfigHelpers)
+configure_file(SAI2-MODELConfig.cmake.in
+               "${PROJECT_BINARY_DIR}/SAI2-MODELConfig.cmake" @ONLY)
+include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
   "${CMAKE_CURRENT_BINARY_DIR}/SAI2-MODELConfigVersion.cmake"
   VERSION ${PROJECT_VERSION}
-  COMPATIBILITY SameMajorVersion
-)
+  COMPATIBILITY SameMajorVersion)
 
 if(BUILD_EXAMPLES)
-	# add examples
-	ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/examples)
+  # add examples
+  add_subdirectory(${PROJECT_SOURCE_DIR}/examples)
 endif()
 
 if(BUILD_TESTS)
-	# add tests
-	ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/tests)
+  # add tests
+  add_subdirectory(${PROJECT_SOURCE_DIR}/tests)
 endif()

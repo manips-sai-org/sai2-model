@@ -11,9 +11,8 @@
 #include "Sai2Model.h"
 
 #include <UrdfToSai2Model.h>
-#include <rbdl/rbdl.h>
 
-// #include <stdexcept>
+#include "RBDLExtensions.h"
 
 using namespace std;
 using namespace Eigen;
@@ -58,7 +57,8 @@ Sai2Model::Sai2Model(const string path_to_model_file, bool verbose) {
 	// parse rbdl model from urdf
 	bool success = RigidBodyDynamics::URDFReadFromFile(
 		path_to_model_file.c_str(), _rbdl_model, _link_names_to_id_map,
-		_joint_names_to_id_map, _joint_names_to_child_link_names_map, _joint_limits, false, verbose);
+		_joint_names_to_id_map, _joint_names_to_child_link_names_map,
+		_joint_limits, false, verbose);
 	if (!success) {
 		throw std::runtime_error("Error loading model [" + path_to_model_file +
 								 "]\n");
@@ -240,20 +240,6 @@ void Sai2Model::updateModel(const Eigen::MatrixXd& M) {
 	updateInverseInertia();
 }
 
-void Sai2Model::updateKinematicsCustom(
-	bool update_frame, bool update_link_velocities,
-	bool update_link_acceleration,	// this does not apply gravity
-	bool use_ddq) {
-	VectorXd* Q_set = update_frame ? &_q : NULL;
-	VectorXd* dQ_set = update_link_velocities ? &_dq : NULL;
-	VectorXd* ddQ_set = NULL;
-	VectorXd zero_ddq = VectorXd::Zero(_dof);
-	if (update_link_acceleration) {
-		ddQ_set = use_ddq ? &_ddq : &zero_ddq;
-	}
-	UpdateKinematicsCustom(*_rbdl_model, Q_set, dQ_set, ddQ_set);
-}
-
 VectorXd Sai2Model::jointGravityVector() {
 	VectorXd g = VectorXd::Zero(_dof);
 
@@ -364,97 +350,88 @@ MatrixXd Sai2Model::JwLocalFrame(const string& link_name,
 	return rotation(link_name, rot_in_link).transpose() * Jw(link_name);
 }
 
-void Sai2Model::computeIK3d(
-	VectorXd& q_result, const vector<string>& link_names,
-	const vector<Vector3d>& point_positions_in_links,
-	const vector<Vector3d>& desired_point_positions_in_robot_frame) {
-	if (link_names.size() != point_positions_in_links.size() ||
-		link_names.size() != desired_point_positions_in_robot_frame.size()) {
+VectorXd Sai2Model::computeInverseKinematics(
+	const vector<string>& link_names, const vector<Vector3d>& pos_in_links,
+	const vector<Vector3d>& desired_pos_world_frame) {
+	if (link_names.size() != pos_in_links.size() ||
+		link_names.size() != desired_pos_world_frame.size()) {
 		throw runtime_error(
-			"size of the 3 input vectors do not match in "
-			"Sai2Model::computeIK3d\n");
+			"the number of link names, pos in links and desired positions must "
+			"match in Sai2Model::computeInverseKinematics\n");
+	}
+	if (link_names.empty()) {
+		cout << "Warning: trying to compute inverse kinematics with no goal. "
+				"returning current model joint positions"
+			 << endl;
+		return _q;
 	}
 
-	vector<unsigned int> link_ids;
-	vector<RigidBodyDynamics::Math::Vector3d> body_point;
-	vector<RigidBodyDynamics::Math::Vector3d> target_pos;
+	RigidBodyDynamics::InverseKinematicsConstraintSet cs;
 	for (int i = 0; i < link_names.size(); i++) {
-		link_ids.push_back(linkIdRbdl(link_names[i]));
-		body_point.push_back(point_positions_in_links[i]);
-		target_pos.push_back(desired_point_positions_in_robot_frame[i]);
+		cs.AddPointConstraint(
+			linkIdRbdl(link_names[i]), pos_in_links[i],
+			_T_world_robot.inverse() * desired_pos_world_frame[i]);
 	}
 
-	InverseKinematics(
-		*_rbdl_model, _q, link_ids, body_point, target_pos,
-		q_result);	// modifies the internal model so we need to re update the
-					// kinematics with the previous q value to keep it unchanged
-	updateKinematics();
+	return IKInternal(cs);
 }
 
-// void Sai2Model::computeIK3dJL(
-// 	VectorXd& q_result, const vector<string>& link_names,
-// 	const vector<Vector3d>& point_positions_in_links,
-// 	const vector<Vector3d>& desired_point_positions_in_robot_frame,
-// 	const VectorXd q_min, const VectorXd q_max, const VectorXd weights) {
-// 	if (link_names.size() != point_positions_in_links.size() ||
-// 		link_names.size() != desired_point_positions_in_robot_frame.size()) {
-// 		throw runtime_error(
-// 			"size of the 3 input vectors do not match in "
-// 			"Sai2Model::computeIK3d\n");
-// 	}
-
-// 	vector<unsigned int> link_ids;
-// 	vector<RigidBodyDynamics::Math::Vector3d> body_point;
-// 	vector<RigidBodyDynamics::Math::Vector3d> target_pos;
-// 	for (int i = 0; i < link_names.size(); i++) {
-// 		link_ids.push_back(linkIdRbdl(link_names[i]));
-// 		body_point.push_back(point_positions_in_links[i]);
-// 		target_pos.push_back(desired_point_positions_in_robot_frame[i]);
-// 	}
-
-// 	InverseKinematicsJL(*_rbdl_model, _q, q_min, q_max, weights, link_ids,
-// 						body_point, target_pos, q_result, 1.0e-12, 0.0001, 500);
-// 	// InverseKinematicsJL modifies the internal model so we need to re update
-// 	// the kinematics with the previous q value to keep it unchanged
-// 	updateKinematics();
-// }
-
-void Sai2Model::computeIK6d(
-	VectorXd& q_result, const vector<string>& link_names,
-	const vector<Affine3d>& frame_in_links,
-	const vector<Affine3d>& desired_frame_locations_in_robot_frame) {
-	if (link_names.size() != frame_in_links.size() ||
-		link_names.size() != desired_frame_locations_in_robot_frame.size()) {
+VectorXd Sai2Model::computeInverseKinematics(
+	const vector<string>& link_names, const vector<Affine3d>& frames_in_links,
+	const vector<Affine3d>& desired_frames_locations_in_world_frame) {
+	if (link_names.size() != frames_in_links.size() ||
+		link_names.size() != desired_frames_locations_in_world_frame.size()) {
 		throw runtime_error(
-			"size of the 3 input vectors do not match in "
-			"Sai2Model::computeIK6d\n");
+			"the number of link names, pos in links and desired positions must "
+			"match in Sai2Model::computeInverseKinematics\n");
+	}
+	if (link_names.empty()) {
+		cout << "Warning: trying to compute inverse kinematics with no goal. "
+				"returning current model joint positions"
+			 << endl;
+		return _q;
 	}
 
-	vector<unsigned int> link_ids;
-	vector<RigidBodyDynamics::Math::Vector3d> point_pos;
-	vector<RigidBodyDynamics::Math::Vector3d> desired_point_pos;
+	RigidBodyDynamics::InverseKinematicsConstraintSet cs;
 	for (int i = 0; i < link_names.size(); i++) {
-		link_ids.push_back(linkIdRbdl(link_names[i]));
-		link_ids.push_back(linkIdRbdl(link_names[i]));
-		link_ids.push_back(linkIdRbdl(link_names[i]));
+		Affine3d robot_base_to_desired_link_base_frame =
+			_T_world_robot.inverse() *
+			desired_frames_locations_in_world_frame[i] *
+			frames_in_links[i].inverse();
 
-		point_pos.push_back(frame_in_links[i] * Vector3d::Zero());
-		point_pos.push_back(frame_in_links[i] * Vector3d::UnitX());
-		point_pos.push_back(frame_in_links[i] * Vector3d::UnitY());
-
-		desired_point_pos.push_back(desired_frame_locations_in_robot_frame[i] *
-									Vector3d::Zero());
-		desired_point_pos.push_back(desired_frame_locations_in_robot_frame[i] *
-									Vector3d::UnitX());
-		desired_point_pos.push_back(desired_frame_locations_in_robot_frame[i] *
-									Vector3d::UnitY());
+		cs.AddFullConstraint(
+			linkIdRbdl(link_names[i]), Vector3d::Zero(),
+			robot_base_to_desired_link_base_frame.translation(),
+			robot_base_to_desired_link_base_frame.rotation().transpose());
 	}
 
-	InverseKinematics(
-		*_rbdl_model, _q, link_ids, point_pos, desired_point_pos,
-		q_result);	// modifies the internal model so we need to re update the
-					// kinematics with the previous q value to keep it unchanged
+	return IKInternal(cs);
+}
+
+VectorXd Sai2Model::IKInternal(
+	RigidBodyDynamics::InverseKinematicsConstraintSet& cs) {
+	cs.step_tol = 1e-9;
+	cs.constraint_tol = 1e-6;
+	cs.lambda = 0.1;
+
+	VectorXd q_min =
+		std::numeric_limits<double>::min() * VectorXd::Ones(_q_size);
+	VectorXd q_max =
+		std::numeric_limits<double>::max() * VectorXd::Ones(_q_size);
+	for (const auto& joint_limit : _joint_limits) {
+		q_min(joint_limit.joint_index) = joint_limit.position_lower;
+		q_max(joint_limit.joint_index) = joint_limit.position_upper;
+	}
+
+	VectorXd q_res = VectorXd::Zero(_q_size);
+	InverseKinematicsWithJointLimits(*_rbdl_model, _q, cs, q_min, q_max, q_res);
+
+	// InverseKinematicsWithJointLimits modifies the internal model so we need
+	// to re update the kinematics with the previous q value to keep it
+	// unchanged
 	updateKinematics();
+
+	return q_res;
 }
 
 Affine3d Sai2Model::transform(const string& link_name,
@@ -493,6 +470,9 @@ Vector6d Sai2Model::velocity6dInWorld(const string link_name,
 
 Vector6d Sai2Model::acceleration6d(const string link_name,
 								   const Vector3d& pos_in_link) const {
+	// recompute accelerations only in rbdl model to make sure accelerations due
+	// to gravity are not included in the return value
+	UpdateKinematicsCustom(*_rbdl_model, nullptr, nullptr, &_ddq);
 	Vector6d acc6d = CalcPointAcceleration6D(
 		*_rbdl_model, _q, _dq, _ddq, linkIdRbdl(link_name), pos_in_link, false);
 	acc6d.head(3).swap(acc6d.tail(3));
@@ -529,6 +509,9 @@ Vector3d Sai2Model::linearVelocityInWorld(const string& link_name,
 
 Vector3d Sai2Model::linearAcceleration(const string& link_name,
 									   const Vector3d& pos_in_link) const {
+	// recompute accelerations only in rbdl model to make sure accelerations due
+	// to gravity are not included in the return value
+	UpdateKinematicsCustom(*_rbdl_model, nullptr, nullptr, &_ddq);
 	return CalcPointAcceleration(*_rbdl_model, _q, _dq, _ddq,
 								 linkIdRbdl(link_name), pos_in_link, false);
 }
@@ -609,7 +592,6 @@ std::string Sai2Model::childLinkName(const std::string& joint_name) const {
 		throw invalid_argument("joint [" + joint_name + "] does not exist");
 	}
 	return _joint_names_to_child_link_names_map.at(joint_name);
-	
 }
 
 std::vector<std::string> Sai2Model::jointNames() const {
@@ -744,8 +726,7 @@ OpSpaceMatrices Sai2Model::operationalSpaceMatrices(
 	// Compute the matrices
 	MatrixXd Lambda = taskInertiaMatrix(task_jacobian);
 	MatrixXd Jbar = _M_inv * task_jacobian.transpose() * Lambda;
-	MatrixXd N =
-		(MatrixXd::Identity(_dof, _dof) - Jbar * task_jacobian);
+	MatrixXd N = (MatrixXd::Identity(_dof, _dof) - Jbar * task_jacobian);
 	return OpSpaceMatrices(task_jacobian, Lambda, Jbar, N);
 }
 
@@ -1182,7 +1163,7 @@ VectorXd Sai2Model::modifiedNewtonEuler(const bool consider_gravity,
 
 MatrixXd matrixRangeBasis(const MatrixXd& matrix, const double& tolerance) {
 	const int range_size = matrix.rows();
-	if(matrix.norm() < tolerance) {
+	if (matrix.norm() < tolerance) {
 		return MatrixXd::Zero(range_size, 1);
 	}
 
