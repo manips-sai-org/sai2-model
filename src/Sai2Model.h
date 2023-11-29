@@ -8,7 +8,7 @@
 #ifndef SAI2MODEL_H_
 #define SAI2MODEL_H_
 
-#include <rbdl/Model.h>
+#include <rbdl/rbdl.h>
 
 #include "JointLimits.h"
 
@@ -209,21 +209,6 @@ public:
 	void updateModel(const Eigen::MatrixXd& M);
 
 	/**
-	 * @brief      update the kinematics.
-	 * @param      update_frame     Whether frame locations should be updated
-	 * @param      update_link_velocities Whether link linear/angular velocities
-	 * should be updated
-	 * @param      update_link_acceleration Whether link linear/angular
-	 * accelerations should be updated
-	 * @param      use_ddq Whether link accelerations should include J*ddq terms
-	 * or not
-	 */
-	void updateKinematicsCustom(
-		bool update_frame = true, bool update_link_velocities = true,
-		bool update_link_acceleration = true,  // this does not apply gravity
-		bool use_ddq = true);
-
-	/**
 	 * @brief      returns the number of degrees of freedom of the robot
 	 *
 	 * @return     number of dof of robot
@@ -326,10 +311,12 @@ public:
 
 	/**
 	 * @brief      Computes the inverse kinematics to get the robot
-	 *             configuration that matches a set of points on the robot to
-	 *             desired positions. Uses the underlying RBDL function based on
-	 *             an iterative computation using the damped Levenberg-Marquardt
-	 *             method (also known as Damped Least Squares method)
+	 * configuration that matches a set of points on the robot to desired
+	 * positions or desired frames. Uses the underlying RBDL function based on
+	 * an iterative computation using the damped Levenberg-Marquardt method
+	 * (also known as Damped Least Squares method) with output saturation for
+	 * the joint limits. Always returns the value from the last iteration, even
+	 * if the IK did not converge.
 	 *
 	 * @param      q_result                                The resulting robot
 	 * configuration
@@ -340,52 +327,45 @@ public:
 	 * @param[in]  desired_point_positions_in_robot_frame  The desired point
 	 * positions in robot frame
 	 */
-	void computeIK3d(
-		VectorXd& q_result, const vector<string>& link_names,
-		const vector<Vector3d>& point_positions_in_links,
-		const vector<Vector3d>& desired_point_positions_in_robot_frame);
 
 	/**
-	 * @brief      Inverse kinematics using a weighted damped Least-Squared
-	 *             method and considering joint limits by saturating the joint
-	 *             values to their limits in every iteration of the algorithm
+	 * @brief Computes the inverse kinematics to get the robot configuration
+	 * that matches a set of points on the robot to desired positions. Uses a
+	 * modified underlying RBDL function based on an iterative computation using
+	 * the damped Levenberg-Marquardt method (also known as Damped Least Squares
+	 * method) with output saturation for the joint limits. Always returns the
+	 * value from the last iteration, even if the IK did not converge. Uses the
+	 * current joint positions as initial guess, and does not update the robot
+	 * configuration.
 	 *
-	 * @param      q_result                                Resulting robot
-	 * configuration
-	 * @param[in]  link_names                              The link names for
-	 * the points to match
-	 * @param[in]  point_positions_in_links                The point positions
-	 * in links
-	 * @param[in]  desired_point_positions_in_robot_frame  The desired point
-	 * positions in robot frame
-	 * @param[in]  q_min                                   Lower joint limits
-	 * @param[in]  q_max                                   Upper joint limits
-	 * @param[in]  weights                                 The weights
+	 * @param link_names vector of link names that contain the points to match
+	 * @param pos_in_links positions of the points in the links
+	 * @param desired_pos_world_frame desired positions of the points in world
+	 * frame
+	 * @return VectorXd set of joint angles that match the desired points as
+	 * best as possible
 	 */
-	void computeIK3dJL(
-		VectorXd& q_result, const vector<string>& link_names,
-		const vector<Vector3d>& point_positions_in_links,
-		const vector<Vector3d>& desired_point_positions_in_robot_frame,
-		const VectorXd q_min, const VectorXd q_max, const VectorXd weights);
+	VectorXd computeInverseKinematics(
+		const vector<string>& link_names, const vector<Vector3d>& pos_in_links,
+		const vector<Vector3d>& desired_pos_world_frame);
 
 	/**
-	 * @brief      Inverse kinematics that matches frames in the robot to
-	 *             desired configurations (instead of just points) using the
-	 *             damped least-squared method
+	 * @brief Computes the inverse kinematics to get the robot configuration
+	 * that matches a set of frames on some robot links to a set of desired
+	 * frames. Uses the same underlying function as the previous function, but
+	 * with frames instead of points. Uses the current joint positions as
+	 * initial guess, and does not update the robot configuration.
 	 *
-	 * @param      q_result                                Resulting robot
-	 * configuration
-	 * @param[in]  link_names                              The link names for
-	 * the frames to match
-	 * @param[in]  frame_in_links                          The frames to match
-	 * expressed in link frame
-	 * @param[in]  desired_frame_locations_in_robot_frame  The desired frame
-	 * locations in robot frame
+	 * @param link_names vector of link names that contain the frames to match
+	 * @param frames_in_links frames in the links
+	 * @param desired_frames_locations_in_world_frame desired frames in world
+	 * @return VectorXd set of joint angles that match the desired frames as
+	 * best as possible
 	 */
-	void computeIK6d(
-		VectorXd& q_result, const vector<string>& link_names,
-		const vector<Affine3d>& frame_in_links,
-		const vector<Affine3d>& desired_frame_locations_in_robot_frame);
+	VectorXd computeInverseKinematics(
+		const vector<string>& link_names,
+		const vector<Affine3d>& frames_in_links,
+		const vector<Affine3d>& desired_frames_locations_in_world_frame);
 
 	/**
 	 * @brief      transformation from base to link frame (possibly a local
@@ -420,11 +400,6 @@ public:
 	 * being correct. So it is safer to call UpdateKinematics before
 	 * calling these, unless these are called right after a simulator
 	 * integrator state.
-	 *Note: If these functions are called after calling NonLinearEffects()
-	 * or other dynamics functions, returned accelerations can include
-	 * acceleration due to gravity. If this is not desired, first call
-	 * updateKinematicsCustom(false, false, true, true) which recomputes just
-	 *the link accelerations in the rbdl model.
 	 */
 	Vector6d acceleration6d(
 		const string link_name,
@@ -475,10 +450,6 @@ public:
 	 *             being correct. So it is safer to call UpdateKinematics before
 	 *             calling this, unless this is called right after a simulator
 	 *             integrator state.
-	 *             Note: If this function is called after calling
-	 * NonLinearEffects() or other dynamics functions, returned accelerations
-	 * can include acceleration due to gravity. If this is not desired, first
-	 * call updateKinematicsCustom(false, false, true, true)
 	 *
 	 * @param      accel        Vector of accelerations to which the result is
 	 *                          written
@@ -643,10 +614,9 @@ public:
 	MatrixXd nullspaceMatrix(const MatrixXd& task_jacobian) const;
 
 	/**
-	 * @brief      	Computes the operational spce matrices (task inertia,
-	 *             	dynamically consistent inverse of the jacobian and nullspace)
-	 *             	for a given task. More efficient than calling the three
-	 *				individual functions.
+	 * @brief Computes the operational spce matrices (task inertia, dynamically
+	 *consistent inverse of the jacobian and nullspace) for a given task. More
+	 *efficient than calling the three individual functions.
 	 *
 	 * @param[in]  task_jacobian  Task jacobian
 	 */
@@ -767,6 +737,18 @@ private:
 	 * @brief      update the inverse inertia matrix.
 	 */
 	void updateInverseInertia();
+
+	/**
+	 * @brief Compute the inverse kinematics from the constraint set as defined
+	 * in RBDL kinematics module, using a variation of RBDL IK algorithm that
+	 * incorporates the robot joint limits. Returns the value from the last
+	 * iteration even if the IK did not converge.
+	 *
+	 * @param cs The constraint set (automatically built by the public interface
+	 * function)
+	 * @return VectorXd the joint angles from latest iteration
+	 */
+	VectorXd IKInternal(RigidBodyDynamics::InverseKinematicsConstraintSet& cs);
 
 	/**
 	 * @brief      Computes the modified Newton-Euler Algorithm as described in

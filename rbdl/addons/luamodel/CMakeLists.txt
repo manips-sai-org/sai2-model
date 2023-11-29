@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.10)
 
 LIST( APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMake )
 
@@ -6,10 +6,11 @@ SET_TARGET_PROPERTIES ( ${PROJECT_EXECUTABLES} PROPERTIES
   LINKER_LANGUAGE CXX
   )
 
-FIND_PACKAGE (Lua51 REQUIRED)
+FIND_PACKAGE (Lua 5.1 REQUIRED)
 
-INCLUDE_DIRECTORIES ( 
-  ${CMAKE_CURRENT_BINARY_DIR}/include/rbdl
+INCLUDE_DIRECTORIES (
+  ${CMAKE_SOURCE_DIR}/include/
+  ${CMAKE_BINARY_DIR}/include/
   ${LUA_INCLUDE_DIR}
   )
 
@@ -18,27 +19,60 @@ SET ( LUAMODEL_SOURCES
   luatables.cc
   )
 
+IF(RBDL_BUILD_EXECUTABLES)
 ADD_EXECUTABLE (rbdl_luamodel_util rbdl_luamodel_util.cc)
+ENDIF(RBDL_BUILD_EXECUTABLES)
 
 IF (RBDL_BUILD_STATIC)
   ADD_LIBRARY ( rbdl_luamodel-static STATIC ${LUAMODEL_SOURCES} )
-  SET_TARGET_PROPERTIES ( rbdl_luamodel-static PROPERTIES PREFIX "lib")
+  IF (NOT WIN32)
+    SET_TARGET_PROPERTIES ( rbdl_luamodel-static PROPERTIES PREFIX "lib")
+  ENDIF (NOT WIN32)
   SET_TARGET_PROPERTIES ( rbdl_luamodel-static PROPERTIES OUTPUT_NAME "rbdl_luamodel")
 
-  TARGET_LINK_LIBRARIES (rbdl_luamodel-static
-    rbdl-static
-    ${LUA_LIBRARIES}
+  
+  IF(RBDL_BUILD_ADDON_MUSCLE)
+    TARGET_LINK_LIBRARIES (rbdl_luamodel-static
+      rbdl_muscle-static         
+      rbdl-static
+      ${LUA_LIBRARIES} 
+    )
+    TARGET_LINK_LIBRARIES (rbdl_luamodel_util
+      rbdl_luamodel-static      
+      rbdl_muscle-static               
+      rbdl-static
+      ${LUA_LIBRARIES} 
     )
 
-  TARGET_LINK_LIBRARIES (rbdl_luamodel_util
-    rbdl_luamodel-static
-    rbdl-static
+  ELSE(RBDL_BUILD_ADDON_MUSCLE)
+    TARGET_LINK_LIBRARIES (rbdl_luamodel-static
+      rbdl-static
+      ${LUA_LIBRARIES}
     )
+    IF(RBDL_BUILD_EXECUTABLES)
+    TARGET_LINK_LIBRARIES (rbdl_luamodel_util
+      rbdl_luamodel-static      
+      rbdl-static
+      ${LUA_LIBRARIES}
+	    ${LUA_LIBRARY}
+    )
+    ENDIF(RBDL_BUILD_EXECUTABLES)
+  ENDIF(RBDL_BUILD_ADDON_MUSCLE)
 
-  INSTALL (TARGETS rbdl_luamodel-static rbdl_luamodel_util 
+  IF(RBDL_BUILD_EXECUTABLES)
+  INSTALL (TARGETS rbdl_luamodel_util
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    )
+  )
+  ENDIF(RBDL_BUILD_EXECUTABLES)
+
+  INSTALL (TARGETS rbdl_luamodel-static
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  )
+
 ELSE (RBDL_BUILD_STATIC)
   ADD_LIBRARY ( rbdl_luamodel SHARED ${LUAMODEL_SOURCES} )
   SET_TARGET_PROPERTIES ( rbdl_luamodel PROPERTIES
@@ -46,20 +80,47 @@ ELSE (RBDL_BUILD_STATIC)
     SOVERSION ${RBDL_SO_VERSION}
     )
 
-  TARGET_LINK_LIBRARIES (rbdl_luamodel
-    rbdl
-    ${LUA_LIBRARIES}
+  IF(RBDL_BUILD_ADDON_MUSCLE)
+    TARGET_LINK_LIBRARIES (rbdl_luamodel
+      rbdl_muscle          
+      rbdl
+      ${LUA_LIBRARIES}
     )
-
-  TARGET_LINK_LIBRARIES (rbdl_luamodel_util
-    rbdl_luamodel
-    rbdl
+    IF(RBDL_BUILD_EXECUTABLES)
+    TARGET_LINK_LIBRARIES (rbdl_luamodel_util
+      rbdl_luamodel
+      rbdl_muscle            
+      rbdl
     )
+    ENDIF(RBDL_BUILD_EXECUTABLES)
+  ELSE(RBDL_BUILD_ADDON_MUSCLE)
+    TARGET_LINK_LIBRARIES (rbdl_luamodel
+      rbdl
+      ${LUA_LIBRARIES}
+      )
 
-  INSTALL (TARGETS rbdl_luamodel rbdl_luamodel_util 
+    IF(RBDL_BUILD_EXECUTABLES)
+    TARGET_LINK_LIBRARIES (rbdl_luamodel_util
+      rbdl_luamodel
+      rbdl
+    )
+    ENDIF(RBDL_BUILD_EXECUTABLES)
+  ENDIF(RBDL_BUILD_ADDON_MUSCLE)
+
+  IF(RBDL_BUILD_EXECUTABLES)
+  INSTALL (TARGETS rbdl_luamodel_util
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  )
+  ENDIF(RBDL_BUILD_EXECUTABLES)
+
+  INSTALL (TARGETS rbdl_luamodel
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
+
 ENDIF (RBDL_BUILD_STATIC)
 
 FILE ( GLOB headers 
@@ -68,5 +129,5 @@ FILE ( GLOB headers
 
 INSTALL ( FILES ${headers} 
   DESTINATION 
-  ${CMAKE_INSTALL_INCLUDEDIR}/rbdl/addons/luamodel 
+  ${CMAKE_INSTALL_INCLUDEDIR}/rbdl/addons/luamodel
   )

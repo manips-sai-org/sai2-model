@@ -40,11 +40,15 @@ wrapper_command_strings = {
 
     "CInitCode" : """        self.%MEMBER% = _%PARENT%_%MEMBER%_%TYPE%_VectorWrapper (<uintptr_t> self.thisptr)""",
 
+    
     "AddProperty" : """    property %MEMBER%:
         def __get__ (self):
-            return self.%MEMBER%
+            vector_size = self.thisptr.%MEMBER%.size()
+            prop = [%TYPE% (address=<uintptr_t> &(self.thisptr.%MEMBER%[i])) for i in range(vector_size)]
+            return prop
 """
 }
+
 
 def parse_line (line_str):
     command = ""
@@ -78,7 +82,7 @@ if __name__ == "__main__":
     infilename = sys.argv[1]
     outfilename = sys.argv[2]
 
-    print ("Processing {} to generate {}".format (infilename, outfilename))
+#    print ("Processing {} to generate {}".format (infilename, outfilename))
     infile = open(infilename)
     outfile = open(outfilename, "w")
     outfile.write ("""# WARNING! 
@@ -102,10 +106,11 @@ if __name__ == "__main__":
                 generated_parent_members[args["PARENT"]] = []
 
             if command=="AddProperty":
-                generated_parent_members[args["PARENT"]].append ({
-                    "TYPE": args["TYPE"],
-                    "MEMBER": args["MEMBER"]
-                    })
+               generated_parent_members[args["PARENT"]].append ({
+                   "TYPE": args["TYPE"],
+                   "MEMBER": args["MEMBER"]
+                   })
+
 
     # generate code
     for line_number, line_str in enumerate (template_lines):
@@ -113,7 +118,6 @@ if __name__ == "__main__":
         if not command:
             outfile.write (line_str + "\n")
         else:
-#            print (command, wrapper_command_strings.keys())
             if command in wrapper_command_strings.keys():
                 parent = args["PARENT"]
                 if command == "AddProperty":
@@ -130,6 +134,7 @@ if __name__ == "__main__":
                         content_type = member["TYPE"]
                         member_name = member["MEMBER"]
                         command_code = wrapper_command_strings[command][:]
+                        
                         command_code = command_code.replace (
                                 "%PARENT%", parent).replace (
                                 "%MEMBER%", member_name).replace (
