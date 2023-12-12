@@ -21,7 +21,7 @@ jobs:
       - name: Copy Libraries to Archive
         run: |
           cp build/libsai2-model.a ./libsai2-model.a
-          cp rbdl/build/librbdl.so.2.5.0 ./librbdl.so
+          cp rbdl/build/librbdl.so.3.2.0 ./librbdl.so
 
       - name: Archive Sai2-model Artifact
         uses: actions/upload-artifact@v3
