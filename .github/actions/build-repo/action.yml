@@ -8,33 +8,13 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Install dependencies library and prepare dependency folder
-      shell: bash
-      run: |
-        mkdir ../dep
-        sudo apt-get install libtinyxml2-dev libeigen3-dev libgtest-dev
+    - name: Install dependencies
+      uses: manips-sai-org/sai2-custom-actions/sai2-dependencies-setup@main
 
     - name: Setup Sai2-urdfreader
-      shell: bash
-      run: |
-        # clone repo and run cmake
-        cd ../dep
-        git clone https://github.com/manips-sai-org/sai2-urdfreader.git
-        cd  sai2-urdfreader
-        mkdir build && cd build && cmake ..
-
-        # Get the latest artifact from the master branch
-        LATEST_ARTIFACT=$(curl -s -X GET \
-          -H "Authorization: Bearer ${{ inputs.token }}" \
-          https://api.github.com/repos/manips-sai-org/sai2-urdfreader/actions/artifacts?branch=master \
-          | jq -r '.artifacts[0].id')
-
-        # Download the artifact using the latest artifact ID to get the library
-        curl -L \
-          -H "Authorization: Bearer ${{ inputs.token }}" \
-          https://api.github.com/repos/manips-sai-org/sai2-urdfreader/actions/artifacts/${LATEST_ARTIFACT}/zip --output lib.zip
-
-        unzip lib.zip
+      uses: manips-sai-org/sai2-custom-actions/sai2-urdfreader-setup@main
+      with:
+        token: ${{ inputs.token }}
 
     - name: Build Sai2-Model
       shell: bash
