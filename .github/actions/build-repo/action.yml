@@ -9,10 +9,10 @@ runs:
   using: "composite"
   steps:
     - name: Install dependencies
-      uses: manips-sai-org/sai2-common/dependencies@mika_dev/custom_github_action
+      uses: manips-sai-org/sai2-common/custom_github_actions/dependencies@mika_dev/custom_github_action
 
     - name: Setup Sai2-urdfreader
-      uses: manips-sai-org/sai2-common/sai2-repositories@mika_dev/custom_github_action
+      uses: manips-sai-org/sai2-common/custom_github_actions/sai2-repositories@mika_dev/custom_github_action
       with:
         token: ${{ inputs.token }}
         repo-name: sai2-urdfreader
