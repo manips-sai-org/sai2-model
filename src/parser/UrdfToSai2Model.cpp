@@ -10,10 +10,10 @@
 #include <map>
 #include <stack>
 
-typedef my_shared_ptr<urdf::Link> LinkPtr;
-typedef const my_shared_ptr<const urdf::Link> ConstLinkPtr;
-typedef my_shared_ptr<urdf::Joint> JointPtr;
-typedef my_shared_ptr<urdf::ModelInterface> ModelPtr;
+typedef my_shared_ptr<Sai2Urdfreader::Link> LinkPtr;
+typedef const my_shared_ptr<const Sai2Urdfreader::Link> ConstLinkPtr;
+typedef my_shared_ptr<Sai2Urdfreader::Joint> JointPtr;
+typedef my_shared_ptr<Sai2Urdfreader::ModelInterface> ModelPtr;
 
 using namespace std;
 
@@ -147,8 +147,8 @@ bool construct_model(
 		JointPtr urdf_joint = joint_map[joint_names[j]];
 		LinkPtr urdf_parent = link_map[urdf_joint->parent_link_name];
 		LinkPtr urdf_child = link_map[urdf_joint->child_link_name];
-		if (urdf_joint->type != urdf::Joint::FIXED &&
-			urdf_joint->type != urdf::Joint::UNKNOWN) {
+		if (urdf_joint->type != Sai2Urdfreader::Joint::FIXED &&
+			urdf_joint->type != Sai2Urdfreader::Joint::UNKNOWN) {
 			joint_names_to_id_map[urdf_joint->name] = current_moveable_joint_id;
 			current_moveable_joint_id++;
 		}
@@ -171,20 +171,20 @@ bool construct_model(
 
 		// create the joint
 		Joint rbdl_joint;
-		if (urdf_joint->type == urdf::Joint::REVOLUTE ||
-			urdf_joint->type == urdf::Joint::CONTINUOUS) {
+		if (urdf_joint->type == Sai2Urdfreader::Joint::REVOLUTE ||
+			urdf_joint->type == Sai2Urdfreader::Joint::CONTINUOUS) {
 			rbdl_joint =
 				Joint(SpatialVector(urdf_joint->axis.x, urdf_joint->axis.y,
 									urdf_joint->axis.z, 0., 0., 0.));
-		} else if (urdf_joint->type == urdf::Joint::PRISMATIC) {
+		} else if (urdf_joint->type == Sai2Urdfreader::Joint::PRISMATIC) {
 			rbdl_joint =
 				Joint(SpatialVector(0., 0., 0., urdf_joint->axis.x,
 									urdf_joint->axis.y, urdf_joint->axis.z));
-		} else if (urdf_joint->type == urdf::Joint::SPHERICAL) {
+		} else if (urdf_joint->type == Sai2Urdfreader::Joint::SPHERICAL) {
 			rbdl_joint = Joint(JointTypeSpherical);
-		} else if (urdf_joint->type == urdf::Joint::FIXED) {
+		} else if (urdf_joint->type == Sai2Urdfreader::Joint::FIXED) {
 			rbdl_joint = Joint(JointTypeFixed);
-		} else if (urdf_joint->type == urdf::Joint::FLOATING) {
+		} else if (urdf_joint->type == Sai2Urdfreader::Joint::FLOATING) {
 			// todo: what order of DoF should be used?
 			rbdl_joint = Joint(SpatialVector(0., 0., 0., 1., 0., 0.),
 							   SpatialVector(0., 0., 0., 0., 1., 0.),
@@ -192,7 +192,7 @@ bool construct_model(
 							   SpatialVector(1., 0., 0., 0., 0., 0.),
 							   SpatialVector(0., 1., 0., 0., 0., 0.),
 							   SpatialVector(0., 0., 1., 0., 0., 0.));
-		} else if (urdf_joint->type == urdf::Joint::PLANAR) {
+		} else if (urdf_joint->type == Sai2Urdfreader::Joint::PLANAR) {
 			// todo: which two directions should be used that are perpendicular
 			// to the specified axis?
 			cerr << "Error while processing joint '" << urdf_joint->name
@@ -270,7 +270,7 @@ bool construct_model(
 			cout << "  body name   : " << urdf_child->name << endl;
 		}
 
-		if (urdf_joint->type == urdf::Joint::FLOATING) {
+		if (urdf_joint->type == Sai2Urdfreader::Joint::FLOATING) {
 			Matrix3d zero_matrix = Matrix3d::Zero();
 			Body null_body(0., Vector3d::Zero(3), zero_matrix);
 			Joint joint_txtytz(JointTypeTranslationXYZ);
@@ -292,8 +292,8 @@ bool construct_model(
 
 		// get the joint limits
 		if (urdf_joint->limits) {
-			if (urdf_joint->type != urdf::Joint::REVOLUTE &&
-				urdf_joint->type != urdf::Joint::PRISMATIC) {
+			if (urdf_joint->type != Sai2Urdfreader::Joint::REVOLUTE &&
+				urdf_joint->type != Sai2Urdfreader::Joint::PRISMATIC) {
 				cerr << "error while processing limits on joint '"
 					 << urdf_joint->name
 					 << "': limits are only supported on revolute and "
@@ -357,7 +357,7 @@ RBDL_DLLAPI bool URDFReadFromString(
 	bool verbose) {
 	assert(model);
 
-	ModelPtr urdf_model = urdf::parseURDF(model_xml_string);
+	ModelPtr urdf_model = Sai2Urdfreader::parseURDF(model_xml_string);
 
 	if (!construct_model(model, urdf_model, link_names_to_id_map,
 						 joint_names_to_id_map,
