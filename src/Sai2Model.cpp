@@ -1015,6 +1015,19 @@ GraspMatrixData Sai2Model::environmentalGraspMatrixAtGeometricCenter(
 	return G_data;
 }
 
+void Sai2Model::Sai2Model::forwardDynamics(VectorXd& ddq, const VectorXd& tau) {
+	ForwardDynamics(*_rbdl_model, _q, _dq, tau, ddq);
+}
+
+Vector6d Sai2Model::Sai2Model::JdotQdot(const string& link_name, const Vector3d& pos_in_link, const bool update_kinematics) {
+	_rbdl_model->gravity.setZero();
+	Vector6d acc6d = CalcPointAcceleration6D(*_rbdl_model, _q, _dq, VectorXd::Zero(_ddq.size()), linkIdRbdl(link_name), pos_in_link, true);
+	acc6d.head(3).swap(acc6d.tail(3));
+	_rbdl_model->gravity = Vector3d(0, 0, -9.81);
+	updateKinematics();
+	return acc6d;
+}
+
 void Sai2Model::Sai2Model::displayJoints() {
 	cout << "\nRobot Joints :" << endl;
 	for (map<string, int>::iterator it = _joint_names_to_id_map.begin();
@@ -1031,6 +1044,12 @@ void Sai2Model::displayLinks() {
 		cout << "link : " << it->first << "\t id : " << it->second << endl;
 	}
 	cout << endl;
+}
+
+MatrixXd Sai2Model::linkDependency(const std::string& link_name) {
+	MatrixXd J;
+	calcLinkDependency(*_rbdl_model, linkIdRbdl(link_name), J);
+	return J;
 }
 
 void Sai2Model::updateDynamics() {
@@ -1189,6 +1208,41 @@ MatrixXd matrixRangeBasis(const MatrixXd& matrix, const double& tolerance) {
 	} else {
 		return svd.matrixU().leftCols(task_dof);
 	}
+}
+
+MatrixXd matrixNullRangeBasis(const MatrixXd& matrix, const double& tolerance) {
+	const int range_size = matrix.rows();
+	if(matrix.norm() < tolerance) {
+		return MatrixXd::Identity(range_size, range_size);
+	}
+
+	JacobiSVD<MatrixXd> svd(matrix, ComputeThinU | ComputeThinV);
+
+	double sigma_0 = svd.singularValues()(0);
+	if (sigma_0 < tolerance) {
+		return MatrixXd::Identity(range_size, range_size);
+	}
+
+	const int max_range = min(matrix.rows(), matrix.cols());
+	int task_dof = max_range;
+	for (int i = svd.singularValues().size() - 1; i > 0; i--) {
+		if (svd.singularValues()(i) / sigma_0 < tolerance) {
+			task_dof -= 1;
+		} else {
+			break;
+		}
+	}
+
+	if (task_dof == matrix.rows()) {
+		return MatrixXd::Zero(max_range, max_range);
+	} else {
+		return svd.matrixU().rightCols(max_range - task_dof);
+	}
+}
+
+SvdData matrixSvd(const MatrixXd& matrix) {
+	JacobiSVD<MatrixXd> svd(matrix, ComputeThinU | ComputeThinV);
+	return SvdData{svd.matrixU(), svd.singularValues(), svd.matrixV()};
 }
 
 Vector3d orientationError(const Matrix3d& desired_orientation,

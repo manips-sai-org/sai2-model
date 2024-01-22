@@ -367,6 +367,51 @@ RBDL_DLLAPI void CalcPointJacobian6D (
   }
 }
 
+RBDL_DLLAPI void calcPointJacobianDotQdot6D (
+    Model& model, 
+    const VectorNd& Q, 
+    const VectorNd& QDot, 
+    unsigned int body_id,
+    const Vector3d &point_position, 
+    VectorNd& G, 
+    bool update_kinematics) 
+{
+  G = CalcPointAcceleration6D(model, Q, QDot, VectorNd::Zero(Q.size()), body_id, point_position, update_kinematics);
+}
+
+RBDL_DLLAPI void calcLinkDependency (
+    Model &model,
+    unsigned int body_id,
+    MatrixNd &J) 
+{      
+  std::vector<int> active_joints;
+  unsigned int reference_body_id = body_id;
+
+  if (model.IsFixedBodyId(body_id)) {
+    unsigned int fbody_id   = body_id
+      - model.fixed_body_discriminator;
+
+    reference_body_id       = model
+      .mFixedBodies[fbody_id]
+      .mMovableParent;
+  } 
+
+  unsigned int j = reference_body_id;
+
+  while (j != 0) {
+    unsigned int q_index = model.mJoints[j].q_index;
+    active_joints.push_back(q_index);
+    j = model.lambda[j];
+  }
+
+  std::sort(active_joints.begin(), active_joints.end());
+  J = MatrixNd::Zero(active_joints.size(), model.q_size);
+  for (int i = 0; i < active_joints.size(); ++i) {
+    J(i, active_joints[i]) = 1;
+  }
+
+}
+
 RBDL_DLLAPI void CalcBodySpatialJacobian (
     Model &model,
     const VectorNd &Q,
