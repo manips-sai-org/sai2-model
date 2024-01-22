@@ -157,5 +157,9 @@ int main(int argc, char** argv) {
 	cout << "joint gravity : " << gravity.transpose() << endl;
 	cout << endl;
 
+	// other tests
+	MatrixXd J_joint = robot->linkDependency(ee_link);
+	cout << "Partial task jacobian for joint dependency: \n" << J_joint << endl;
+
 	return 0;
 }

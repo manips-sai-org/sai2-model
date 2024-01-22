@@ -174,6 +174,42 @@ RBDL_DLLAPI void CalcPointJacobian6D (Model &model,
     bool update_kinematics = true
     );
 
+/**
+ * @brief Computes a 6-D \dot{J}\dot{q} for a point on a body 
+ * 
+ * Computes the 6-D \dot{J}\dot{q} quantity 
+ * 
+ * @param model
+ * @param Q 
+ * @param QDot 
+ * @param body_id 
+ * @param point_position 
+ * @param G 
+ * @param update_kinematics 
+ * @return RBDL_DLLAPI 
+ */
+RBDL_DLLAPI void calcPointJacobianDotQdot6D(
+    Model& model, 
+    const Math::VectorNd& Q, 
+    const Math::VectorNd& QDot, 
+    unsigned int body_id,
+    const Math::Vector3d &point_position, 
+    Math::VectorNd& G, 
+    bool update_kinematics);
+
+/**
+ * @brief Computes the task matrix of the 
+ * 
+ * @param model 
+ * @param body_id 
+ * @param J 
+ * @return RBDL_DLLAPI 
+ */
+RBDL_DLLAPI void calcLinkDependency (
+    Model &model,
+    unsigned int body_id,
+    Math::MatrixNd& J);
+
 /** \brief Computes the spatial jacobian for a body
  *
  * The spatial velocity of a body at the origin of the base coordinate

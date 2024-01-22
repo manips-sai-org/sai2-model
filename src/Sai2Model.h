@@ -89,6 +89,12 @@ struct SphericalJointDescription {
 		: name(name), index(index), w_index(w_index) {}
 };
 
+struct SvdData {
+	Eigen::MatrixXd U;
+	Eigen::VectorXd s;
+	Eigen::MatrixXd V;
+};
+
 enum ContactType { PointContact, SurfaceContact };
 
 class ContactModel {
@@ -755,6 +761,20 @@ public:
 	 */
 	void displayJoints();
 	void displayLinks();
+	
+	MatrixXd linkDependency(const std::string& link_name);
+
+	/**
+	 * @brief   Computes ABA
+	 * 
+	 */
+	void forwardDynamics(VectorXd& ddq, const VectorXd& tau);
+
+	/**
+	 * @brief   Computes the time derivative of the full jacobian 
+	 * 
+	 */
+	Vector6d JdotQdot(const string& link_name, const Vector3d& pos_in_link, const bool update_kinematics = false);
 
 private:
 	/**
@@ -865,6 +885,17 @@ private:
  */
 MatrixXd matrixRangeBasis(const MatrixXd& matrix,
 						  const double& tolerance = 1e-3);
+
+MatrixXd matrixNullRangeBasis(const MatrixXd& matrix,
+							  const double& tolerance = 1e-3);
+
+/**
+ * @brief Computes the svd data for a matrix
+ * 
+ * @param matrix 	the input matrix
+ * @return SvdData 	data structure containing U, S, and Vs
+ */
+SvdData matrixSvd(const MatrixXd& matrix);
 
 /**
  * @brief      Gives orientation error from rotation matrices
