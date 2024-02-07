@@ -754,7 +754,9 @@ public:
 	 * @param update_kinematics 
 	 * @return Vector6d 
 	 */
-	Vector6d JdotQdot(const string& link_name, const Vector3d& pos_in_link, const bool update_kinematics = false);
+	Vector6d jDotQDot(const string& link_name, 
+					  const Vector3d& pos_in_link = Vector3d::Zero(), 
+					  const bool update_kinematics = false);
 
 private:
 	/**

@@ -1019,7 +1019,7 @@ void Sai2Model::Sai2Model::forwardDynamics(VectorXd& ddq, const VectorXd& tau) {
 	ForwardDynamics(*_rbdl_model, _q, _dq, tau, ddq);
 }
 
-Vector6d Sai2Model::Sai2Model::JdotQdot(const string& link_name, const Vector3d& pos_in_link, const bool update_kinematics) {
+Vector6d Sai2Model::Sai2Model::jDotQDot(const string& link_name, const Vector3d& pos_in_link, const bool update_kinematics) {
 	Vector3d prev_gravity = _rbdl_model->gravity;
 	_rbdl_model->gravity.setZero();
 	Vector6d acc6d = CalcPointAcceleration6D(*_rbdl_model, _q, _dq, VectorXd::Zero(_ddq.size()), linkIdRbdl(link_name), pos_in_link, true);
