@@ -10,6 +10,7 @@
 using namespace std;
 
 const string robot_fname = "resources/rprbot.urdf";
+const string humanoid_fname = "resources/toro.urdf";
 
 int main(int argc, char** argv) {
 	cout << "Loading robot file: " << robot_fname << endl;
@@ -158,7 +159,8 @@ int main(int argc, char** argv) {
 	cout << endl;
 
 	// other tests
-	MatrixXd J_joint = robot->linkDependency(ee_link);
+	Sai2Model::Sai2Model* humanoid = new Sai2Model::Sai2Model(humanoid_fname);
+	MatrixXd J_joint = humanoid->linkDependency("ra_link6");
 	cout << "Partial task jacobian for joint dependency: \n" << J_joint << endl;
 
 	return 0;

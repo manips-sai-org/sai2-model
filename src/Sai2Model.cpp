@@ -1020,10 +1020,11 @@ void Sai2Model::Sai2Model::forwardDynamics(VectorXd& ddq, const VectorXd& tau) {
 }
 
 Vector6d Sai2Model::Sai2Model::JdotQdot(const string& link_name, const Vector3d& pos_in_link, const bool update_kinematics) {
+	Vector3d prev_gravity = _rbdl_model->gravity;
 	_rbdl_model->gravity.setZero();
 	Vector6d acc6d = CalcPointAcceleration6D(*_rbdl_model, _q, _dq, VectorXd::Zero(_ddq.size()), linkIdRbdl(link_name), pos_in_link, true);
 	acc6d.head(3).swap(acc6d.tail(3));
-	_rbdl_model->gravity = Vector3d(0, 0, -9.81);
+	_rbdl_model->gravity = prev_gravity;
 	updateKinematics();
 	return acc6d;
 }
@@ -1174,7 +1175,7 @@ VectorXd Sai2Model::modifiedNewtonEuler(const bool consider_gravity,
 		Vector3d zp = z_list[i];
 		tau(i - 1) = mom_i.dot(zp);
 
-		f[i] = f_i;
+		f[i] = f_i;	
 		mom[i] = mom_i;
 	}
 	return tau;

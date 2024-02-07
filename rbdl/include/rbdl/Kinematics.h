@@ -198,7 +198,7 @@ RBDL_DLLAPI void calcPointJacobianDotQdot6D(
     bool update_kinematics);
 
 /**
- * @brief Computes the task matrix of the 
+ * @brief Computes the task jacobian associated with the joints for the link
  * 
  * @param model 
  * @param body_id 
@@ -208,7 +208,7 @@ RBDL_DLLAPI void calcPointJacobianDotQdot6D(
 RBDL_DLLAPI void calcLinkDependency (
     Model &model,
     unsigned int body_id,
-    Math::MatrixNd& J);
+    Math::MatrixNd &J);
 
 /** \brief Computes the spatial jacobian for a body
  *
