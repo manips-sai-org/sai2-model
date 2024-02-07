@@ -762,6 +762,12 @@ public:
 	void displayJoints();
 	void displayLinks();
 	
+	/**
+	 * @brief Computes the joint selection matrix for the joints leading up to the link
+	 * 
+	 * @param link_name 
+	 * @return MatrixXd 
+	 */
 	MatrixXd linkDependency(const std::string& link_name);
 
 	/**
@@ -771,8 +777,12 @@ public:
 	void forwardDynamics(VectorXd& ddq, const VectorXd& tau);
 
 	/**
-	 * @brief   Computes the time derivative of the full jacobian 
+	 * @brief Computes \dot{J}\dot{q} 
 	 * 
+	 * @param link_name 
+	 * @param pos_in_link 
+	 * @param update_kinematics 
+	 * @return Vector6d 
 	 */
 	Vector6d JdotQdot(const string& link_name, const Vector3d& pos_in_link, const bool update_kinematics = false);
 
