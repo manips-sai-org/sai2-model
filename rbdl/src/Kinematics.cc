@@ -378,18 +378,6 @@ RBDL_DLLAPI void CalcPointJacobian6D (
   }
 }
 
-RBDL_DLLAPI void calcPointJacobianDotQdot6D (
-    Model& model, 
-    const VectorNd& Q, 
-    const VectorNd& QDot, 
-    unsigned int body_id,
-    const Vector3d &point_position, 
-    VectorNd& G, 
-    bool update_kinematics) 
-{
-  G = CalcPointAcceleration6D(model, Q, QDot, VectorNd::Zero(Q.size()), body_id, point_position, update_kinematics);
-}
-
 RBDL_DLLAPI void calcLinkDependency (
     Model &model,
     unsigned int body_id,

@@ -159,9 +159,22 @@ int main(int argc, char** argv) {
 	cout << endl;
 
 	// other tests
+	robot->setQ(VectorXd::Random(robot->dof()));
+	robot->setDq(VectorXd::Random(robot->dof()));
+	robot->updateModel();
+	MatrixXd J_joint = robot->linkDependency(ee_link);
+	cout << "Robot partial task jacobian for joint dependency: \n" << J_joint << endl;
+	auto JdotQdot = robot->jDotQDot(ee_link, ee_pos_in_link);
+	cout << "Robot Jdotqdot: " << JdotQdot.transpose() << "\n";
+
 	Sai2Model::Sai2Model* humanoid = new Sai2Model::Sai2Model(humanoid_fname);
-	MatrixXd J_joint = humanoid->linkDependency("ra_link6");
-	cout << "Partial task jacobian for joint dependency: \n" << J_joint << endl;
+	humanoid->setQ(VectorXd::Random(humanoid->dof()));
+	humanoid->setDq(VectorXd::Random(humanoid->dof()));
+	humanoid->updateModel();
+	J_joint = humanoid->linkDependency("ra_link6");
+	cout << "Humanoid partial task jacobian for joint dependency: \n" << J_joint << endl;
+	JdotQdot = humanoid->jDotQDot("ra_link6");
+	cout << "Humanoid Jdotqdot: " << JdotQdot.transpose() << "\n";	
 
 	return 0;
 }
