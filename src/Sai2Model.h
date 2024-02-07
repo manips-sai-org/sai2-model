@@ -878,9 +878,6 @@ private:
 MatrixXd matrixRangeBasis(const MatrixXd& matrix,
 						  const double& tolerance = 1e-3);
 
-MatrixXd matrixNullRangeBasis(const MatrixXd& matrix,
-							  const double& tolerance = 1e-3);
-
 /**
  * @brief Computes the svd data for a matrix
  * 

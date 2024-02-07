@@ -1211,36 +1211,6 @@ MatrixXd matrixRangeBasis(const MatrixXd& matrix, const double& tolerance) {
 	}
 }
 
-MatrixXd matrixNullRangeBasis(const MatrixXd& matrix, const double& tolerance) {
-	const int range_size = matrix.rows();
-	if(matrix.norm() < tolerance) {
-		return MatrixXd::Identity(range_size, range_size);
-	}
-
-	JacobiSVD<MatrixXd> svd(matrix, ComputeThinU | ComputeThinV);
-
-	double sigma_0 = svd.singularValues()(0);
-	if (sigma_0 < tolerance) {
-		return MatrixXd::Identity(range_size, range_size);
-	}
-
-	const int max_range = min(matrix.rows(), matrix.cols());
-	int task_dof = max_range;
-	for (int i = svd.singularValues().size() - 1; i > 0; i--) {
-		if (svd.singularValues()(i) / sigma_0 < tolerance) {
-			task_dof -= 1;
-		} else {
-			break;
-		}
-	}
-
-	if (task_dof == matrix.rows()) {
-		return MatrixXd::Zero(max_range, max_range);
-	} else {
-		return svd.matrixU().rightCols(max_range - task_dof);
-	}
-}
-
 SvdData matrixSvd(const MatrixXd& matrix) {
 	JacobiSVD<MatrixXd> svd(matrix, ComputeThinU | ComputeThinV);
 	return SvdData{svd.matrixU(), svd.singularValues(), svd.matrixV()};
