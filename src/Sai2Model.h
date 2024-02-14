@@ -784,9 +784,35 @@ public:
 	 * @param update_kinematics 
 	 * @return Vector6d 
 	 */
-	Vector6d jDotQDot(const string& link_name, 
+	Vector6d jDotQDot(const std::string& link_name, 
 					  const Vector3d& pos_in_link = Vector3d::Zero(), 
 					  const bool update_kinematics = false);
+
+	/**
+	 * @brief Add load to link 
+	 * 
+	 * @param link_name 
+	 * @param mass 
+	 * @param com 
+	 * @param inertia 
+	 * @param body_name 
+	 */
+	void addLoad(const std::string link_name,
+				 const double mass, 
+				 const Vector3d& com,
+				 const Matrix3d& inertia,
+				 const std::string body_name = "");
+
+	/**
+	 * @brief Remove load with body name 
+	 * 
+	 * @param body_name 
+	 */
+	void removeLoad(const std::string link_name,
+				    const double mass, 
+				    const Vector3d& com,
+				    const Matrix3d& inertia,
+				    const std::string body_name = "");
 
 private:
 	/**
