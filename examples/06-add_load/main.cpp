@@ -113,6 +113,9 @@ int main(int argc, char** argv) {
 	robot->addLoad(ee_link, mass, com, inertia, "load");
 	robot->removeLoad(ee_link, mass, com, inertia, "load");
 
+	// test removing load with an invalid name
+	robot->removeLoad(ee_link, mass, com, inertia, "invalid_name");
+
 	std::cout << "All tests passed\n";
 
 	return 0;
