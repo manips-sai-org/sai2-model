@@ -1067,9 +1067,13 @@ void Sai2Model::Sai2Model::removeLoad(const std::string link_name,
 	RigidBodyDynamics::Math::SpatialTransform joint_frame = RigidBodyDynamics::Math::SpatialTransform(Matrix3d::Identity(), Vector3d(0, 0, 0));
 	RigidBodyDynamics::Joint joint = RigidBodyDynamics::Joint(RigidBodyDynamics::JointTypeFixed);
 	RigidBodyDynamics::Body body = RigidBodyDynamics::Body(-mass, RigidBodyDynamics::Math::Vector3d(com), RigidBodyDynamics::Math::Matrix3d(-inertia));
-	_rbdl_model->mBodyNameMap.erase(body_name);
-	_rbdl_model->AddBody(linkIdRbdl(link_name), joint_frame, joint, body, body_name);
-	_rbdl_model->mBodyNameMap.erase(body_name);
+	if (_rbdl_model->mBodyNameMap.find(body_name) != _rbdl_model->mBodyNameMap.end()) {
+		_rbdl_model->mBodyNameMap.erase(body_name);
+		_rbdl_model->AddBody(linkIdRbdl(link_name), joint_frame, joint, body, body_name);
+		_rbdl_model->mBodyNameMap.erase(body_name);
+	} else {
+		cout << "Body name " + body_name + " not found; not removing load\n";
+	}
 }
 
 void Sai2Model::Sai2Model::displayJoints() {
