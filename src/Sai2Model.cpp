@@ -1029,6 +1029,30 @@ Vector6d Sai2Model::Sai2Model::jDotQDot(const string& link_name, const Vector3d&
 	return acc6d;
 }
 
+void Sai2Model::Sai2Model::addLoad(const std::string link_name,
+								   const double mass,
+								   const Vector3d& com,
+								   const Matrix3d& inertia,
+								   const std::string body_name) {
+	RigidBodyDynamics::Math::SpatialTransform joint_frame = RigidBodyDynamics::Math::SpatialTransform(Matrix3d::Identity(), Vector3d(0, 0, 0));
+	RigidBodyDynamics::Joint joint = RigidBodyDynamics::Joint(RigidBodyDynamics::JointTypeFixed);
+	RigidBodyDynamics::Body body = RigidBodyDynamics::Body(mass, RigidBodyDynamics::Math::Vector3d(com), RigidBodyDynamics::Math::Matrix3d(inertia));
+	_rbdl_model->AddBody(linkIdRbdl(link_name), joint_frame, joint, body, body_name);
+}
+
+void Sai2Model::Sai2Model::removeLoad(const std::string link_name,
+									  const double mass,
+									  const Vector3d& com,
+									  const Matrix3d& inertia,
+								      const std::string body_name) {
+	RigidBodyDynamics::Math::SpatialTransform joint_frame = RigidBodyDynamics::Math::SpatialTransform(Matrix3d::Identity(), Vector3d(0, 0, 0));
+	RigidBodyDynamics::Joint joint = RigidBodyDynamics::Joint(RigidBodyDynamics::JointTypeFixed);
+	RigidBodyDynamics::Body body = RigidBodyDynamics::Body(-mass, RigidBodyDynamics::Math::Vector3d(com), RigidBodyDynamics::Math::Matrix3d(-inertia));
+	_rbdl_model->mBodyNameMap.erase(body_name);
+	_rbdl_model->AddBody(linkIdRbdl(link_name), joint_frame, joint, body, body_name);
+	_rbdl_model->mBodyNameMap.erase(body_name);
+}
+
 void Sai2Model::Sai2Model::displayJoints() {
 	cout << "\nRobot Joints :" << endl;
 	for (map<string, int>::iterator it = _joint_names_to_id_map.begin();
