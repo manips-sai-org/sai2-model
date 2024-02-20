@@ -1015,8 +1015,10 @@ GraspMatrixData Sai2Model::environmentalGraspMatrixAtGeometricCenter(
 	return G_data;
 }
 
-void Sai2Model::Sai2Model::forwardDynamics(VectorXd& ddq, const VectorXd& tau) {
+VectorXd Sai2Model::Sai2Model::forwardDynamics(const VectorXd& tau) {
+	VectorXd ddq(_dof);
 	ForwardDynamics(*_rbdl_model, _q, _dq, tau, ddq);
+	return ddq;
 }
 
 Vector6d Sai2Model::Sai2Model::jDotQDot(const string& link_name, const Vector3d& pos_in_link, const bool update_kinematics) {
@@ -1027,34 +1029,6 @@ Vector6d Sai2Model::Sai2Model::jDotQDot(const string& link_name, const Vector3d&
 	_rbdl_model->gravity = prev_gravity;
 	updateKinematics();
 	return acc6d;
-}
-
-void Sai2Model::Sai2Model::addLoad(const std::string link_name,
-								   const double mass,
-								   const Vector3d& com,
-								   const Matrix3d& inertia,
-								   const std::string body_name) {
-	RigidBodyDynamics::Math::SpatialTransform joint_frame = RigidBodyDynamics::Math::SpatialTransform(Matrix3d::Identity(), Vector3d(0, 0, 0));
-	RigidBodyDynamics::Joint joint = RigidBodyDynamics::Joint(RigidBodyDynamics::JointTypeFixed);
-	RigidBodyDynamics::Body body = RigidBodyDynamics::Body(mass, RigidBodyDynamics::Math::Vector3d(com), RigidBodyDynamics::Math::Matrix3d(inertia));
-	_rbdl_model->AddBody(linkIdRbdl(link_name), joint_frame, joint, body, body_name);
-}
-
-void Sai2Model::Sai2Model::removeLoad(const std::string link_name,
-									  const double mass,
-									  const Vector3d& com,
-									  const Matrix3d& inertia,
-								      const std::string body_name) {
-	RigidBodyDynamics::Math::SpatialTransform joint_frame = RigidBodyDynamics::Math::SpatialTransform(Matrix3d::Identity(), Vector3d(0, 0, 0));
-	RigidBodyDynamics::Joint joint = RigidBodyDynamics::Joint(RigidBodyDynamics::JointTypeFixed);
-	RigidBodyDynamics::Body body = RigidBodyDynamics::Body(-mass, RigidBodyDynamics::Math::Vector3d(com), RigidBodyDynamics::Math::Matrix3d(-inertia));
-	if (_rbdl_model->mBodyNameMap.find(body_name) != _rbdl_model->mBodyNameMap.end()) {
-		_rbdl_model->mBodyNameMap.erase(body_name);
-		_rbdl_model->AddBody(linkIdRbdl(link_name), joint_frame, joint, body, body_name);
-		_rbdl_model->mBodyNameMap.erase(body_name);
-	} else {
-		cout << "Body name " + body_name + " not found; not removing load\n";
-	}
 }
 
 void Sai2Model::Sai2Model::displayJoints() {
@@ -1203,7 +1177,7 @@ VectorXd Sai2Model::modifiedNewtonEuler(const bool consider_gravity,
 		Vector3d zp = z_list[i];
 		tau(i - 1) = mom_i.dot(zp);
 
-		f[i] = f_i;	
+		f[i] = f_i;
 		mom[i] = mom_i;
 	}
 	return tau;

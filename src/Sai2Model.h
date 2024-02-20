@@ -92,7 +92,7 @@ struct SphericalJointDescription {
 struct SvdData {
 	Eigen::MatrixXd U;
 	Eigen::VectorXd s;
-	Eigen::MatrixXd V;
+	Eigen::MatrixXd Vt;
 };
 
 enum ContactType { PointContact, SurfaceContact };
@@ -735,54 +735,30 @@ public:
 	/**
 	 * @brief Computes the joint selection matrix for the joints leading up to the link
 	 * 
-	 * @param link_name 
-	 * @return MatrixXd 
+	 * @param link_name 	link of robot to compute the joint selection matrix
+	 * @return MatrixXd 	joint selection matrix
 	 */
 	MatrixXd linkDependency(const std::string& link_name);
 
 	/**
-	 * @brief   Computes ABA
+	 * @brief Computes the joint accelerations given an applied torque 
 	 * 
+	 * @param tau 			applied torques
+	 * @return VectorXd		resulting joint accelerations from tau
 	 */
-	void forwardDynamics(VectorXd& ddq, const VectorXd& tau);
+	VectorXd forwardDynamics(const VectorXd& tau);
 
 	/**
 	 * @brief Computes \dot{J}\dot{q} 
 	 * 
-	 * @param link_name 
-	 * @param pos_in_link 
-	 * @param update_kinematics 
-	 * @return Vector6d 
+	 * @param link_name 			link of robot to compute \dot{J}\dot{q}
+	 * @param pos_in_link 			position in link 
+	 * @param update_kinematics 	if kinematics needs to be updated
+	 * @return Vector6d 			\dot{J}\dot{q} vector 
 	 */
 	Vector6d jDotQDot(const std::string& link_name, 
 					  const Vector3d& pos_in_link = Vector3d::Zero(), 
 					  const bool update_kinematics = false);
-
-	/**
-	 * @brief Add load to link 
-	 * 
-	 * @param link_name 
-	 * @param mass 
-	 * @param com 
-	 * @param inertia 
-	 * @param body_name 
-	 */
-	void addLoad(const std::string link_name,
-				 const double mass, 
-				 const Vector3d& com,
-				 const Matrix3d& inertia,
-				 const std::string body_name = "");
-
-	/**
-	 * @brief Remove load with body name 
-	 * 
-	 * @param body_name 
-	 */
-	void removeLoad(const std::string link_name,
-				    const double mass, 
-				    const Vector3d& com,
-				    const Matrix3d& inertia,
-				    const std::string body_name = "");
 
 private:
 	/**
@@ -907,10 +883,12 @@ MatrixXd matrixRangeBasis(const MatrixXd& matrix,
 						  const double& tolerance = 1e-3);
 
 /**
- * @brief Computes the svd data for a matrix
+ * @brief Computes the thin svd data for a matrix. Given an n-by-p matrix A, then
+ * 	letting m = min(n, p), U is an n-by-m matrix, S is a vector of size m, and
+ *  Vt is a p-by-m matrix, and thus A = U * S.asDiagonal() * Vt.transpose()
  * 
  * @param matrix 	the input matrix
- * @return SvdData 	data structure containing U, S, and Vs
+ * @return SvdData 	data structure containing U, S, and Vt
  */
 SvdData matrixSvd(const MatrixXd& matrix);
 

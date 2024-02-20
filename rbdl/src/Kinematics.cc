@@ -388,6 +388,9 @@ RBDL_DLLAPI void calcLinkDependency (
 
   while (j != 0) {
     unsigned int q_index = model.mJoints[j].q_index;
+    if (model.mJoints[j].mJointType == JointTypeSpherical) {
+      throw std::runtime_error("Can't compute link dependency with spherical joint");
+    }
     active_joints.push_back(q_index);
     j = model.lambda[j];
   }

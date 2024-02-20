@@ -10,7 +10,7 @@
 using namespace std;
 
 const string robot_fname = "resources/rprbot.urdf";
-const string humanoid_fname = "resources/toro.urdf";
+const string rppbot_robot_fname = "resources/rppbot.urdf";
 
 int main(int argc, char** argv) {
 	cout << "Loading robot file: " << robot_fname << endl;
@@ -158,23 +158,15 @@ int main(int argc, char** argv) {
 	cout << "joint gravity : " << gravity.transpose() << endl;
 	cout << endl;
 
-	// other tests
-	robot->setQ(VectorXd::Random(robot->dof()));
-	robot->setDq(VectorXd::Random(robot->dof()));
-	robot->updateModel();
-	MatrixXd J_joint = robot->linkDependency(ee_link);
-	cout << "Robot partial task jacobian for joint dependency: \n" << J_joint << endl;
-	auto JdotQdot = robot->jDotQDot(ee_link, ee_pos_in_link);
-	cout << "Robot Jdotqdot: " << JdotQdot.transpose() << "\n";
-
-	Sai2Model::Sai2Model* humanoid = new Sai2Model::Sai2Model(humanoid_fname);
-	humanoid->setQ(VectorXd::Random(humanoid->dof()));
-	humanoid->setDq(VectorXd::Random(humanoid->dof()));
-	humanoid->updateModel();
-	J_joint = humanoid->linkDependency("ra_link6");
-	cout << "Humanoid partial task jacobian for joint dependency: \n" << J_joint << endl;
-	JdotQdot = humanoid->jDotQDot("ra_link6");
-	cout << "Humanoid Jdotqdot: " << JdotQdot.transpose() << "\n";	
+	// test jdotqdot and link dependency 
+	Sai2Model::Sai2Model* parallel_robot = new Sai2Model::Sai2Model(rppbot_robot_fname);
+	parallel_robot->setQ(VectorXd::Random(parallel_robot->dof()));
+	parallel_robot->setDq(VectorXd::Random(parallel_robot->dof()));
+	parallel_robot->updateModel();
+	MatrixXd J_joint = parallel_robot->linkDependency(ee_link);
+	cout << "Parallel robot partial task jacobian for joint dependency: \n" << J_joint << endl;
+	auto JdotQdot = parallel_robot->jDotQDot(ee_link, ee_pos_in_link);
+	cout << "Parallel robot jdotqdot: \n" << JdotQdot.transpose() << "\n";
 
 	return 0;
 }
