@@ -1155,7 +1155,7 @@ TEST_F(Sai2ModelTest, MatrixRange) {
 
 TEST_F(Sai2ModelTest, LinkDependency) {
 	MatrixXd J = model_rrpbot->linkDependency("link1");
-	MatrixXd J_expected = MatrixXd::Zero(3, 3);
+	MatrixXd J_expected = MatrixXd::Zero(2, 3);
 	J_expected(0, 0) = 1;
 	J_expected(1, 1) = 1;
 	EXPECT_TRUE(checkEigenMatricesEqual(J_expected, J));
