@@ -25,10 +25,11 @@ struct LinkMassParams {
 	double mass;
 	Vector3d com_pos;
 	Matrix3d inertia;
+	std::string link_name;
 
 	LinkMassParams(const double& mass, const Vector3d& com_pos,
-				   const Matrix3d& inertia)
-		: mass(mass), com_pos(com_pos), inertia(inertia) {}
+				   const Matrix3d& inertia, const std::string& link_name)
+		: mass(mass), com_pos(com_pos), inertia(inertia), link_name(link_name) {}
 };
 
 struct OpSpaceMatrices {
@@ -726,6 +727,29 @@ public:
 	void displayJoints();
 	void displayLinks();
 
+	/**
+	 * @brief Add load to link. This is done by adding a fixed link with load 
+	 * parameters to the existing link.
+	 * 
+	 * @param link_name 	link to add load
+	 * @param mass 			load mass
+	 * @param com_pos 		load com measured about the parent joint frame
+	 * @param inertia 		load inertia measured about the parent joint frame 
+	 * @param body_name 	unique body name for identifier
+	 */
+	void addLoad(const std::string& link_name,
+				 const double& mass, 
+				 const Vector3d& com_pos,
+				 const Matrix3d& inertia,
+				 const std::string& body_name);
+
+	/**
+	 * @brief Remove load with body name through internal map.
+	 * 
+	 * @param body_name 	unique body name for identifier 
+	 */
+	void removeLoad(const std::string body_name);
+
 private:
 	/**
 	 * @brief      update the dynamics (mass matrix and its inverse) for the
@@ -832,6 +856,9 @@ private:
 
 	/// \brief joint limits for positions, velocity and torque, parsed from URDF
 	vector<JointLimit> _joint_limits;
+
+	/// \brief map for load tracking 
+	map<string, LinkMassParams> _load_names_to_load_mass_map;
 };
 
 /**
