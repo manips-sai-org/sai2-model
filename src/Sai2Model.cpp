@@ -170,6 +170,36 @@ void Sai2Model::setDdq(const Eigen::VectorXd& ddq) {
 	_ddq = ddq;
 }
 
+VectorXd Sai2Model::jointLimitsPositionLower() const {
+	VectorXd lower_limits =
+		-numeric_limits<double>::max() * VectorXd::Ones(_q_size);
+	for (const auto& joint_limit : _joint_limits) {
+		lower_limits(joint_limit.joint_index) = joint_limit.position_lower;
+	}
+	for (const auto& joint : _spherical_joints) {
+		lower_limits(joint.index) = -1.0;
+		lower_limits(joint.index + 1) = -1.0;
+		lower_limits(joint.index + 2) = -1.0;
+		lower_limits(joint.w_index) = -1.0;
+	}
+	return lower_limits;
+}
+
+VectorXd Sai2Model::jointLimitsPositionUpper() const {
+	VectorXd upper_limits =
+		numeric_limits<double>::max() * VectorXd::Ones(_q_size);
+	for (const auto& joint_limit : _joint_limits) {
+		upper_limits(joint_limit.joint_index) = joint_limit.position_upper;
+	}
+	for (const auto& joint : _spherical_joints) {
+		upper_limits(joint.index) = 1.0;
+		upper_limits(joint.index + 1) = 1.0;
+		upper_limits(joint.index + 2) = 1.0;
+		upper_limits(joint.w_index) = 1.0;
+	}
+	return upper_limits;
+}
+
 const Eigen::Quaterniond Sai2Model::sphericalQuat(
 	const std::string& joint_name) const {
 	for (auto joint : _spherical_joints) {
