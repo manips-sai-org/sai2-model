@@ -173,6 +173,12 @@ public:
 	// getter for the joint limits
 	const std::vector<JointLimit>& jointLimits() const { return _joint_limits; }
 
+	// returns the lower and upper position limits as a vector of size q_size
+	// for continuous joints, the limits are set to +/- numeric_limits<double>::max()
+	// for spherical joints, the limits of all the corresponding quaternion coefficients are set to +/- 1
+	VectorXd jointLimitsPositionLower() const;
+	VectorXd jointLimitsPositionUpper() const;
+
 	// getter for the spherical joints
 	const std::vector<SphericalJointDescription>& sphericalJoints() const {
 		return _spherical_joints;
