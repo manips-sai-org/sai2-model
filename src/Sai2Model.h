@@ -89,6 +89,12 @@ struct SphericalJointDescription {
 		: name(name), index(index), w_index(w_index) {}
 };
 
+struct SvdData {
+	Eigen::MatrixXd U;
+	Eigen::VectorXd s;
+	Eigen::MatrixXd Vt;
+};
+
 enum ContactType { PointContact, SurfaceContact };
 
 class ContactModel {
@@ -731,6 +737,34 @@ public:
 	 */
 	void displayJoints();
 	void displayLinks();
+	
+	/**
+	 * @brief Computes the joint selection matrix for the joints leading up to the link
+	 * 
+	 * @param link_name 	link of robot to compute the joint selection matrix
+	 * @return MatrixXd 	joint selection matrix
+	 */
+	MatrixXd linkDependency(const std::string& link_name);
+
+	/**
+	 * @brief Computes the joint accelerations given an applied torque 
+	 * 
+	 * @param tau 			applied torques
+	 * @return VectorXd		resulting joint accelerations from tau
+	 */
+	VectorXd forwardDynamics(const VectorXd& tau);
+
+	/**
+	 * @brief Computes \dot{J}\dot{q} 
+	 * 
+	 * @param link_name 			link of robot to compute \dot{J}\dot{q}
+	 * @param pos_in_link 			position in link 
+	 * @param update_kinematics 	if kinematics needs to be updated
+	 * @return Vector6d 			\dot{J}\dot{q} vector 
+	 */
+	Vector6d jDotQDot(const std::string& link_name, 
+					  const Vector3d& pos_in_link = Vector3d::Zero(), 
+					  const bool update_kinematics = false);
 
 private:
 	/**
@@ -853,6 +887,16 @@ private:
  */
 MatrixXd matrixRangeBasis(const MatrixXd& matrix,
 						  const double& tolerance = 1e-3);
+
+/**
+ * @brief Computes the thin svd data for a matrix. Given an n-by-p matrix A, then
+ * 	letting m = min(n, p), U is an n-by-m matrix, S is a vector of size m, and
+ *  Vt is a p-by-m matrix, and thus A = U * S.asDiagonal() * Vt.transpose()
+ * 
+ * @param matrix 	the input matrix
+ * @return SvdData 	data structure containing U, S, and Vt
+ */
+SvdData matrixSvd(const MatrixXd& matrix);
 
 /**
  * @brief      Gives orientation error from rotation matrices

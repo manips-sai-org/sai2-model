@@ -1153,6 +1153,14 @@ TEST_F(Sai2ModelTest, MatrixRange) {
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_Range, JRange));
 }
 
+TEST_F(Sai2ModelTest, LinkDependency) {
+	MatrixXd J = model_rrpbot->linkDependency("link1");
+	MatrixXd J_expected = MatrixXd::Zero(2, 3);
+	J_expected(0, 0) = 1;
+	J_expected(1, 1) = 1;
+	EXPECT_TRUE(checkEigenMatricesEqual(J_expected, J));
+}
+
 TEST_F(Sai2ModelTest, OrientationError) {
 	Vector3d delta_phi = Vector3d::Zero();
 	Vector3d expected_delta_phi = Vector3d::Zero();

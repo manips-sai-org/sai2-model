@@ -1045,6 +1045,22 @@ GraspMatrixData Sai2Model::environmentalGraspMatrixAtGeometricCenter(
 	return G_data;
 }
 
+VectorXd Sai2Model::Sai2Model::forwardDynamics(const VectorXd& tau) {
+	VectorXd ddq(_dof);
+	ForwardDynamics(*_rbdl_model, _q, _dq, tau, ddq);
+	return ddq;
+}
+
+Vector6d Sai2Model::Sai2Model::jDotQDot(const string& link_name, const Vector3d& pos_in_link, const bool update_kinematics) {
+	Vector3d prev_gravity = _rbdl_model->gravity;
+	_rbdl_model->gravity.setZero();
+	Vector6d acc6d = CalcPointAcceleration6D(*_rbdl_model, _q, _dq, VectorXd::Zero(_ddq.size()), linkIdRbdl(link_name), pos_in_link, true);
+	acc6d.head(3).swap(acc6d.tail(3));
+	_rbdl_model->gravity = prev_gravity;
+	updateKinematics();
+	return acc6d;
+}
+
 void Sai2Model::Sai2Model::displayJoints() {
 	cout << "\nRobot Joints :" << endl;
 	for (map<string, int>::iterator it = _joint_names_to_id_map.begin();
@@ -1061,6 +1077,12 @@ void Sai2Model::displayLinks() {
 		cout << "link : " << it->first << "\t id : " << it->second << endl;
 	}
 	cout << endl;
+}
+
+MatrixXd Sai2Model::linkDependency(const std::string& link_name) {
+	MatrixXd J;
+	calcLinkDependency(*_rbdl_model, linkIdRbdl(link_name), J);
+	return J;
 }
 
 void Sai2Model::updateDynamics() {
@@ -1219,6 +1241,11 @@ MatrixXd matrixRangeBasis(const MatrixXd& matrix, const double& tolerance) {
 	} else {
 		return svd.matrixU().leftCols(task_dof);
 	}
+}
+
+SvdData matrixSvd(const MatrixXd& matrix) {
+	JacobiSVD<MatrixXd> svd(matrix, ComputeThinU | ComputeThinV);
+	return SvdData{svd.matrixU(), svd.singularValues(), svd.matrixV()};
 }
 
 Vector3d orientationError(const Matrix3d& desired_orientation,
