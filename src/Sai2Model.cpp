@@ -707,17 +707,7 @@ MatrixXd Sai2Model::taskInertiaMatrixWithPseudoInv(
 	MatrixXd inv_inertia = task_jacobian * _M_inv * task_jacobian.transpose();
 
 	// compute SVD pseudoinverse
-	// TODO: make class function?
-	JacobiSVD<MatrixXd> svd(inv_inertia, ComputeThinU | ComputeThinV);
-	const double epsilon = numeric_limits<double>::epsilon();
-	double tolerance = epsilon * max(inv_inertia.cols(), inv_inertia.rows()) *
-					   svd.singularValues().array().abs()(0);
-	return svd.matrixV() *
-		   (svd.singularValues().array().abs() > tolerance)
-			   .select(svd.singularValues().array().inverse(), 0)
-			   .matrix()
-			   .asDiagonal() *
-		   svd.matrixU().adjoint();
+	return computePseudoInverse(inv_inertia);
 }
 
 MatrixXd Sai2Model::dynConsistentInverseJacobian(
@@ -1189,6 +1179,16 @@ VectorXd Sai2Model::modifiedNewtonEuler(const bool consider_gravity,
 		mom[i] = mom_i;
 	}
 	return tau;
+}
+
+MatrixXd computePseudoInverse(const MatrixXd& matrix, const double& tolerance) {
+	JacobiSVD<MatrixXd> svd(matrix, ComputeThinU | ComputeThinV);
+	return svd.matrixV() *
+		   (svd.singularValues().array().abs() > tolerance)
+			   .select(svd.singularValues().array().inverse(), 0)
+			   .matrix()
+			   .asDiagonal() *
+		   svd.matrixU().adjoint();
 }
 
 MatrixXd matrixRangeBasis(const MatrixXd& matrix, const double& tolerance) {
