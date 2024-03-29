@@ -55,10 +55,11 @@ Sai2Model::Sai2Model(const string path_to_model_file, bool verbose) {
 	_rbdl_model = new RigidBodyDynamics::Model();
 
 	// parse rbdl model from urdf
+	map<int, double> initial_joint_positions;
 	bool success = RigidBodyDynamics::URDFReadFromFile(
 		path_to_model_file.c_str(), _rbdl_model, _link_names_to_id_map,
-		_joint_names_to_id_map, _joint_names_to_child_link_names_map,
-		_joint_limits, false, verbose);
+		_joint_names_to_id_map, initial_joint_positions,
+		_joint_names_to_child_link_names_map, _joint_limits, false, verbose);
 	if (!success) {
 		throw std::runtime_error("Error loading model [" + path_to_model_file +
 								 "]\n");
@@ -109,6 +110,9 @@ Sai2Model::Sai2Model(const string path_to_model_file, bool verbose) {
 
 	// Initialize state vectors
 	_q.setZero(_q_size);
+	for(const auto& pair : initial_joint_positions) {
+		_q(pair.first) = pair.second;
+	}
 	// special case handle spherical joints. See rbdl/Joint class for details.
 	for (uint i = 0; i < _rbdl_model->mJoints.size(); ++i) {
 		if (_rbdl_model->mJoints[i].mJointType ==

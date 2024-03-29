@@ -1,4 +1,4 @@
-SET(EXAMPLE_NAME 01-create_model_from_file)
+SET(EXAMPLE_NAME 06-robot_arms)
 
 # create an executable
 ADD_EXECUTABLE (${EXAMPLE_NAME} main.cpp)

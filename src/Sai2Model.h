@@ -11,6 +11,7 @@
 #include <rbdl/rbdl.h>
 
 #include "JointLimits.h"
+#include "parser/Sai2ModelParserUtils.h"
 
 using namespace std;
 using namespace Eigen;

@@ -6,9 +6,9 @@
 
 using namespace std;
 
-const string robot_fname = "resources/rpspbot.urdf";
-
 int main(int argc, char** argv) {
+	const string robot_fname =
+		string(EXAMPLES_FOLDER) + "/04-joint_limits/rpspbot.urdf";
 	cout << "Loading robot file: " << robot_fname << endl;
 
 	auto robot = std::make_shared<Sai2Model::Sai2Model>(robot_fname);

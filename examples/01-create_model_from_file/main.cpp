@@ -7,9 +7,9 @@
 
 using namespace std;
 
-const string robot_fname = "resources/pbot.urdf";
-
 int main(int argc, char** argv) {
+	const string robot_fname =
+		string(EXAMPLES_FOLDER) + "/01-create_model_from_file/pbot.urdf";
 	cout << "Loading robot file: " << robot_fname << endl;
 
 	Sai2Model::Sai2Model robot(robot_fname, true);

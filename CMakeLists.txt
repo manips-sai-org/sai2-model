@@ -36,7 +36,8 @@ find_package(SAI2-URDF REQUIRED)
 
 # include Parser
 set(PARSER_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/src/parser)
-set(PARSER_SOURCE ${PROJECT_SOURCE_DIR}/src/parser/UrdfToSai2Model.cpp)
+set(PARSER_SOURCE ${PROJECT_SOURCE_DIR}/src/parser/UrdfToSai2Model.cpp
+                  ${PROJECT_SOURCE_DIR}/src/parser/Sai2ModelParserUtils.cpp)
 
 # include Model
 set(SAI2-MODEL_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/src)
@@ -60,6 +61,17 @@ find_library(
   PATHS ${RBDL_LOCAL_DIR}/build
   NO_DEFAULT_PATH)
 set(SAI2-MODEL_LIBRARIES sai2-model ${RBDL_LIBRARIES})
+
+# set the urdf model folder
+set(URDF_MODELS_FOLDER ${PROJECT_SOURCE_DIR}/urdf_models)
+file(
+  WRITE ${CMAKE_CURRENT_BINARY_DIR}/../src/parser/Sai2Model_UrdfFolder.h
+  "#ifndef SAI2_MODEL_URDF_FOLDER_H_
+#define SAI2_MODEL_URDF_FOLDER_H_
+
+#define SAI2_MODEL_URDF_FOLDER \"${URDF_MODELS_FOLDER}\"
+
+#endif // SAI2_MODEL_URDF_FOLDER_H_")
 
 #
 # export package
