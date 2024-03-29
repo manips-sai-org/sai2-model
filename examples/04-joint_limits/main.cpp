@@ -6,7 +6,8 @@
 
 using namespace std;
 
-const string robot_fname = "resources/rpspbot.urdf";
+const string robot_fname =
+	string(EXAMPLES_FOLDER) + "/04-joint_limits/rpspbot.urdf";
 
 int main(int argc, char** argv) {
 	cout << "Loading robot file: " << robot_fname << endl;

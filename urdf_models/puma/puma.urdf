@@ -1,0 +1,159 @@
+<?xml version="1.0" ?>
+
+<robot name="Puma">
+
+	<link name="ground">
+		<inertial>
+			<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+			<mass value="0.001" />
+			<inertia ixx="0.01" iyy="0.01" izz="0.01" ixy="0" ixz="0" iyz="0" />
+		</inertial>
+		<visual>
+			<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+			<geometry>
+				<mesh filename="meshes/base_bl.obj" scale="1 1 1" />
+			</geometry>
+		</visual>
+	</link>
+
+	<link name="base">
+		<inertial>
+			<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+			<mass value="34.4" />
+			<inertia ixx="0.18" iyy="0.18" izz="0.35" ixy="0" ixz="0" iyz="0" />
+		</inertial>
+		<visual>
+			<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+			<geometry>
+				<mesh filename="meshes/shoulder_bl.obj" scale="1 1 1" />
+			</geometry>
+		</visual>
+	</link>
+
+	<link name="upper_arm">
+		<inertial>
+			<origin xyz="0.068 0.006 -0.016" rpy="0 0 0" />
+			<mass value="17.4" />
+			<inertia ixx="0.130" iyy="0.524" izz="0.539" ixy="0" ixz="0" iyz="0" />
+		</inertial>
+		<visual>
+			<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+			<geometry>
+				<mesh filename="meshes/upper_arm_bl.obj" scale="1 1 1" />
+			</geometry>
+		</visual>
+	</link>
+
+	<link name="lower_arm">
+		<inertial>
+			<origin xyz="0.0 -0.143 0.014" rpy="0 0 0" />
+			<mass value="6.04" />
+			<inertia ixx="0.066" iyy="0.0125" izz="0.086" ixy="0" ixz="0" iyz="0" />
+		</inertial>
+		<visual>
+			<origin xyz="-0.02 0.0 -0.005" rpy="0 0 0" />
+			<geometry>
+				<mesh filename="meshes/lower_arm_bl.obj" scale="1 1 1" />
+			</geometry>
+		</visual>
+	</link>
+
+	<link name="wrist-hand">
+		<inertial>
+			<origin xyz="0.0 0.0 -0.019" rpy="0 0 0" />
+			<mass value="0.82" />
+			<inertia ixx="0.0018" iyy="0.0018" izz="0.0013" ixy="0" ixz="0" iyz="0" />
+		</inertial>
+		<visual>
+			<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+			<geometry>
+				<mesh filename="meshes/hand_bl.obj" scale="1 1 1" />
+			</geometry>
+		</visual>
+	</link>
+
+	<link name="wrist-finger">
+		<inertial>
+			<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+			<mass value="0.34" />
+			<inertia ixx="0.0003" iyy="0.0003" izz="0.0004" ixy="0" ixz="0" iyz="0" />
+		</inertial>
+		<visual>
+			<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+			<geometry>
+				<mesh filename="meshes/finger_bl.obj" scale="1 1 1" />
+			</geometry>
+		</visual>
+	</link>
+
+	<link name="end-effector">
+		<inertial>
+			<origin xyz="0.0 0.0 0.032" rpy="0 0 0" />
+			<mass value="0.39" />
+			<inertia ixx="0.005" iyy="0.001" izz="0.005" ixy="0" ixz="0" iyz="0" />
+		</inertial>
+		<visual>
+			<origin xyz="0.0 0.0 0.0" rpy="1.5707 0 0" />
+			<geometry>
+                <cylinder radius="0.01" length="0.2" />
+            </geometry>
+            <material name="link5-1">
+                <color rgba="0.2 0.9 0.1 1.0" />
+            </material>
+		</visual>
+	</link>
+
+	<joint name="shoulder-yaw" type="revolute">
+		<parent link="ground" />
+		<child link="base" />
+		<origin xyz="0.0 0.0 0.66" rpy="0.0 0.0 0.0" />
+		<axis xyz="0 0 1" />
+		<calibration falling="90.0" />
+		<limit lower="-3.14159" upper="3.14159" effort="97.6" velocity="1.0" />
+	</joint>
+
+	<joint name="shoulder-pitch" type="revolute">
+		<parent link="base" />
+		<child link="upper_arm" />
+		<origin xyz="0.0 0.2435 0.0" rpy="-1.5707963268 0.0 0.0" />
+		<axis xyz="0 0 1" />
+		<calibration falling="30.0" />
+		<limit lower="-3.14159" upper="3.14159" effort="186.4" velocity="1.0" />
+	</joint>
+
+	<joint name="elbow" type="revolute">
+		<parent link="upper_arm" />
+		<child link="lower_arm" />
+		<origin xyz="0.4318 0.0 -0.0934" rpy="0.0 0.0 0.0" />
+		<axis xyz="0 0 1" />
+		<limit lower="-3.14159" upper="3.14159" effort="89.4" velocity="1.0" />
+	</joint>
+
+	<joint name="wrist-roll1" type="revolute">
+		<parent link="lower_arm" />
+		<child link="wrist-hand" />
+		<origin xyz="-0.0203 -0.4331 0.0" rpy="1.5707963268 0.0 0.0" />
+		<axis xyz="0 0 1" />
+		<calibration falling="-90.0" />
+		<limit lower="-3.14159" upper="3.14159" effort="24.2" velocity="1.0" />
+	</joint>
+
+	<joint name="wrist-pitch" type="revolute">
+		<parent link="wrist-hand" />
+		<child link="wrist-finger" />
+		<origin xyz="0.0 0.0 0.0" rpy="0 1.5707963268 -3.1415926536" />
+		<axis xyz="0 0 1" />
+		<calibration falling="-30.0" />
+		<limit lower="-3.14159" upper="3.14159" effort="20.1" velocity="1.0" />
+	</joint>
+
+	<joint name="wrist-roll2" type="revolute">
+		<parent link="wrist-finger" />
+		<child link="end-effector" />
+		<origin xyz="-0.07 0.0 0.0" rpy="1.5707 0.0 0.0" />
+		<axis xyz="1 0 0" />
+		<limit lower="-3.14159" upper="3.14159" effort="21.3" velocity="1.0" />
+	</joint>
+
+</robot>
+

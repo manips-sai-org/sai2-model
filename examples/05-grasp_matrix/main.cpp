@@ -9,7 +9,8 @@
 using namespace std;
 using namespace Eigen;
 
-const string robot_file = "resources/linkage.urdf";
+const string robot_file =
+	string(EXAMPLES_FOLDER) + "/05-grasp_matrix/linkage.urdf";
 
 int main() {
 	// load robot
