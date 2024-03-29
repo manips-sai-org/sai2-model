@@ -9,9 +9,10 @@
 
 using namespace std;
 
+const string robot_fname =
+	string(EXAMPLES_FOLDER) + "/02-update_model/rprbot.urdf";
+
 int main(int argc, char** argv) {
-	const string robot_fname =
-		string(EXAMPLES_FOLDER) + "/02-update_model/rprbot.urdf";
 	cout << "Loading robot file: " << robot_fname << endl;
 
 	Sai2Model::Sai2Model* robot = new Sai2Model::Sai2Model(robot_fname);

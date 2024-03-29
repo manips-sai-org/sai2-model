@@ -9,9 +9,10 @@
 using namespace std;
 using namespace Eigen;
 
+const string robot_file =
+	string(EXAMPLES_FOLDER) + "/05-grasp_matrix/linkage.urdf";
+
 int main() {
-	const string robot_file =
-		string(EXAMPLES_FOLDER) + "/05-grasp_matrix/linkage.urdf";
 	// load robot
 	auto linkage = std::make_shared<Sai2Model::Sai2Model>(robot_file);
 
