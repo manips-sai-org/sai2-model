@@ -3,7 +3,8 @@ name: Build master and upload artifact on a schedule
 on:
   schedule:
     - cron: "0 0 1 * *"
-      branches: [ "master" ]
+  push:
+    branches: [ "master" ]
   workflow_dispatch:
 
 jobs:
@@ -11,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout-repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: build-repo
         uses: ./.github/actions/build-repo

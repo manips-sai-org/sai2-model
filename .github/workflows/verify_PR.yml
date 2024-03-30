@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout-repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: build-repo
         uses: ./.github/actions/build-repo
