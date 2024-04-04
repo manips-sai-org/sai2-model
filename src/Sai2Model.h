@@ -92,7 +92,7 @@ struct SphericalJointDescription {
 struct SvdData {
 	Eigen::MatrixXd U;
 	Eigen::VectorXd s;
-	Eigen::MatrixXd Vt;
+	Eigen::MatrixXd V;
 };
 
 enum ContactType { PointContact, SurfaceContact };
@@ -888,7 +888,7 @@ MatrixXd matrixRangeBasis(const MatrixXd& matrix,
  *  Vt is a p-by-m matrix, and thus A = U * S.asDiagonal() * Vt.transpose()
  * 
  * @param matrix 	the input matrix
- * @return SvdData 	data structure containing U, S, and Vt
+ * @return SvdData 	data structure containing U, S, and V
  */
 SvdData matrixSvd(const MatrixXd& matrix);
 
