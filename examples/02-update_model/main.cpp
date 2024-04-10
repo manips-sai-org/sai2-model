@@ -9,9 +9,11 @@
 
 using namespace std;
 
-const string robot_fname = "resources/rprbot.urdf";
-const string rppbot_robot_fname = "resources/rppbot.urdf";
-
+const string robot_fname =
+	string(EXAMPLES_FOLDER) + "/02-update_model/rprbot.urdf";
+const string rppbot_robot_fname = 
+	string(EXAMPLES_FOLDER) + "/02-update_model/rprbot.urdf";
+	
 int main(int argc, char** argv) {
 	cout << "Loading robot file: " << robot_fname << endl;
 
@@ -20,12 +22,6 @@ int main(int argc, char** argv) {
 
 	const string ee_link = "link2";
 	const Eigen::Vector3d ee_pos_in_link = Eigen::Vector3d(0.0, 0.0, 1.0);
-
-	// Eigen::Vector3d position;
-	// Eigen::Vector3d velocity;
-	// Eigen::Matrix3d rotation;
-	// Eigen::MatrixXd J(6, dof);
-	// Eigen::VectorXd gravity(dof);
 
 	// position and orientation of the end effector
 	Eigen::Vector3d position = robot->position(ee_link, ee_pos_in_link);

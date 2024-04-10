@@ -10,7 +10,8 @@
 
 using namespace std;
 
-const string robot_fname = "resources/panda_arm.urdf";
+const string robot_fname =
+	string(EXAMPLES_FOLDER) + "/02-update_model/panda_arm.urdf";
 
 // Function to generate a sample vector with each component within specified ranges
 Eigen::VectorXd generatesample_vector(const Eigen::VectorXd& min_vals, const Eigen::VectorXd& max_vals) {

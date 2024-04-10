@@ -11,6 +11,7 @@
 #include <rbdl/rbdl.h>
 
 #include "JointLimits.h"
+#include "parser/Sai2ModelParserUtils.h"
 
 using namespace std;
 using namespace Eigen;
@@ -178,6 +179,13 @@ public:
 
 	// getter for the joint limits
 	const std::vector<JointLimit>& jointLimits() const { return _joint_limits; }
+
+	// returns the lower and upper position limits as a vector of size q_size
+	// for continuous joints, the limits are set to +/-
+	// numeric_limits<double>::max() for spherical joints, the limits of all the
+	// corresponding quaternion coefficients are set to +/- 1
+	VectorXd jointLimitsPositionLower() const;
+	VectorXd jointLimitsPositionUpper() const;
 
 	// getter for the spherical joints
 	const std::vector<SphericalJointDescription>& sphericalJoints() const {
@@ -869,6 +877,17 @@ private:
 };
 
 /**
+ * @brief Computes the pseudo inverse by computing the svd and setting the
+ * singular values lower than the tolerance to zero in the inverse
+ *
+ * @param matrix the input matrix
+ * @param tolerance the threshold to ignore singular values
+ * @return MatrixXd the pseudo inverse of the input matrix
+ */
+MatrixXd computePseudoInverse(const MatrixXd& matrix,
+							  const double& tolerance = 1e-6);
+
+/**
  * @brief Computes the range space of the input matrix where the singular
  * directions (directions with singular values lower than the tolerance) have
  * been removed. The returned matrix is a of size n x k where n in the number of
@@ -880,7 +899,7 @@ private:
  * @return a matrix whose columns form the base of the input matrix range space
  */
 MatrixXd matrixRangeBasis(const MatrixXd& matrix,
-						  const double& tolerance = 1e-3);
+						  const double& tolerance = 1e-6);
 
 /**
  * @brief Computes the thin svd data for a matrix. Given an n-by-p matrix A, then

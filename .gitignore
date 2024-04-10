@@ -35,6 +35,6 @@
 build/
 
 # DS store file
-*.DS_Store
+**/.DS_Store
 
-.vscode/
+src/parser/Sai2Model_UrdfFolder.h

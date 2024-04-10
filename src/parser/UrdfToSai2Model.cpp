@@ -10,6 +10,8 @@
 #include <map>
 #include <stack>
 
+#include "Sai2ModelParserUtils.h"
+
 typedef my_shared_ptr<Sai2Urdfreader::Link> LinkPtr;
 typedef const my_shared_ptr<const Sai2Urdfreader::Link> ConstLinkPtr;
 typedef my_shared_ptr<Sai2Urdfreader::Joint> JointPtr;
@@ -17,6 +19,9 @@ typedef my_shared_ptr<Sai2Urdfreader::ModelInterface> ModelPtr;
 
 using namespace std;
 
+namespace {
+const double DEG_TO_RAD = M_PI / 180.0;
+}
 namespace RigidBodyDynamics {
 
 using namespace Math;
@@ -30,6 +35,7 @@ bool construct_model(
 	Model* rbdl_model, ModelPtr urdf_model,
 	std::map<std::string, int>& link_names_to_id_map,
 	std::map<std::string, int>& joint_names_to_id_map,
+	std::map<int, double>& initial_joint_positions,
 	std::map<std::string, std::string>& joint_names_to_child_link_names_map,
 	std::vector<Sai2Model::JointLimit>& joint_limits, bool floating_base,
 	bool verbose) {
@@ -142,7 +148,8 @@ bool construct_model(
 	}
 
 	unsigned int j;
-	unsigned int current_moveable_joint_id = 1; // start with 1 because 0 is the root joint
+	unsigned int current_moveable_joint_id =
+		1;	// start with 1 because 0 is the root joint
 	for (j = 0; j < joint_names.size(); j++) {
 		JointPtr urdf_joint = joint_map[joint_names[j]];
 		LinkPtr urdf_parent = link_map[urdf_joint->parent_link_name];
@@ -173,13 +180,26 @@ bool construct_model(
 		Joint rbdl_joint;
 		if (urdf_joint->type == Sai2Urdfreader::Joint::REVOLUTE ||
 			urdf_joint->type == Sai2Urdfreader::Joint::CONTINUOUS) {
-			rbdl_joint =
-				Joint(SpatialVector(urdf_joint->axis.x, urdf_joint->axis.y,
-									urdf_joint->axis.z, 0., 0., 0.));
+			Eigen::Vector3d axis = Eigen::Vector3d(
+				urdf_joint->axis.x, urdf_joint->axis.y, urdf_joint->axis.z);
+			if (axis.norm() < 1e-3) {
+				throw std::runtime_error(
+					"Revolute joint axis must be non zero");
+			} else {
+				axis.normalize();
+			}
+			rbdl_joint = Joint(JointTypeRevolute, axis);
 		} else if (urdf_joint->type == Sai2Urdfreader::Joint::PRISMATIC) {
+			Eigen::Vector3d axis = Eigen::Vector3d(
+				urdf_joint->axis.x, urdf_joint->axis.y, urdf_joint->axis.z);
+			if (axis.norm() < 1e-3) {
+				throw std::runtime_error(
+					"Prismatic joint axis must be non zero");
+			} else {
+				axis.normalize();
+			}
 			rbdl_joint =
-				Joint(SpatialVector(0., 0., 0., urdf_joint->axis.x,
-									urdf_joint->axis.y, urdf_joint->axis.z));
+				Joint(SpatialVector(0., 0., 0., axis[0], axis[1], axis[2]));
 		} else if (urdf_joint->type == Sai2Urdfreader::Joint::SPHERICAL) {
 			rbdl_joint = Joint(JointTypeSpherical);
 		} else if (urdf_joint->type == Sai2Urdfreader::Joint::FIXED) {
@@ -290,6 +310,32 @@ bool construct_model(
 		joint_names_to_child_link_names_map[urdf_joint->name] =
 			urdf_child->name;
 
+		// get the joint initial position
+		// TODO: we use the calibration field for now, it should be improved to
+		// have a proper intial position field
+		const int joint_q_index =
+			rbdl_model->mJoints[rbdl_model->mJoints.size() - 1].q_index;
+		if (urdf_joint->calibration) {
+			if (urdf_joint->type == Sai2Urdfreader::Joint::REVOLUTE ||
+				urdf_joint->type == Sai2Urdfreader::Joint::CONTINUOUS) {
+				if (urdf_joint->calibration->rising) {
+					initial_joint_positions[joint_q_index] =
+						*(urdf_joint->calibration->rising);
+				} else if (urdf_joint->calibration->falling) {
+					initial_joint_positions[joint_q_index] =
+						*(urdf_joint->calibration->falling) * DEG_TO_RAD;
+				}
+			} else if (urdf_joint->type == Sai2Urdfreader::Joint::PRISMATIC) {
+				if (urdf_joint->calibration->rising) {
+					initial_joint_positions[joint_q_index] =
+						*(urdf_joint->calibration->rising);
+				} else if (urdf_joint->calibration->falling) {
+					initial_joint_positions[joint_q_index] =
+						*(urdf_joint->calibration->falling);
+				}
+			}
+		}
+
 		// get the joint limits
 		if (urdf_joint->limits) {
 			if (urdf_joint->type != Sai2Urdfreader::Joint::REVOLUTE &&
@@ -311,8 +357,8 @@ bool construct_model(
 			}
 			const auto& lim = urdf_joint->limits;
 			joint_limits.push_back(Sai2Model::JointLimit(
-				urdf_joint->name, rbdl_model->mJoints[j + 1].q_index,
-				lim->lower, lim->upper, lim->velocity, lim->effort));
+				urdf_joint->name, joint_q_index, lim->lower, lim->upper,
+				lim->velocity, lim->effort));
 		}
 	}
 
@@ -323,12 +369,14 @@ RBDL_DLLAPI bool URDFReadFromFile(
 	const char* filename, Model* model,
 	std::map<std::string, int>& link_names_to_id_map,
 	std::map<std::string, int>& joint_names_to_id_map,
+	std::map<int, double>& initial_joint_positions,
 	std::map<std::string, std::string>& joint_names_to_child_link_names_map,
 	std::vector<Sai2Model::JointLimit>& joint_limits, bool floating_base,
 	bool verbose) {
-	ifstream model_file(filename);
+	std::string resolved_filename = Sai2Model::ReplaceUrdfPathPrefix(filename);
+	ifstream model_file(resolved_filename);
 	if (!model_file) {
-		cerr << "Error opening file '" << filename << "'." << endl;
+		cerr << "Error opening file '" << resolved_filename << "'." << endl;
 		abort();
 	}
 
@@ -344,6 +392,7 @@ RBDL_DLLAPI bool URDFReadFromFile(
 
 	return URDFReadFromString(model_xml_string.c_str(), model,
 							  link_names_to_id_map, joint_names_to_id_map,
+							  initial_joint_positions,
 							  joint_names_to_child_link_names_map, joint_limits,
 							  floating_base, verbose);
 }
@@ -352,6 +401,7 @@ RBDL_DLLAPI bool URDFReadFromString(
 	const char* model_xml_string, Model* model,
 	std::map<std::string, int>& link_names_to_id_map,
 	std::map<std::string, int>& joint_names_to_id_map,
+	std::map<int, double>& initial_joint_positions,
 	std::map<std::string, std::string>& joint_names_to_child_link_names_map,
 	std::vector<Sai2Model::JointLimit>& joint_limits, bool floating_base,
 	bool verbose) {
@@ -360,7 +410,7 @@ RBDL_DLLAPI bool URDFReadFromString(
 	ModelPtr urdf_model = Sai2Urdfreader::parseURDF(model_xml_string);
 
 	if (!construct_model(model, urdf_model, link_names_to_id_map,
-						 joint_names_to_id_map,
+						 joint_names_to_id_map, initial_joint_positions,
 						 joint_names_to_child_link_names_map, joint_limits,
 						 floating_base, verbose)) {
 		cerr << "Error constructing model from urdf file." << endl;
