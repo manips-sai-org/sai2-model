@@ -1,4 +1,4 @@
-SET(EXAMPLE_NAME 06-add_load)
+SET(EXAMPLE_NAME 08-add_load)
 
 # create an executable
 ADD_EXECUTABLE (${EXAMPLE_NAME} main.cpp)

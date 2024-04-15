@@ -11,6 +11,7 @@
 #include <rbdl/rbdl.h>
 
 #include "JointLimits.h"
+#include "parser/Sai2ModelParserUtils.h"
 
 using namespace std;
 using namespace Eigen;
@@ -88,6 +89,12 @@ struct SphericalJointDescription {
 	SphericalJointDescription(const string name, const int index,
 							  const int w_index)
 		: name(name), index(index), w_index(w_index) {}
+};
+
+struct SvdData {
+	Eigen::MatrixXd U;
+	Eigen::VectorXd s;
+	Eigen::MatrixXd V;
 };
 
 enum ContactType { PointContact, SurfaceContact };
@@ -173,6 +180,13 @@ public:
 
 	// getter for the joint limits
 	const std::vector<JointLimit>& jointLimits() const { return _joint_limits; }
+
+	// returns the lower and upper position limits as a vector of size q_size
+	// for continuous joints, the limits are set to +/-
+	// numeric_limits<double>::max() for spherical joints, the limits of all the
+	// corresponding quaternion coefficients are set to +/- 1
+	VectorXd jointLimitsPositionLower() const;
+	VectorXd jointLimitsPositionUpper() const;
 
 	// getter for the spherical joints
 	const std::vector<SphericalJointDescription>& sphericalJoints() const {
@@ -726,6 +740,34 @@ public:
 	 */
 	void displayJoints();
 	void displayLinks();
+	
+	/**
+	 * @brief Computes the joint selection matrix for the joints leading up to the link
+	 * 
+	 * @param link_name 	link of robot to compute the joint selection matrix
+	 * @return MatrixXd 	joint selection matrix
+	 */
+	MatrixXd linkDependency(const std::string& link_name);
+
+	/**
+	 * @brief Computes the joint accelerations given an applied torque 
+	 * 
+	 * @param tau 			applied torques
+	 * @return VectorXd		resulting joint accelerations from tau
+	 */
+	VectorXd forwardDynamics(const VectorXd& tau);
+
+	/**
+	 * @brief Computes \dot{J}\dot{q} 
+	 * 
+	 * @param link_name 			link of robot to compute \dot{J}\dot{q}
+	 * @param pos_in_link 			position in link 
+	 * @param update_kinematics 	if kinematics needs to be updated
+	 * @return Vector6d 			\dot{J}\dot{q} vector 
+	 */
+	Vector6d jDotQDot(const std::string& link_name, 
+					  const Vector3d& pos_in_link = Vector3d::Zero(), 
+					  const bool update_kinematics = false);
 
 	/**
 	 * @brief Add load to link. This is done by adding a fixed link with load 
@@ -862,6 +904,17 @@ private:
 };
 
 /**
+ * @brief Computes the pseudo inverse by computing the svd and setting the
+ * singular values lower than the tolerance to zero in the inverse
+ *
+ * @param matrix the input matrix
+ * @param tolerance the threshold to ignore singular values
+ * @return MatrixXd the pseudo inverse of the input matrix
+ */
+MatrixXd computePseudoInverse(const MatrixXd& matrix,
+							  const double& tolerance = 1e-6);
+
+/**
  * @brief Computes the range space of the input matrix where the singular
  * directions (directions with singular values lower than the tolerance) have
  * been removed. The returned matrix is a of size n x k where n in the number of
@@ -873,7 +926,17 @@ private:
  * @return a matrix whose columns form the base of the input matrix range space
  */
 MatrixXd matrixRangeBasis(const MatrixXd& matrix,
-						  const double& tolerance = 1e-3);
+						  const double& tolerance = 1e-6);
+
+/**
+ * @brief Computes the thin svd data for a matrix. Given an n-by-p matrix A, then
+ * 	letting m = min(n, p), U is an n-by-m matrix, S is a vector of size m, and
+ *  Vt is a p-by-m matrix, and thus A = U * S.asDiagonal() * Vt.transpose()
+ * 
+ * @param matrix 	the input matrix
+ * @return SvdData 	data structure containing U, S, and V
+ */
+SvdData matrixSvd(const MatrixXd& matrix);
 
 /**
  * @brief      Gives orientation error from rotation matrices

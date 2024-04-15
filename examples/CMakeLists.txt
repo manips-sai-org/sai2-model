@@ -1,11 +1,14 @@
-SET (SAI2-MODEL_EXAMPLES_LIBRARIES
-${SAI2-MODEL_LIBRARIES}
-${SAI2-URDF_LIBRARIES}
-)
+set(SAI2-MODEL_EXAMPLES_LIBRARIES ${SAI2-MODEL_LIBRARIES}
+                                  ${SAI2-URDF_LIBRARIES})
 
-ADD_SUBDIRECTORY(01-create_model_from_file)
-ADD_SUBDIRECTORY(02-update_model)
-ADD_SUBDIRECTORY(03-spherical_joints)
-ADD_SUBDIRECTORY(04-joint_limits)
-ADD_SUBDIRECTORY(05-grasp_matrix)
-ADD_SUBDIRECTORY(06-add_load)
+set(EXAMPLES_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}")
+add_definitions(-DEXAMPLES_FOLDER="${EXAMPLES_FOLDER}")
+
+add_subdirectory(01-create_model_from_file)
+add_subdirectory(02-update_model)
+add_subdirectory(03-spherical_joints)
+add_subdirectory(04-joint_limits)
+add_subdirectory(05-grasp_matrix)
+add_subdirectory(06-robot_arms)
+add_subdirectory(07-panda_test)
+add_subdirectory(08-add_load)

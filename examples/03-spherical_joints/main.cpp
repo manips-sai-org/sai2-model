@@ -10,7 +10,8 @@
 
 using namespace std;
 
-const string robot_fname = "resources/rpspsbot.urdf";
+const string robot_fname =
+	string(EXAMPLES_FOLDER) + "/03-spherical_joints/rpspsbot.urdf";
 
 int main(int argc, char** argv) {
 	cout << "Loading robot file: " << robot_fname << endl;

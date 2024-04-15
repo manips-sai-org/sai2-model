@@ -7,7 +7,8 @@
 
 using namespace std;
 
-const string robot_fname = "resources/pbot.urdf";
+const string robot_fname =
+	string(EXAMPLES_FOLDER) + "/01-create_model_from_file/pbot.urdf";
 
 int main(int argc, char** argv) {
 	cout << "Loading robot file: " << robot_fname << endl;

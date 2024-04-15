@@ -55,10 +55,11 @@ Sai2Model::Sai2Model(const string path_to_model_file, bool verbose) {
 	_rbdl_model = new RigidBodyDynamics::Model();
 
 	// parse rbdl model from urdf
+	map<int, double> initial_joint_positions;
 	bool success = RigidBodyDynamics::URDFReadFromFile(
 		path_to_model_file.c_str(), _rbdl_model, _link_names_to_id_map,
-		_joint_names_to_id_map, _joint_names_to_child_link_names_map,
-		_joint_limits, false, verbose);
+		_joint_names_to_id_map, initial_joint_positions,
+		_joint_names_to_child_link_names_map, _joint_limits, false, verbose);
 	if (!success) {
 		throw std::runtime_error("Error loading model [" + path_to_model_file +
 								 "]\n");
@@ -109,6 +110,9 @@ Sai2Model::Sai2Model(const string path_to_model_file, bool verbose) {
 
 	// Initialize state vectors
 	_q.setZero(_q_size);
+	for(const auto& pair : initial_joint_positions) {
+		_q(pair.first) = pair.second;
+	}
 	// special case handle spherical joints. See rbdl/Joint class for details.
 	for (uint i = 0; i < _rbdl_model->mJoints.size(); ++i) {
 		if (_rbdl_model->mJoints[i].mJointType ==
@@ -168,6 +172,36 @@ void Sai2Model::setDdq(const Eigen::VectorXd& ddq) {
 		return;
 	}
 	_ddq = ddq;
+}
+
+VectorXd Sai2Model::jointLimitsPositionLower() const {
+	VectorXd lower_limits =
+		-numeric_limits<double>::max() * VectorXd::Ones(_q_size);
+	for (const auto& joint_limit : _joint_limits) {
+		lower_limits(joint_limit.joint_index) = joint_limit.position_lower;
+	}
+	for (const auto& joint : _spherical_joints) {
+		lower_limits(joint.index) = -1.0;
+		lower_limits(joint.index + 1) = -1.0;
+		lower_limits(joint.index + 2) = -1.0;
+		lower_limits(joint.w_index) = -1.0;
+	}
+	return lower_limits;
+}
+
+VectorXd Sai2Model::jointLimitsPositionUpper() const {
+	VectorXd upper_limits =
+		numeric_limits<double>::max() * VectorXd::Ones(_q_size);
+	for (const auto& joint_limit : _joint_limits) {
+		upper_limits(joint_limit.joint_index) = joint_limit.position_upper;
+	}
+	for (const auto& joint : _spherical_joints) {
+		upper_limits(joint.index) = 1.0;
+		upper_limits(joint.index + 1) = 1.0;
+		upper_limits(joint.index + 2) = 1.0;
+		upper_limits(joint.w_index) = 1.0;
+	}
+	return upper_limits;
 }
 
 const Eigen::Quaterniond Sai2Model::sphericalQuat(
@@ -677,17 +711,7 @@ MatrixXd Sai2Model::taskInertiaMatrixWithPseudoInv(
 	MatrixXd inv_inertia = task_jacobian * _M_inv * task_jacobian.transpose();
 
 	// compute SVD pseudoinverse
-	// TODO: make class function?
-	JacobiSVD<MatrixXd> svd(inv_inertia, ComputeThinU | ComputeThinV);
-	const double epsilon = numeric_limits<double>::epsilon();
-	double tolerance = epsilon * max(inv_inertia.cols(), inv_inertia.rows()) *
-					   svd.singularValues().array().abs()(0);
-	return svd.matrixV() *
-		   (svd.singularValues().array().abs() > tolerance)
-			   .select(svd.singularValues().array().inverse(), 0)
-			   .matrix()
-			   .asDiagonal() *
-		   svd.matrixU().adjoint();
+	return computePseudoInverse(inv_inertia);
 }
 
 MatrixXd Sai2Model::dynConsistentInverseJacobian(
@@ -1015,6 +1039,22 @@ GraspMatrixData Sai2Model::environmentalGraspMatrixAtGeometricCenter(
 	return G_data;
 }
 
+VectorXd Sai2Model::Sai2Model::forwardDynamics(const VectorXd& tau) {
+	VectorXd ddq(_dof);
+	ForwardDynamics(*_rbdl_model, _q, _dq, tau, ddq);
+	return ddq;
+}
+
+Vector6d Sai2Model::Sai2Model::jDotQDot(const string& link_name, const Vector3d& pos_in_link, const bool update_kinematics) {
+	Vector3d prev_gravity = _rbdl_model->gravity;
+	_rbdl_model->gravity.setZero();
+	Vector6d acc6d = CalcPointAcceleration6D(*_rbdl_model, _q, _dq, VectorXd::Zero(_ddq.size()), linkIdRbdl(link_name), pos_in_link, true);
+	acc6d.head(3).swap(acc6d.tail(3));
+	_rbdl_model->gravity = prev_gravity;
+	updateKinematics();
+	return acc6d;
+}
+
 void Sai2Model::Sai2Model::displayJoints() {
 	cout << "\nRobot Joints :" << endl;
 	for (map<string, int>::iterator it = _joint_names_to_id_map.begin();
@@ -1031,6 +1071,12 @@ void Sai2Model::displayLinks() {
 		cout << "link : " << it->first << "\t id : " << it->second << endl;
 	}
 	cout << endl;
+}
+
+MatrixXd Sai2Model::linkDependency(const std::string& link_name) {
+	MatrixXd J;
+	calcLinkDependency(*_rbdl_model, linkIdRbdl(link_name), J);
+	return J;
 }
 
 void Sai2Model::addLoad(const std::string& link_name,
@@ -1199,6 +1245,16 @@ VectorXd Sai2Model::modifiedNewtonEuler(const bool consider_gravity,
 	return tau;
 }
 
+MatrixXd computePseudoInverse(const MatrixXd& matrix, const double& tolerance) {
+	JacobiSVD<MatrixXd> svd(matrix, ComputeThinU | ComputeThinV);
+	return svd.matrixV() *
+		   (svd.singularValues().array().abs() > tolerance)
+			   .select(svd.singularValues().array().inverse(), 0)
+			   .matrix()
+			   .asDiagonal() *
+		   svd.matrixU().adjoint();
+}
+
 MatrixXd matrixRangeBasis(const MatrixXd& matrix, const double& tolerance) {
 	const int range_size = matrix.rows();
 	if (matrix.norm() < tolerance) {
@@ -1227,6 +1283,11 @@ MatrixXd matrixRangeBasis(const MatrixXd& matrix, const double& tolerance) {
 	} else {
 		return svd.matrixU().leftCols(task_dof);
 	}
+}
+
+SvdData matrixSvd(const MatrixXd& matrix) {
+	JacobiSVD<MatrixXd> svd(matrix, ComputeThinU | ComputeThinV);
+	return SvdData{svd.matrixU(), svd.singularValues(), svd.matrixV()};
 }
 
 Vector3d orientationError(const Matrix3d& desired_orientation,
