@@ -334,6 +334,12 @@ bool construct_model(
 						*(urdf_joint->calibration->falling);
 				}
 			}
+		} else { // use mid point of joint limits
+			if (urdf_joint->limits) {
+				initial_joint_positions[joint_q_index] =
+					(urdf_joint->limits->upper + urdf_joint->limits->lower) /
+					2.0;
+			}
 		}
 
 		// get the joint limits
