@@ -861,6 +861,27 @@ TEST_CASE_METHOD ( Human36,
                                                   .apply(model->v[foot_r_id]));
 
   CHECK_THAT (v_foot_0_ref, AllCloseVector(v_foot_0_jac, TEST_PREC, TEST_PREC));
+
+  // Compute the partial joint task to the link
+  MatrixNd J_posture;
+  calcLinkDependency(*model, foot_r_id, J_posture);
+  VectorNd joint_indices = G.colwise().sum();
+  int nnz = 0;
+  std::vector<int> nnz_cols;
+  for (int i = 0; i < joint_indices.size(); ++i) {
+    if (joint_indices(i) != 0) {
+      nnz_cols.push_back(i);
+      nnz++;
+    }
+  }
+  MatrixNd J_posture_from_G = MatrixNd::Zero(nnz, G.cols());
+  int row = 0;
+  for (int i = 0; i < nnz_cols.size(); ++i) {
+      J_posture_from_G(row, nnz_cols[i]) = 1;
+      row++;
+  }
+
+  CHECK_THAT (J_posture_from_G, AllCloseMatrix(J_posture, TEST_PREC, TEST_PREC));
 }
 
 TEST_CASE_METHOD ( Human36,

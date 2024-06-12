@@ -174,6 +174,19 @@ RBDL_DLLAPI void CalcPointJacobian6D (Model &model,
     bool update_kinematics = true
     );
 
+/**
+ * @brief Computes the task jacobian associated with the joints for the link
+ * 
+ * @param model 
+ * @param body_id 
+ * @param J 
+ * @return RBDL_DLLAPI 
+ */
+RBDL_DLLAPI void calcLinkDependency (
+    Model &model,
+    unsigned int body_id,
+    Math::MatrixNd &J);
+
 /** \brief Computes the spatial jacobian for a body
  *
  * The spatial velocity of a body at the origin of coordinate system of 

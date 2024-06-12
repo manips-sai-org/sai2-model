@@ -11,7 +11,9 @@ using namespace std;
 
 const string robot_fname =
 	string(EXAMPLES_FOLDER) + "/02-update_model/rprbot.urdf";
-
+const string rppbot_robot_fname = 
+	string(EXAMPLES_FOLDER) + "/02-update_model/rprbot.urdf";
+	
 int main(int argc, char** argv) {
 	cout << "Loading robot file: " << robot_fname << endl;
 
@@ -151,6 +153,16 @@ int main(int argc, char** argv) {
 	cout << "jacobian at the end effector \n" << J << endl;
 	cout << "joint gravity : " << gravity.transpose() << endl;
 	cout << endl;
+
+	// test jdotqdot and link dependency 
+	Sai2Model::Sai2Model* parallel_robot = new Sai2Model::Sai2Model(rppbot_robot_fname);
+	parallel_robot->setQ(VectorXd::Random(parallel_robot->dof()));
+	parallel_robot->setDq(VectorXd::Random(parallel_robot->dof()));
+	parallel_robot->updateModel();
+	MatrixXd J_joint = parallel_robot->linkDependency(ee_link);
+	cout << "Parallel robot partial task jacobian for joint dependency: \n" << J_joint << endl;
+	auto JdotQdot = parallel_robot->jDotQDot(ee_link, ee_pos_in_link);
+	cout << "Parallel robot jdotqdot: \n" << JdotQdot.transpose() << "\n";
 
 	return 0;
 }
