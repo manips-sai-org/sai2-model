@@ -73,8 +73,7 @@ bool checkEigenMatricesEqual(const Eigen::MatrixBase<DerivedA>& expected,
 			if (fabs(expected(i, j) - actual(i, j)) > epsilon) {
 				equal = false;
 				std::cout << "Mismatch found at index (" << i << ", " << j
-						  << "): "
-						  << "Expected: " << expected(i, j) << " "
+						  << "): " << "Expected: " << expected(i, j) << " "
 						  << "Actual:   " << actual(i, j) << std::endl;
 			}
 		}
@@ -195,7 +194,7 @@ TEST_F(Sai2ModelTest, SphericalJointsDescriptions) {
 	EXPECT_FALSE(model_rpsprbot->sphericalJoints().empty());
 	EXPECT_EQ(model_rpsprbot->sphericalJoints().size(), 1);
 
-	EXPECT_EQ(model_rpsprbot->sphericalJoints().at(0).name, "j2");
+	EXPECT_EQ(model_rpsprbot->sphericalJoints().at(0).joint_name, "j2");
 	EXPECT_EQ(model_rpsprbot->sphericalJoints().at(0).index, 2);
 	EXPECT_EQ(model_rpsprbot->sphericalJoints().at(0).w_index, 7);
 }
@@ -216,10 +215,16 @@ TEST_F(Sai2ModelTest, JointName) {
 TEST_F(Sai2ModelTest, JointNames) {
 	const auto joint_names = model_rrpbot->jointNames();
 	EXPECT_EQ(joint_names.size(), model_rrpbot->dof());
-	EXPECT_EQ(model_rpsprbot->jointNames().size(), model_rpsprbot->dof() - 2);
+	EXPECT_EQ(model_rpsprbot->jointNames().size(), model_rpsprbot->qSize());
 	std::vector<std::string> expected_joint_names = {"j0", "j1", "j2"};
 	for (int i = 0; i < joint_names.size(); ++i) {
 		EXPECT_EQ(joint_names[i], expected_joint_names[i]);
+	}
+	const auto joint_names_rpspr = model_rpsprbot->jointNames();
+	std::vector<std::string> expected_joint_names_rpspr = {
+		"j0", "j1", "j2", "j2", "j2", "j3", "j4", "j2"};
+	for (int i = 0; i < joint_names_rpspr.size(); ++i) {
+		EXPECT_EQ(joint_names_rpspr[i], expected_joint_names_rpspr[i]);
 	}
 }
 

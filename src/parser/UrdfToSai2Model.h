@@ -16,6 +16,7 @@ RBDL_DLLAPI bool URDFReadFromFile(
 	std::map<std::string, int>& joint_names_to_id_map,
 	std::map<int, double>& initial_joint_positions,
 	std::map<std::string, std::string>& joint_names_to_child_link_names_map,
+	std::map<std::string, std::string>& joint_names_to_parent_link_names_map,
 	std::vector<Sai2Model::JointLimit>& joint_limits, bool floating_base,
 	bool verbose = false);
 
@@ -25,6 +26,7 @@ RBDL_DLLAPI bool URDFReadFromString(
 	std::map<std::string, int>& joint_names_to_id_map,
 	std::map<int, double>& initial_joint_positions,
 	std::map<std::string, std::string>& joint_names_to_child_link_names_map,
+	std::map<std::string, std::string>& joint_names_to_parent_link_names_map,
 	std::vector<Sai2Model::JointLimit>& joint_limits, bool floating_base,
 	bool verbose = false);
 }  // namespace RigidBodyDynamics

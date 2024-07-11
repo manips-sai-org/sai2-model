@@ -59,7 +59,8 @@ Sai2Model::Sai2Model(const string path_to_model_file, bool verbose) {
 	bool success = RigidBodyDynamics::URDFReadFromFile(
 		path_to_model_file.c_str(), _rbdl_model, _link_names_to_id_map,
 		_joint_names_to_id_map, initial_joint_positions,
-		_joint_names_to_child_link_names_map, _joint_limits, false, verbose);
+		_joint_names_to_child_link_names_map,
+		_joint_names_to_parent_link_names_map, _joint_limits, false, verbose);
 	if (!success) {
 		throw std::runtime_error("Error loading model [" + path_to_model_file +
 								 "]\n");
@@ -110,7 +111,7 @@ Sai2Model::Sai2Model(const string path_to_model_file, bool verbose) {
 
 	// Initialize state vectors
 	_q.setZero(_q_size);
-	for(const auto& pair : initial_joint_positions) {
+	for (const auto& pair : initial_joint_positions) {
 		_q(pair.first) = pair.second;
 	}
 	// special case handle spherical joints. See rbdl/Joint class for details.
@@ -121,8 +122,10 @@ Sai2Model::Sai2Model(const string path_to_model_file, bool verbose) {
 									   _q);
 			int index = _rbdl_model->mJoints[i].q_index;
 			int w_index = _rbdl_model->multdof3_w_index[i];
-			_spherical_joints.push_back(
-				SphericalJointDescription(jointName(index), index, w_index));
+			string joint_name = jointName(index);
+			_spherical_joints.push_back(SphericalJointDescription(
+				joint_name, parentLinkName(joint_name),
+				childLinkName(joint_name), index, w_index));
 		}
 	}
 
@@ -149,7 +152,7 @@ void Sai2Model::setQ(const Eigen::VectorXd& q) {
 							   q(sph_joint.index + 2), q(sph_joint.w_index))) {
 			throw invalid_argument(
 				"trying to set an invalid quaternion for joint " +
-				sph_joint.name + " at index " +
+				sph_joint.joint_name + " at index " +
 				std::to_string(sph_joint.index) +
 				", and w_index: " + std::to_string(sph_joint.w_index));
 			return;
@@ -207,7 +210,7 @@ VectorXd Sai2Model::jointLimitsPositionUpper() const {
 const Eigen::Quaterniond Sai2Model::sphericalQuat(
 	const std::string& joint_name) const {
 	for (auto joint : _spherical_joints) {
-		if (joint.name == joint_name) {
+		if (joint.joint_name == joint_name) {
 			int i = joint.index;
 			int iw = joint.w_index;
 			return Eigen::Quaterniond(_q(iw), _q(i), _q(i + 1), _q(i + 2));
@@ -221,7 +224,7 @@ const Eigen::Quaterniond Sai2Model::sphericalQuat(
 void Sai2Model::setSphericalQuat(const std::string& joint_name,
 								 const Eigen::Quaterniond quat) {
 	for (auto joint : _spherical_joints) {
-		if (joint.name == joint_name) {
+		if (joint.joint_name == joint_name) {
 			int i = joint.index;
 			int iw = joint.w_index;
 			_q(i) = quat.x();
@@ -605,7 +608,7 @@ int Sai2Model::sphericalJointIndexW(const string& joint_name) const {
 	}
 	for (auto it = _spherical_joints.cbegin(); it != _spherical_joints.cend();
 		 ++it) {
-		if (it->name == joint_name) {
+		if (it->joint_name == joint_name) {
 			return it->w_index;
 		}
 	}
@@ -628,12 +631,20 @@ std::string Sai2Model::childLinkName(const std::string& joint_name) const {
 	return _joint_names_to_child_link_names_map.at(joint_name);
 }
 
+std::string Sai2Model::parentLinkName(const std::string& joint_name) const {
+	if (_joint_names_to_id_map.find(joint_name) ==
+		_joint_names_to_id_map.end()) {
+		throw invalid_argument("joint [" + joint_name + "] does not exist");
+	}
+	return _joint_names_to_parent_link_names_map.at(joint_name);
+}
+
 std::vector<std::string> Sai2Model::jointNames() const {
 	std::vector<std::string> names;
-	names.reserve(_joint_names_to_id_map.size());
+	names.reserve(_joint_id_to_names_map.size());
 
-	for (const auto& pair : _joint_names_to_id_map) {
-		names.push_back(pair.first);
+	for (const auto& pair : _joint_id_to_names_map) {
+		names.push_back(pair.second);
 	}
 
 	return names;

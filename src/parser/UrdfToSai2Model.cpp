@@ -37,6 +37,7 @@ bool construct_model(
 	std::map<std::string, int>& joint_names_to_id_map,
 	std::map<int, double>& initial_joint_positions,
 	std::map<std::string, std::string>& joint_names_to_child_link_names_map,
+	std::map<std::string, std::string>& joint_names_to_parent_link_names_map,
 	std::vector<Sai2Model::JointLimit>& joint_limits, bool floating_base,
 	bool verbose) {
 	LinkPtr urdf_root_link;
@@ -309,6 +310,8 @@ bool construct_model(
 			rbdl_model->GetBodyId(urdf_child->name.c_str());
 		joint_names_to_child_link_names_map[urdf_joint->name] =
 			urdf_child->name;
+		joint_names_to_parent_link_names_map[urdf_joint->name] =
+			urdf_parent->name;
 
 		// get the joint initial position
 		// TODO: we use the calibration field for now, it should be improved to
@@ -334,7 +337,7 @@ bool construct_model(
 						*(urdf_joint->calibration->falling);
 				}
 			}
-		} else { // use mid point of joint limits
+		} else {  // use mid point of joint limits
 			if (urdf_joint->limits) {
 				initial_joint_positions[joint_q_index] =
 					(urdf_joint->limits->upper + urdf_joint->limits->lower) /
@@ -377,6 +380,7 @@ RBDL_DLLAPI bool URDFReadFromFile(
 	std::map<std::string, int>& joint_names_to_id_map,
 	std::map<int, double>& initial_joint_positions,
 	std::map<std::string, std::string>& joint_names_to_child_link_names_map,
+	std::map<std::string, std::string>& joint_names_to_parent_link_names_map,
 	std::vector<Sai2Model::JointLimit>& joint_limits, bool floating_base,
 	bool verbose) {
 	std::string resolved_filename = Sai2Model::ReplaceUrdfPathPrefix(filename);
@@ -399,8 +403,9 @@ RBDL_DLLAPI bool URDFReadFromFile(
 	return URDFReadFromString(model_xml_string.c_str(), model,
 							  link_names_to_id_map, joint_names_to_id_map,
 							  initial_joint_positions,
-							  joint_names_to_child_link_names_map, joint_limits,
-							  floating_base, verbose);
+							  joint_names_to_child_link_names_map,
+							  joint_names_to_parent_link_names_map,
+							  joint_limits, floating_base, verbose);
 }
 
 RBDL_DLLAPI bool URDFReadFromString(
@@ -409,6 +414,7 @@ RBDL_DLLAPI bool URDFReadFromString(
 	std::map<std::string, int>& joint_names_to_id_map,
 	std::map<int, double>& initial_joint_positions,
 	std::map<std::string, std::string>& joint_names_to_child_link_names_map,
+	std::map<std::string, std::string>& joint_names_to_parent_link_names_map,
 	std::vector<Sai2Model::JointLimit>& joint_limits, bool floating_base,
 	bool verbose) {
 	assert(model);
@@ -417,7 +423,8 @@ RBDL_DLLAPI bool URDFReadFromString(
 
 	if (!construct_model(model, urdf_model, link_names_to_id_map,
 						 joint_names_to_id_map, initial_joint_positions,
-						 joint_names_to_child_link_names_map, joint_limits,
+						 joint_names_to_child_link_names_map,
+						 joint_names_to_parent_link_names_map, joint_limits,
 						 floating_base, verbose)) {
 		cerr << "Error constructing model from urdf file." << endl;
 		return false;

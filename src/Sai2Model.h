@@ -56,8 +56,9 @@ struct GraspMatrixData {
 
 // Basic data structure for force sensor data
 struct ForceSensorData {
-	std::string robot_name;	 // name of robot to which sensor is attached
-	std::string link_name;	 // name of link to which sensor is attached
+	std::string robot_or_object_name;  // name of robot or object to which
+									   // sensor is attached
+	std::string link_name;	// name of link to which sensor is attached
 	// transform from link to sensor frame. Measured moments are with respect to
 	// the sensor frame origin
 	Eigen::Affine3d transform_in_link;
@@ -71,7 +72,7 @@ struct ForceSensorData {
 										 // in world frame
 
 	ForceSensorData()
-		: robot_name(""),
+		: robot_or_object_name(""),
 		  link_name(""),
 		  transform_in_link(Eigen::Affine3d::Identity()),
 		  force_local_frame(Eigen::Vector3d::Zero()),
@@ -81,13 +82,21 @@ struct ForceSensorData {
 };
 
 struct SphericalJointDescription {
-	string name;
+	string joint_name;
+	string parent_link_name;
+	string child_link_name;
 	int index;
 	int w_index;
 
-	SphericalJointDescription(const string name, const int index,
+	SphericalJointDescription(const string joint_name,
+							  const string parent_link_name,
+							  const string child_link_name, const int index,
 							  const int w_index)
-		: name(name), index(index), w_index(w_index) {}
+		: joint_name(joint_name),
+		  parent_link_name(parent_link_name),
+		  child_link_name(child_link_name),
+		  index(index),
+		  w_index(w_index) {}
 };
 
 enum ContactType { PointContact, SurfaceContact };
@@ -556,6 +565,14 @@ public:
 	std::string childLinkName(const std::string& joint_name) const;
 
 	/**
+	 * @brief      Returns the link name parent of the given joint id
+	 *
+	 * @param      joint_name  name of the joint
+	 * @return     the parent link name
+	 */
+	std::string parentLinkName(const std::string& joint_name) const;
+
+	/**
 	 * @brief      Gives the mass properties of a given link
 	 *
 	 * @param      mass            the returned mass value
@@ -828,6 +845,9 @@ private:
 
 	/// \brief map from joint names to child link names
 	map<string, string> _joint_names_to_child_link_names_map;
+
+	/// \brief map from joint names to parent link names
+	map<string, string> _joint_names_to_parent_link_names_map;
 
 	/// \brief vector of spherical joints
 	vector<SphericalJointDescription> _spherical_joints;
