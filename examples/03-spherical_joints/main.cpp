@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
 			"after all the non spherical joints indexes): "
 		 << endl;
 	for (const auto& joint_description : robot->sphericalJoints()) {
-		cout << "name: " << joint_description.name
+		cout << "name: " << joint_description.joint_name
 			 << " - index: " << joint_description.index
 			 << " - w_index: " << joint_description.w_index << endl;
 	}
@@ -82,9 +82,8 @@ int main(int argc, char** argv) {
 
 	cout << "spherical joint w indexes from individual call: " << endl;
 	for (const auto& sph_joint : robot->sphericalJoints()) {
-		cout << "name: " << sph_joint.name
-			 << " -  w_index: " << robot->sphericalJointIndexW(sph_joint.name)
-			 << endl;
+		cout << "name: " << sph_joint.joint_name << " -  w_index: "
+			 << robot->sphericalJointIndexW(sph_joint.joint_name) << endl;
 	}
 	cout << endl << endl;
 
@@ -96,7 +95,7 @@ int main(int argc, char** argv) {
 	cout << endl << endl;
 
 	// change spherical joint position
-	string sph_joint_name = robot->sphericalJoints()[0].name;
+	string sph_joint_name = robot->sphericalJoints()[0].joint_name;
 	Eigen::Quaterniond quat = Eigen::Quaterniond(
 		Eigen::AngleAxisd(M_PI / 6, Eigen::Vector3d(1, 0, 1)));
 	robot->setSphericalQuat(sph_joint_name, quat);

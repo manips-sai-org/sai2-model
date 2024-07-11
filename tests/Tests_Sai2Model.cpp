@@ -73,8 +73,7 @@ bool checkEigenMatricesEqual(const Eigen::MatrixBase<DerivedA>& expected,
 			if (fabs(expected(i, j) - actual(i, j)) > epsilon) {
 				equal = false;
 				std::cout << "Mismatch found at index (" << i << ", " << j
-						  << "): "
-						  << "Expected: " << expected(i, j) << " "
+						  << "): " << "Expected: " << expected(i, j) << " "
 						  << "Actual:   " << actual(i, j) << std::endl;
 			}
 		}
@@ -195,7 +194,7 @@ TEST_F(Sai2ModelTest, SphericalJointsDescriptions) {
 	EXPECT_FALSE(model_rpsprbot->sphericalJoints().empty());
 	EXPECT_EQ(model_rpsprbot->sphericalJoints().size(), 1);
 
-	EXPECT_EQ(model_rpsprbot->sphericalJoints().at(0).name, "j2");
+	EXPECT_EQ(model_rpsprbot->sphericalJoints().at(0).joint_name, "j2");
 	EXPECT_EQ(model_rpsprbot->sphericalJoints().at(0).index, 2);
 	EXPECT_EQ(model_rpsprbot->sphericalJoints().at(0).w_index, 7);
 }
