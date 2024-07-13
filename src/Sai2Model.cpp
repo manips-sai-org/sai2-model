@@ -1212,27 +1212,27 @@ MatrixXd matrixRangeBasis(const MatrixXd& matrix, const double& tolerance) {
 		return MatrixXd::Zero(range_size, 1);
 	}
 
-	JacobiSVD<MatrixXd> svd(matrix, ComputeThinU | ComputeThinV);
+	SelfAdjointEigenSolver<MatrixXd> es(matrix * matrix.transpose());
 
-	double sigma_0 = svd.singularValues()(0);
-	if (sigma_0 < tolerance) {
+	double lambda_0 = es.eigenvalues()(range_size - 1);
+	if (lambda_0 < tolerance) {
 		return MatrixXd::Zero(range_size, 1);
 	}
 
 	const int max_range = min(matrix.rows(), matrix.cols());
 	int task_dof = max_range;
-	for (int i = svd.singularValues().size() - 1; i > 0; i--) {
-		if (svd.singularValues()(i) / sigma_0 < tolerance) {
+	for (int i = 0; i < range_size; ++i) {
+		if (es.eigenvalues()(i) / lambda_0 < tolerance) {
 			task_dof -= 1;
 		} else {
 			break;
 		}
 	}
 
-	if (task_dof == matrix.rows()) {
-		return MatrixXd::Identity(max_range, max_range);
+	if (task_dof == range_size) {
+		return MatrixXd::Identity(range_size, range_size);
 	} else {
-		return svd.matrixU().leftCols(task_dof);
+		return es.eigenvectors().rightCols(task_dof).rowwise().reverse();
 	}
 }
 
