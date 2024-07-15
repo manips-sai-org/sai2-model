@@ -1221,7 +1221,7 @@ MatrixXd matrixRangeBasis(const MatrixXd& matrix, const double& tolerance) {
 
 	const int max_range = min(matrix.rows(), matrix.cols());
 	int task_dof = max_range;
-	for (int i = 0; i < range_size; ++i) {
+	for (int i = (range_size - max_range); i < range_size; ++i) {
 		if (es.eigenvalues()(i) / lambda_0 < tolerance) {
 			task_dof -= 1;
 		} else {
