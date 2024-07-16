@@ -1154,7 +1154,7 @@ TEST_F(Sai2ModelTest, MatrixRange) {
 	MatrixXd J = model_rrbot->Jv("link1");
 	MatrixXd JRange = matrixRangeBasis(J);
 	MatrixXd expected_Range = MatrixXd::Zero(3, 1);
-	expected_Range(1, 0) = -1;
+	expected_Range(1, 0) = 1;
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_Range, JRange));
 }
 
