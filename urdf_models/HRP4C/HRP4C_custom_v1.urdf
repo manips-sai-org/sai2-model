@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <!--
 This version of the bot has some changes compared to the main version:
 - All the joints in the head are made fixed (cheeks, eyes, lips) and the visuals for those are disabled
@@ -6,7 +7,6 @@ the neck is still actuated
 - 1 Dof has been added to each wrist in the missing direction of rotation
 - The only collisions enabled are on the feet, hand palms and fingers and are all represented with boxes
 -->
-<?xml version="1.0"?>
 <robot name="HRP4"
 	xmlns:xi="http://www.w3.org/2001/XInclude">
 	<link name="BASE_FRAME">
@@ -268,12 +268,12 @@ the neck is still actuated
 				<mesh filename="./meshes/L_HAND_PALM_mesh.obj" scale="1 1 1" />
 			</geometry>
 		</visual>
-		<!-- <collision>
+		<collision>
 			<origin xyz="0 -0.005 -0.05" rpy="0 0 0"/>
 			<geometry>
 				<box size="0.05 0.01 0.08"/>
 			</geometry>
-		</collision> -->
+		</collision>
 		<!-- <collision>
 			<origin xyz="0 0 -0.222445" rpy="0 -0 0"/>
 			<geometry>
@@ -281,11 +281,9 @@ the neck is still actuated
 			</geometry>
 		</collision> -->
 		<inertial>
-			<!-- <mass value="0.0134204" /> -->
-			<mass value="0.3134204" />
+			<mass value="0.0134204" />
 			<origin xyz="0.0039155 3e-08 -0.0027439" rpy="0 -0 0"/>
-			<!-- <inertia ixx="-2.18376e-22" ixy="-3.83884e-22" ixz="1.4e-07" iyy="3.1e-07" iyz="2.14807e-22" izz="2.1e-07"/> -->
-			<inertia ixx="2.18376e-1" ixy="-3.83884e-22" ixz="1.4e-1" iyy="3.1e-07" iyz="2.14807e-22" izz="2.1e-1"/>
+			<inertia ixx="-2.18376e-22" ixy="-3.83884e-22" ixz="1.4e-07" iyy="3.1e-07" iyz="2.14807e-22" izz="2.1e-07"/>
 		</inertial>
 	</link>
 	<gazebo reference="L_WRIST_R_LINK">
@@ -306,12 +304,12 @@ the neck is still actuated
 				<mesh filename="./meshes/L_HAND_THUMB_mesh.obj" scale="1 1 1" />
 			</geometry>
 		</visual>
-		<!-- <collision>
+		<collision>
 			<origin xyz="0.025 0.0046 -0.0526" rpy="0 -0 0"/>
 			<geometry>
 				<mesh filename="./meshes/L_HAND_J0_LINK_mesh.obj" scale="1 1 1" />
 			</geometry>
-		</collision> -->
+		</collision>
 		<inertial>
 			<mass value="0.0894" />
 			<origin xyz="-0.033 -2.77556e-17 -0.02" rpy="0 -0 0"/>
@@ -335,12 +333,12 @@ the neck is still actuated
 				<mesh filename="./meshes/L_HAND_FINGERS_mesh.obj" scale="1 1 1" />
 			</geometry>
 		</visual>
-		<!-- <collision>
+		<collision>
 			<origin xyz="-0.009 0 -0.0959" rpy="0 -0 0"/>
 			<geometry>
 				<mesh filename="./meshes/L_HAND_J1_LINK_mesh.obj" scale="1 1 1" />
 			</geometry>
-		</collision> -->
+		</collision>
 		<inertial>
 			<mass value="0.3576" />
 			<origin xyz="-0.017 0 -0.062" rpy="0 -0 0"/>
@@ -741,12 +739,12 @@ the neck is still actuated
 				<mesh filename="./meshes/R_HAND_PALM_mesh.obj" scale="1 1 1" />
 			</geometry>
 		</visual>
-		<!-- <collision>
+		<collision>
 			<origin xyz="0 0.005 -0.05" rpy="0 0 0"/>
 			<geometry>
 				<box size="0.05 0.01 0.08"/>
 			</geometry>
-		</collision> -->
+		</collision>
 		<!-- <collision>
 			<origin xyz="0 0 -0.222445" rpy="0 -0 0"/>
 			<geometry>
@@ -777,12 +775,12 @@ the neck is still actuated
 				<mesh filename="./meshes/R_HAND_THUMB_mesh.obj" scale="1 1 1" />
 			</geometry>
 		</visual>
-		<!-- <collision>
+		<collision>
 			<origin xyz="0.025 -0.0046 -0.0526" rpy="0 -0 0"/>
 			<geometry>
 				<mesh filename="./meshes/R_HAND_J0_LINK_mesh.obj" scale="1 1 1" />
 			</geometry>
-		</collision> -->
+		</collision>
 		<inertial>
 			<mass value="0.0894" />
 			<origin xyz="-0.033 2.77556e-17 -0.02" rpy="0 -0 0"/>
@@ -806,12 +804,12 @@ the neck is still actuated
 				<mesh filename="./meshes/R_HAND_FINGERS_mesh.obj" scale="1 1 1" />
 			</geometry>
 		</visual>
-		<!-- <collision>
+		<collision>
 			<origin xyz="-0.009 0 -0.0959" rpy="0 -0 0"/>
 			<geometry>
 				<mesh filename="./meshes/R_HAND_J1_LINK_mesh.obj" scale="1 1 1" />
 			</geometry>
-		</collision> -->
+		</collision>
 		<inertial>
 			<mass value="0.3576" />
 			<origin xyz="-0.017 0 -0.062" rpy="0 -0 0"/>
