@@ -1,0 +1,17 @@
+name: Generate and publish Doxygen documentation
+
+on:
+  push:
+    branches: [ "master" ]
+
+jobs:
+  build-and-archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout-repo
+        uses: actions/checkout@v4
+
+      - name: generate documentation
+        uses: manips-sai-org/sai2-common/custom_github_actions/deploy_docs@master
+        with: 
+          github-token: ${{ secrets.GITHUB_TOKEN }}

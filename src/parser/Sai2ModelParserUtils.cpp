@@ -6,6 +6,7 @@ namespace Sai2Model {
 
 std::map<std::string, std::string> URDF_FOLDERS;
 
+// \cond
 // automatic initialization of the URDF folders
 struct UrdfFolderInitializer {
 	UrdfFolderInitializer() {
@@ -14,6 +15,7 @@ struct UrdfFolderInitializer {
 	}
 };
 static UrdfFolderInitializer urdfFolderInitializer;
+// \endcond
 
 std::string ReplaceUrdfPathPrefix(const std::string& path) {
 	for (const auto& folder : URDF_FOLDERS) {

@@ -771,7 +771,7 @@ void Sai2Model::addEnvironmentalContact(const string link,
 										const ContactType contact_type) {
 	for (vector<ContactModel>::iterator it = _environmental_contacts.begin();
 		 it != _environmental_contacts.end(); ++it) {
-		if (it->_link_name == link) {
+		if (it->contact_link_name == link) {
 			throw invalid_argument(
 				"Environmental contact on link " + link +
 				" already exists in Sai2Model::addEnvironmentalContact()");
@@ -784,7 +784,7 @@ void Sai2Model::deleteEnvironmentalContact(const string link_name) {
 	vector<ContactModel> new_contacts;
 	for (vector<ContactModel>::iterator it = _environmental_contacts.begin();
 		 it != _environmental_contacts.end(); ++it) {
-		if (it->_link_name != link_name) {
+		if (it->contact_link_name != link_name) {
 			new_contacts.push_back(*it);
 		}
 	}
@@ -797,10 +797,10 @@ void Sai2Model::updateEnvironmentalContact(const string link,
 										   const ContactType contact_type) {
 	for (vector<ContactModel>::iterator it = _environmental_contacts.begin();
 		 it != _environmental_contacts.end(); ++it) {
-		if (it->_link_name == link) {
-			it->_contact_position = pos_in_link;
-			it->_contact_orientation = orientation;
-			it->_contact_type = contact_type;
+		if (it->contact_link_name == link) {
+			it->contact_position = pos_in_link;
+			it->contact_orientation = orientation;
+			it->contact_type = contact_type;
 			return;
 		}
 	}
@@ -815,7 +815,7 @@ void Sai2Model::addManipulationContact(const string link,
 									   const ContactType contact_type) {
 	for (vector<ContactModel>::iterator it = _manipulation_contacts.begin();
 		 it != _manipulation_contacts.end(); ++it) {
-		if (it->_link_name == link) {
+		if (it->contact_link_name == link) {
 			throw invalid_argument(
 				"Environmental contact on link " + link +
 				" already exists in Sai2Model::addManipulationContact()");
@@ -829,7 +829,7 @@ void Sai2Model::deleteManipulationContact(const string link_name) {
 	vector<ContactModel> new_contacts;
 	for (vector<ContactModel>::iterator it = _manipulation_contacts.begin();
 		 it != _manipulation_contacts.end(); ++it) {
-		if (it->_link_name != link_name) {
+		if (it->contact_link_name != link_name) {
 			new_contacts.push_back(*it);
 		}
 	}
@@ -842,10 +842,10 @@ void Sai2Model::updateManipulationContact(const string link,
 										  const ContactType contact_type) {
 	for (vector<ContactModel>::iterator it = _manipulation_contacts.begin();
 		 it != _manipulation_contacts.end(); ++it) {
-		if (it->_link_name == link) {
-			it->_contact_position = pos_in_link;
-			it->_contact_orientation = orientation;
-			it->_contact_type = contact_type;
+		if (it->contact_link_name == link) {
+			it->contact_position = pos_in_link;
+			it->contact_orientation = orientation;
+			it->contact_type = contact_type;
 			return;
 		}
 	}
@@ -884,14 +884,14 @@ GraspMatrixData Sai2Model::manipulationGraspMatrixAtGeometricCenter(
 	for (const auto& contact : _manipulation_contacts) {
 		if (resultant_in_world_frame) {
 			contact_locations.push_back(
-				positionInWorld(contact._link_name, contact._contact_position));
+				positionInWorld(contact.contact_link_name, contact.contact_position));
 
 		} else {
 			contact_locations.push_back(
-				position(contact._link_name, contact._contact_position));
+				position(contact.contact_link_name, contact.contact_position));
 		}
-		contact_types.push_back(contact._contact_type);
-		if (contact._contact_type == SurfaceContact) {
+		contact_types.push_back(contact.contact_type);
+		if (contact.contact_type == SurfaceContact) {
 			num_surface_contacts++;
 		}
 	}
@@ -905,12 +905,12 @@ GraspMatrixData Sai2Model::manipulationGraspMatrixAtGeometricCenter(
 			Matrix3d R_local;
 			if (resultant_in_world_frame) {
 				R_local = rotationInWorld(
-					_manipulation_contacts[i]._link_name,
-					_manipulation_contacts[i]._contact_orientation);
+					_manipulation_contacts[i].contact_link_name,
+					_manipulation_contacts[i].contact_orientation);
 			} else {
 				R_local =
-					rotation(_manipulation_contacts[i]._link_name,
-							 _manipulation_contacts[i]._contact_orientation);
+					rotation(_manipulation_contacts[i].contact_link_name,
+							 _manipulation_contacts[i].contact_orientation);
 			}
 
 			G_data.G
@@ -922,7 +922,7 @@ GraspMatrixData Sai2Model::manipulationGraspMatrixAtGeometricCenter(
 					   3 * (n_contact_points + num_surface_contacts))
 				.applyOnTheLeft(R_local.transpose());
 
-			if (_manipulation_contacts[i]._contact_type == SurfaceContact) {
+			if (_manipulation_contacts[i].contact_type == SurfaceContact) {
 				G_data.G
 					.block(0, 3 * (n_contact_points + current_surface_contact),
 						   3 * (n_contact_points + num_surface_contacts), 3)
@@ -982,14 +982,14 @@ GraspMatrixData Sai2Model::environmentalGraspMatrixAtGeometricCenter(
 	for (const auto& contact : _environmental_contacts) {
 		if (resultant_in_world_frame) {
 			contact_locations.push_back(
-				positionInWorld(contact._link_name, contact._contact_position));
+				positionInWorld(contact.contact_link_name, contact.contact_position));
 
 		} else {
 			contact_locations.push_back(
-				position(contact._link_name, contact._contact_position));
+				position(contact.contact_link_name, contact.contact_position));
 		}
-		contact_types.push_back(contact._contact_type);
-		if (contact._contact_type == SurfaceContact) {
+		contact_types.push_back(contact.contact_type);
+		if (contact.contact_type == SurfaceContact) {
 			num_surface_contacts++;
 		}
 	}
@@ -1003,12 +1003,12 @@ GraspMatrixData Sai2Model::environmentalGraspMatrixAtGeometricCenter(
 			Matrix3d R_local;
 			if (resultant_in_world_frame) {
 				R_local = rotationInWorld(
-					_environmental_contacts[i]._link_name,
-					_environmental_contacts[i]._contact_orientation);
+					_environmental_contacts[i].contact_link_name,
+					_environmental_contacts[i].contact_orientation);
 			} else {
 				R_local =
-					rotation(_environmental_contacts[i]._link_name,
-							 _environmental_contacts[i]._contact_orientation);
+					rotation(_environmental_contacts[i].contact_link_name,
+							 _environmental_contacts[i].contact_orientation);
 			}
 
 			G_data.G
@@ -1020,7 +1020,7 @@ GraspMatrixData Sai2Model::environmentalGraspMatrixAtGeometricCenter(
 					   3 * (n_contact_points + num_surface_contacts))
 				.applyOnTheLeft(R_local.transpose());
 
-			if (_environmental_contacts[i]._contact_type == SurfaceContact) {
+			if (_environmental_contacts[i].contact_type == SurfaceContact) {
 				G_data.G
 					.block(0, 3 * (n_contact_points + current_surface_contact),
 						   3 * (n_contact_points + num_surface_contacts), 3)

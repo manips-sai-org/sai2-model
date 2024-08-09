@@ -33,6 +33,7 @@
 
 # Directories
 build/
+docs/html/
 
 # DS store file
 **/.DS_Store
