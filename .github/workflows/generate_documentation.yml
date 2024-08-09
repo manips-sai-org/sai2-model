@@ -2,7 +2,7 @@ name: Generate and publish Doxygen documentation
 
 on:
   push:
-    branches: [ "master", mika_dev/documentation ]
+    branches: [ "master" ]
 
 jobs:
   build-and-archive:
