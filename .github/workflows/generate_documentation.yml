@@ -1,0 +1,17 @@
+name: Generate and publish Doxygen documentation
+
+on:
+  push:
+    branches: [ "master", mika_dev/documentation ]
+
+jobs:
+  build-and-archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout-repo
+        uses: actions/checkout@v4
+
+      - name: generate documentation
+        uses: ./custom_github_actions/deploy_docs
+        with: 
+          github-token: ${{ secrets.GITHUB_TOKEN }}

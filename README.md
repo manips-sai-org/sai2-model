@@ -44,6 +44,15 @@ cd build/examples/01-create_model_from_file
 ./01-create_model_from_file
 ```
 
+## Documentation
+The documentation can also be accessed online at the following [link](https://manips-sai-org.github.io/sai2-model/)
+
+It can also be generated locally with doxygen:
+```
+cd docs
+doxygen
+```
+
 ## License
 Currently pending licensing. PLEASE DO NOT DISTRIBUTE.
 
