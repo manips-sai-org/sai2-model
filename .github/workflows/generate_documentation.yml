@@ -12,6 +12,6 @@ jobs:
         uses: actions/checkout@v4
 
       - name: generate documentation
-        uses: ./custom_github_actions/deploy_docs
+        uses: manips-sai-org/sai2-common/custom_github_actions/deploy_docs@master
         with: 
           github-token: ${{ secrets.GITHUB_TOKEN }}
