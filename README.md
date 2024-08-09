@@ -1,4 +1,4 @@
-# sai2-model
+# Sai2-Model
 
 This is SAI2 robot model library for robot kinematics and dynamics.
 It uses [RBDL](https://rbdl.bitbucket.io/) and adds function to facilitate the implementation of the whole body control framework from Stanford Robotics Lab.
@@ -37,7 +37,7 @@ cd build
 cmake .. && make -j8
 ```
 
-## run the examples
+## Run the examples
 Go to the build/examples/one_of_the_examples folder and run the example. For example 1 :
 ```
 cd build/examples/01-create_model_from_file
@@ -46,3 +46,6 @@ cd build/examples/01-create_model_from_file
 
 ## License
 Currently pending licensing. PLEASE DO NOT DISTRIBUTE.
+
+## For questions, contact:
+mjorda@stanford.edu or mjorda@jorda-tech.com
