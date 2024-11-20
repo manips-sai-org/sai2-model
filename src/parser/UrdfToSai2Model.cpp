@@ -63,6 +63,7 @@ bool construct_model(
 	Matrix3d root_inertial_inertia;
 	double root_inertial_mass;
 	link_names_to_id_map[root->name] = 0;
+	Body root_link = Body();
 
 	if (root->inertial) {
 		root_inertial_mass = root->inertial->mass;
@@ -86,32 +87,31 @@ bool construct_model(
 		root->inertial->origin.rotation.getRPY(
 			root_inertial_rpy[0], root_inertial_rpy[1], root_inertial_rpy[2]);
 
-		Body root_link = Body(root_inertial_mass, root_inertial_position,
-							  root_inertial_inertia);
-
-		Joint root_joint(JointTypeFixed);
-		if (floating_base) {
-			root_joint = JointTypeFloatingBase;
-		}
-
-		SpatialTransform root_joint_frame = SpatialTransform();
-
-		if (verbose) {
-			cout << "+ Adding Root Body " << endl;
-			cout << "  joint frame: " << root_joint_frame << endl;
-			if (floating_base) {
-				cout << "  joint type : floating" << endl;
-			} else {
-				cout << "  joint type : fixed" << endl;
-			}
-			cout << "  body inertia: " << endl << root_link.mInertia << endl;
-			cout << "  body mass   : " << root_link.mMass << endl;
-			cout << "  body name   : " << root->name << endl;
-		}
-
-		rbdl_model->AppendBody(root_joint_frame, root_joint, root_link,
-							   root->name);
+		root_link = Body(root_inertial_mass, root_inertial_position,
+						 root_inertial_inertia);
 	}
+
+	Joint root_joint(JointTypeFixed);
+	if (floating_base) {
+		root_joint = JointTypeFloatingBase;
+	}
+
+	SpatialTransform root_joint_frame = SpatialTransform();
+
+	if (verbose) {
+		cout << "+ Adding Root Body " << endl;
+		cout << "  joint frame: " << root_joint_frame << endl;
+		if (floating_base) {
+			cout << "  joint type : floating" << endl;
+		} else {
+			cout << "  joint type : fixed" << endl;
+		}
+		cout << "  body inertia: " << endl << root_link.mInertia << endl;
+		cout << "  body mass   : " << root_link.mMass << endl;
+		cout << "  body name   : " << root->name << endl;
+	}
+
+	rbdl_model->AppendBody(root_joint_frame, root_joint, root_link, root->name);
 
 	if (link_stack.top()->child_joints.size() > 0) {
 		joint_index_stack.push(0);
