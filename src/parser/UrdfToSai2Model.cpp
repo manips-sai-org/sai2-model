@@ -63,6 +63,7 @@ bool construct_model(
 	Matrix3d root_inertial_inertia;
 	double root_inertial_mass;
 	link_names_to_id_map[root->name] = 0;
+	Body root_link = Body();
 
 	if (root->inertial) {
 		root_inertial_mass = root->inertial->mass;
@@ -86,32 +87,31 @@ bool construct_model(
 		root->inertial->origin.rotation.getRPY(
 			root_inertial_rpy[0], root_inertial_rpy[1], root_inertial_rpy[2]);
 
-		Body root_link = Body(root_inertial_mass, root_inertial_position,
-							  root_inertial_inertia);
-
-		Joint root_joint(JointTypeFixed);
-		if (floating_base) {
-			root_joint = JointTypeFloatingBase;
-		}
-
-		SpatialTransform root_joint_frame = SpatialTransform();
-
-		if (verbose) {
-			cout << "+ Adding Root Body " << endl;
-			cout << "  joint frame: " << root_joint_frame << endl;
-			if (floating_base) {
-				cout << "  joint type : floating" << endl;
-			} else {
-				cout << "  joint type : fixed" << endl;
-			}
-			cout << "  body inertia: " << endl << root_link.mInertia << endl;
-			cout << "  body mass   : " << root_link.mMass << endl;
-			cout << "  body name   : " << root->name << endl;
-		}
-
-		rbdl_model->AppendBody(root_joint_frame, root_joint, root_link,
-							   root->name);
+		root_link = Body(root_inertial_mass, root_inertial_position,
+						 root_inertial_inertia);
 	}
+
+	Joint root_joint(JointTypeFixed);
+	if (floating_base) {
+		root_joint = JointTypeFloatingBase;
+	}
+
+	SpatialTransform root_joint_frame = SpatialTransform();
+
+	if (verbose) {
+		cout << "+ Adding Root Body " << endl;
+		cout << "  joint frame: " << root_joint_frame << endl;
+		if (floating_base) {
+			cout << "  joint type : floating" << endl;
+		} else {
+			cout << "  joint type : fixed" << endl;
+		}
+		cout << "  body inertia: " << endl << root_link.mInertia << endl;
+		cout << "  body mass   : " << root_link.mMass << endl;
+		cout << "  body name   : " << root->name << endl;
+	}
+
+	rbdl_model->AppendBody(root_joint_frame, root_joint, root_link, root->name);
 
 	if (link_stack.top()->child_joints.size() > 0) {
 		joint_index_stack.push(0);
@@ -148,10 +148,9 @@ bool construct_model(
 		}
 	}
 
-	unsigned int j;
-	unsigned int current_moveable_joint_id =
-		1;	// start with 1 because 0 is the root joint
-	for (j = 0; j < joint_names.size(); j++) {
+	// start with 1 because 0 is the root joint
+	unsigned int current_moveable_joint_id = 1;
+	for (unsigned int j = 0; j < joint_names.size(); j++) {
 		JointPtr urdf_joint = joint_map[joint_names[j]];
 		LinkPtr urdf_parent = link_map[urdf_joint->parent_link_name];
 		LinkPtr urdf_child = link_map[urdf_joint->child_link_name];
@@ -162,20 +161,13 @@ bool construct_model(
 		}
 
 		// determine where to add the current joint and child body
-		unsigned int rbdl_parent_id = 0;
-
-		if (urdf_parent->name != "base_joint" &&
-			rbdl_model->mBodies.size() != 1)
-			rbdl_parent_id = rbdl_model->GetBodyId(urdf_parent->name.c_str());
+		unsigned int rbdl_parent_id =
+			rbdl_model->GetBodyId(urdf_parent->name.c_str());
 
 		if (rbdl_parent_id == std::numeric_limits<unsigned int>::max())
 			cerr << "Error while processing joint '" << urdf_joint->name
 				 << "': parent link '" << urdf_parent->name
 				 << "' could not be found." << endl;
-
-		// cout << "joint: " << urdf_joint->name << "\tparent = " <<
-		// urdf_parent->name << " child = " << urdf_child->name << " parent_id =
-		// " << rbdl_parent_id << endl;
 
 		// create the joint
 		Joint rbdl_joint;
