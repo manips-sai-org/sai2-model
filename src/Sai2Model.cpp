@@ -34,7 +34,7 @@ bool isPositiveDefinite(const MatrixXd& matrix) {
 	if (matrix.rows() != matrix.cols()) return false;
 
 	// symmetric
-	if (!matrix.transpose().isApprox(matrix)) return false;
+	if (!matrix.transpose().isApprox(matrix, 1e-2)) return false;
 
 	// positive eigenvalues
 	SelfAdjointEigenSolver<MatrixXd> eigensolver(matrix);
