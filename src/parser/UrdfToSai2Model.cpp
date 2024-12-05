@@ -339,27 +339,34 @@ bool construct_model(
 
 		// get the joint limits
 		if (urdf_joint->limits) {
-			if (urdf_joint->type != Sai2Urdfreader::Joint::REVOLUTE &&
-				urdf_joint->type != Sai2Urdfreader::Joint::PRISMATIC) {
-				cerr << "error while processing limits on joint '"
-					 << urdf_joint->name
-					 << "': limits are only supported on revolute and "
-						"prismatic joints."
-					 << endl;
-				return false;
-			}
-			if (urdf_joint->limits->upper <= urdf_joint->limits->lower) {
-				cerr << "error while processing limits on joint '"
-					 << urdf_joint->name
-					 << "': lower limit cannot be equal or higher than upper "
-						"limit"
-					 << endl;
-				return false;
-			}
 			const auto& lim = urdf_joint->limits;
-			joint_limits.push_back(Sai2Model::JointLimit(
-				urdf_joint->name, joint_q_index, lim->lower, lim->upper,
-				lim->velocity, lim->effort));
+			switch (urdf_joint->type) {
+				case Sai2Urdfreader::Joint::REVOLUTE:
+				case Sai2Urdfreader::Joint::PRISMATIC:
+					if (urdf_joint->limits->upper <=
+						urdf_joint->limits->lower) {
+						cerr << "error while processing limits on joint '"
+							 << urdf_joint->name
+							 << "': lower limit cannot be equal or higher than "
+								"upper "
+								"limit, disabling joint limits for that joint"
+							 << endl;
+						break;
+					}
+					joint_limits.push_back(Sai2Model::JointLimit(
+						urdf_joint->name, joint_q_index, lim->lower, lim->upper,
+						lim->velocity, lim->effort));
+					break;
+
+				case Sai2Urdfreader::Joint::CONTINUOUS:
+					joint_limits.push_back(Sai2Model::JointLimit(
+						urdf_joint->name, joint_q_index, -std::numeric_limits<double>::max(), std::numeric_limits<double>::max(),
+						lim->velocity, lim->effort));
+					break;
+
+				default:
+					break;
+			}
 		}
 	}
 

@@ -15,10 +15,7 @@ int main(int argc, char** argv) {
 	auto robot = std::make_shared<Sai2Model::Sai2Model>(robot_fname);
 
 	cout << endl
-		 << "Joint limits are parsed automatically in the urdf file. They must "
-			"be present for prismatic and revolute joints and must not be "
-			"there for spherical and fixed joints, otherwise the parser will "
-			"give an error"
+		 << "Joint limits are parsed automatically in the urdf file."
 		 << endl
 		 << endl;
 
