@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['lambda_228',['Lambda',['../structSai2Model_1_1OpSpaceMatrices.html#a6fc294f8797708928a16f965a5405a30',1,'Sai2Model::OpSpaceMatrices']]],
-  ['link_5fname_229',['link_name',['../structSai2Model_1_1ForceSensorData.html#a10d54127c094950d8c6b78fd7e93972a',1,'Sai2Model::ForceSensorData']]]
+  ['lambda_228',['Lambda',['../structSaiModel_1_1OpSpaceMatrices.html#a29623520fb900eebcd8ef93ae4cfea3c',1,'SaiModel::OpSpaceMatrices']]],
+  ['link_5fname_229',['link_name',['../structSaiModel_1_1ForceSensorData.html#ab8d5525adb1cfabb4c0f5482bcb99668',1,'SaiModel::ForceSensorData']]]
 ];

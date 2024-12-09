@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['w_5findex_119',['w_index',['../structSai2Model_1_1SphericalJointDescription.html#a5328d19252c7c06e781ee9e29c872abf',1,'Sai2Model::SphericalJointDescription']]],
-  ['worldgravity_120',['worldGravity',['../classSai2Model_1_1Sai2Model.html#a0b4426fd280cbc74adb12aa392965d71',1,'Sai2Model::Sai2Model']]]
+  ['w_5findex_119',['w_index',['../structSaiModel_1_1SphericalJointDescription.html#a63d9d7d98bcf998717d24f4a69df56df',1,'SaiModel::SphericalJointDescription']]],
+  ['worldgravity_120',['worldGravity',['../classSaiModel_1_1SaiModel.html#abefd911ac7c09d63a538615228ec557c',1,'SaiModel::SaiModel']]]
 ];

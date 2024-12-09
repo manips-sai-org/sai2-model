@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['graspmatrixdata_123',['GraspMatrixData',['../structSai2Model_1_1GraspMatrixData.html',1,'Sai2Model']]]
+  ['graspmatrixdata_123',['GraspMatrixData',['../structSaiModel_1_1GraspMatrixData.html',1,'SaiModel']]]
 ];

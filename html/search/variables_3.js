@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['g_220',['G',['../structSai2Model_1_1GraspMatrixData.html#ad5a473ba8992bb2b8d28755b51eb204e',1,'Sai2Model::GraspMatrixData']]],
-  ['g_5finv_221',['G_inv',['../structSai2Model_1_1GraspMatrixData.html#ae9a0e53347f79a50243d35e86239905a',1,'Sai2Model::GraspMatrixData']]]
+  ['g_220',['G',['../structSaiModel_1_1GraspMatrixData.html#a1edbd49bbc80568d7ef0cc311f1a39e4',1,'SaiModel::GraspMatrixData']]],
+  ['g_5finv_221',['G_inv',['../structSaiModel_1_1GraspMatrixData.html#ab9c37cc9c927a9ffef3c23f0a900fe24',1,'SaiModel::GraspMatrixData']]]
 ];

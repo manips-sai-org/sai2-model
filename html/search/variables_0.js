@@ -1,9 +1,9 @@
 var searchData=
 [
-  ['child_5flink_5fname_211',['child_link_name',['../structSai2Model_1_1SphericalJointDescription.html#a712aea2ed20b10aa81efbba37cfa37de',1,'Sai2Model::SphericalJointDescription']]],
-  ['com_5fpos_212',['com_pos',['../structSai2Model_1_1LinkMassParams.html#a0c37d1f4f3e7726cdc70f7e815de8e9e',1,'Sai2Model::LinkMassParams']]],
-  ['contact_5flink_5fname_213',['contact_link_name',['../structSai2Model_1_1ContactModel.html#a7bb0b511930d4bb7d20184a93a7e1dbf',1,'Sai2Model::ContactModel']]],
-  ['contact_5forientation_214',['contact_orientation',['../structSai2Model_1_1ContactModel.html#a2b56821a1882b8a44852692783d5cc6a',1,'Sai2Model::ContactModel']]],
-  ['contact_5fposition_215',['contact_position',['../structSai2Model_1_1ContactModel.html#a7e63b53336fe62a399870f0d6376cefb',1,'Sai2Model::ContactModel']]],
-  ['contact_5ftype_216',['contact_type',['../structSai2Model_1_1ContactModel.html#a9178646514d1cd9030acf8765734e3d2',1,'Sai2Model::ContactModel']]]
+  ['child_5flink_5fname_211',['child_link_name',['../structSaiModel_1_1SphericalJointDescription.html#ae52994ff2df628302876bddf51d6c218',1,'SaiModel::SphericalJointDescription']]],
+  ['com_5fpos_212',['com_pos',['../structSaiModel_1_1LinkMassParams.html#a49cba9192c7c6f48517f0212d01580e6',1,'SaiModel::LinkMassParams']]],
+  ['contact_5flink_5fname_213',['contact_link_name',['../structSaiModel_1_1ContactModel.html#a144fd95437cbb2e6b9d23a9703041738',1,'SaiModel::ContactModel']]],
+  ['contact_5forientation_214',['contact_orientation',['../structSaiModel_1_1ContactModel.html#aba68c986e485ff7e9a9061d3ef5098bc',1,'SaiModel::ContactModel']]],
+  ['contact_5fposition_215',['contact_position',['../structSaiModel_1_1ContactModel.html#a07d3acaa9dc694e897ef7f3b4ba89000',1,'SaiModel::ContactModel']]],
+  ['contact_5ftype_216',['contact_type',['../structSaiModel_1_1ContactModel.html#ae938c772b81aadcdd2b4348c14bef03b',1,'SaiModel::ContactModel']]]
 ];

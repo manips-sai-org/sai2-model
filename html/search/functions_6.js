@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['islinkinrobot_155',['isLinkInRobot',['../classSai2Model_1_1Sai2Model.html#ac99cfd5e677e3a25b0fc912de62757bd',1,'Sai2Model::Sai2Model']]]
+  ['islinkinrobot_155',['isLinkInRobot',['../classSaiModel_1_1SaiModel.html#ae6f267753af8146d643642c6e2f5df7c',1,'SaiModel::SaiModel']]]
 ];

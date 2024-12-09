@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.9.1"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Sai2-Model: /home/runner/work/sai2-model/sai2-model/src/parser/UrdfToSai2Model.h Source File</title>
+<title>Sai-Model: /home/runner/work/sai-model/sai-model/src/parser/UrdfToSaiModel.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -21,7 +21,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
-   <div id="projectname">Sai2-Model
+   <div id="projectname">Sai-Model
    &#160;<span id="projectnumber">v1.0.0</span>
    </div>
   </td>
@@ -67,11 +67,11 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="headertitle">
-<div class="title">UrdfToSai2Model.h</div>  </div>
+<div class="title">UrdfToSaiModel.h</div>  </div>
 </div><!--header-->
 <div class="contents">
-<div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;<span class="preprocessor">#ifndef SAI2_URDF_TO_RBDLMODEL_H</span></div>
-<div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160;<span class="preprocessor">#define SAI2_URDF_TO_RBDLMODEL_H</span></div>
+<div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;<span class="preprocessor">#ifndef SAI_URDF_TO_RBDLMODEL_H</span></div>
+<div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160;<span class="preprocessor">#define SAI_URDF_TO_RBDLMODEL_H</span></div>
 <div class="line"><a name="l00003"></a><span class="lineno">    3</span>&#160; </div>
 <div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160;<span class="preprocessor">#include &lt;rbdl/rbdl_config.h&gt;</span></div>
 <div class="line"><a name="l00005"></a><span class="lineno">    5</span>&#160; </div>
@@ -89,7 +89,7 @@ $(function() {
 <div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;    std::map&lt;int, double&gt;&amp; initial_joint_positions,</div>
 <div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;    std::map&lt;std::string, std::string&gt;&amp; joint_names_to_child_link_names_map,</div>
 <div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;    std::map&lt;std::string, std::string&gt;&amp; joint_names_to_parent_link_names_map,</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;    std::vector&lt;Sai2Model::JointLimit&gt;&amp; joint_limits, <span class="keywordtype">bool</span> floating_base,</div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;    std::vector&lt;SaiModel::JointLimit&gt;&amp; joint_limits, <span class="keywordtype">bool</span> floating_base,</div>
 <div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;    <span class="keywordtype">bool</span> verbose = <span class="keyword">false</span>);</div>
 <div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160; </div>
 <div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;RBDL_DLLAPI <span class="keywordtype">bool</span> URDFReadFromString(</div>
@@ -99,7 +99,7 @@ $(function() {
 <div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;    std::map&lt;int, double&gt;&amp; initial_joint_positions,</div>
 <div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;    std::map&lt;std::string, std::string&gt;&amp; joint_names_to_child_link_names_map,</div>
 <div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;    std::map&lt;std::string, std::string&gt;&amp; joint_names_to_parent_link_names_map,</div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;    std::vector&lt;Sai2Model::JointLimit&gt;&amp; joint_limits, <span class="keywordtype">bool</span> floating_base,</div>
+<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;    std::vector&lt;SaiModel::JointLimit&gt;&amp; joint_limits, <span class="keywordtype">bool</span> floating_base,</div>
 <div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;    <span class="keywordtype">bool</span> verbose = <span class="keyword">false</span>);</div>
 <div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;}  <span class="comment">// namespace RigidBodyDynamics</span></div>
 <div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160; </div>

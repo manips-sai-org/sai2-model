@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['nullspacematrix_180',['nullspaceMatrix',['../classSai2Model_1_1Sai2Model.html#a27bb3ac351d8c88fcee91ab331aa00d8',1,'Sai2Model::Sai2Model']]]
+  ['nullspacematrix_180',['nullspaceMatrix',['../classSaiModel_1_1SaiModel.html#ad769c1699df5da3258c8b8e70c6f31f2',1,'SaiModel::SaiModel']]]
 ];

@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.9.1"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Sai2-Model: Sai2Model::ContactModel Struct Reference</title>
+<title>Sai-Model: SaiModel::ContactModel Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -21,7 +21,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
-   <div id="projectname">Sai2-Model
+   <div id="projectname">Sai-Model
    &#160;<span id="projectnumber">v1.0.0</span>
    </div>
   </td>
@@ -62,53 +62,53 @@ $(function() {
 
 <div id="nav-path" class="navpath">
   <ul>
-<li class="navelem"><b>Sai2Model</b></li><li class="navelem"><a class="el" href="structSai2Model_1_1ContactModel.html">ContactModel</a></li>  </ul>
+<li class="navelem"><b>SaiModel</b></li><li class="navelem"><a class="el" href="structSaiModel_1_1ContactModel.html">ContactModel</a></li>  </ul>
 </div>
 </div><!-- top -->
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
-<a href="structSai2Model_1_1ContactModel-members.html">List of all members</a>  </div>
+<a href="structSaiModel_1_1ContactModel-members.html">List of all members</a>  </div>
   <div class="headertitle">
-<div class="title">Sai2Model::ContactModel Struct Reference</div>  </div>
+<div class="title">SaiModel::ContactModel Struct Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
 
 <p>Structure for the description of a contact model. The contact model represents a contact between the robot and the environment. It is used to compute the grasp matrix. Only point and surface contacts are supported for now.  
- <a href="structSai2Model_1_1ContactModel.html#details">More...</a></p>
+ <a href="structSaiModel_1_1ContactModel.html#details">More...</a></p>
 
-<p><code>#include &lt;<a class="el" href="Sai2Model_8h_source.html">Sai2Model.h</a>&gt;</code></p>
+<p><code>#include &lt;<a class="el" href="SaiModel_8h_source.html">SaiModel.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a3d046e669a92f49d09be66dfcd0ff521"><td class="memItemLeft" align="right" valign="top"><a id="a3d046e669a92f49d09be66dfcd0ff521"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>ContactModel</b> (const string &amp;link_name, const Vector3d &amp;pos, const Matrix3d &amp;orientation, const ContactType &amp;<a class="el" href="structSai2Model_1_1ContactModel.html#a9178646514d1cd9030acf8765734e3d2">contact_type</a>)</td></tr>
-<tr class="separator:a3d046e669a92f49d09be66dfcd0ff521"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae1a03907659b0cf807f3823ea41f84e5"><td class="memItemLeft" align="right" valign="top"><a id="ae1a03907659b0cf807f3823ea41f84e5"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>ContactModel</b> (const string &amp;link_name, const Vector3d &amp;pos, const Matrix3d &amp;orientation, const ContactType &amp;<a class="el" href="structSaiModel_1_1ContactModel.html#ae938c772b81aadcdd2b4348c14bef03b">contact_type</a>)</td></tr>
+<tr class="separator:ae1a03907659b0cf807f3823ea41f84e5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:a7bb0b511930d4bb7d20184a93a7e1dbf"><td class="memItemLeft" align="right" valign="top"><a id="a7bb0b511930d4bb7d20184a93a7e1dbf"></a>
-string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSai2Model_1_1ContactModel.html#a7bb0b511930d4bb7d20184a93a7e1dbf">contact_link_name</a></td></tr>
-<tr class="memdesc:a7bb0b511930d4bb7d20184a93a7e1dbf"><td class="mdescLeft">&#160;</td><td class="mdescRight">name of the link at which the contact occurs <br /></td></tr>
-<tr class="separator:a7bb0b511930d4bb7d20184a93a7e1dbf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7e63b53336fe62a399870f0d6376cefb"><td class="memItemLeft" align="right" valign="top"><a id="a7e63b53336fe62a399870f0d6376cefb"></a>
-Vector3d&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSai2Model_1_1ContactModel.html#a7e63b53336fe62a399870f0d6376cefb">contact_position</a></td></tr>
-<tr class="memdesc:a7e63b53336fe62a399870f0d6376cefb"><td class="mdescLeft">&#160;</td><td class="mdescRight">the position of the contact in the link. if possible, it should be the geometrical center of the contact zone, or the point of contact in case of point contact <br /></td></tr>
-<tr class="separator:a7e63b53336fe62a399870f0d6376cefb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2b56821a1882b8a44852692783d5cc6a"><td class="memItemLeft" align="right" valign="top"><a id="a2b56821a1882b8a44852692783d5cc6a"></a>
-Matrix3d&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSai2Model_1_1ContactModel.html#a2b56821a1882b8a44852692783d5cc6a">contact_orientation</a></td></tr>
-<tr class="memdesc:a2b56821a1882b8a44852692783d5cc6a"><td class="mdescLeft">&#160;</td><td class="mdescRight">orientation of contact. Assumes the constrained direction is z. <br /></td></tr>
-<tr class="separator:a2b56821a1882b8a44852692783d5cc6a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9178646514d1cd9030acf8765734e3d2"><td class="memItemLeft" align="right" valign="top"><a id="a9178646514d1cd9030acf8765734e3d2"></a>
-ContactType&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSai2Model_1_1ContactModel.html#a9178646514d1cd9030acf8765734e3d2">contact_type</a></td></tr>
-<tr class="memdesc:a9178646514d1cd9030acf8765734e3d2"><td class="mdescLeft">&#160;</td><td class="mdescRight">contact type. Only point and surface contacts are supported for now <br /></td></tr>
-<tr class="separator:a9178646514d1cd9030acf8765734e3d2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a144fd95437cbb2e6b9d23a9703041738"><td class="memItemLeft" align="right" valign="top"><a id="a144fd95437cbb2e6b9d23a9703041738"></a>
+string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSaiModel_1_1ContactModel.html#a144fd95437cbb2e6b9d23a9703041738">contact_link_name</a></td></tr>
+<tr class="memdesc:a144fd95437cbb2e6b9d23a9703041738"><td class="mdescLeft">&#160;</td><td class="mdescRight">name of the link at which the contact occurs <br /></td></tr>
+<tr class="separator:a144fd95437cbb2e6b9d23a9703041738"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a07d3acaa9dc694e897ef7f3b4ba89000"><td class="memItemLeft" align="right" valign="top"><a id="a07d3acaa9dc694e897ef7f3b4ba89000"></a>
+Vector3d&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSaiModel_1_1ContactModel.html#a07d3acaa9dc694e897ef7f3b4ba89000">contact_position</a></td></tr>
+<tr class="memdesc:a07d3acaa9dc694e897ef7f3b4ba89000"><td class="mdescLeft">&#160;</td><td class="mdescRight">the position of the contact in the link. if possible, it should be the geometrical center of the contact zone, or the point of contact in case of point contact <br /></td></tr>
+<tr class="separator:a07d3acaa9dc694e897ef7f3b4ba89000"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aba68c986e485ff7e9a9061d3ef5098bc"><td class="memItemLeft" align="right" valign="top"><a id="aba68c986e485ff7e9a9061d3ef5098bc"></a>
+Matrix3d&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSaiModel_1_1ContactModel.html#aba68c986e485ff7e9a9061d3ef5098bc">contact_orientation</a></td></tr>
+<tr class="memdesc:aba68c986e485ff7e9a9061d3ef5098bc"><td class="mdescLeft">&#160;</td><td class="mdescRight">orientation of contact. Assumes the constrained direction is z. <br /></td></tr>
+<tr class="separator:aba68c986e485ff7e9a9061d3ef5098bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae938c772b81aadcdd2b4348c14bef03b"><td class="memItemLeft" align="right" valign="top"><a id="ae938c772b81aadcdd2b4348c14bef03b"></a>
+ContactType&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSaiModel_1_1ContactModel.html#ae938c772b81aadcdd2b4348c14bef03b">contact_type</a></td></tr>
+<tr class="memdesc:ae938c772b81aadcdd2b4348c14bef03b"><td class="mdescLeft">&#160;</td><td class="mdescRight">contact type. Only point and surface contacts are supported for now <br /></td></tr>
+<tr class="separator:ae938c772b81aadcdd2b4348c14bef03b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Structure for the description of a contact model. The contact model represents a contact between the robot and the environment. It is used to compute the grasp matrix. Only point and surface contacts are supported for now. </p>
 </div><hr/>The documentation for this struct was generated from the following file:<ul>
-<li>/home/runner/work/sai2-model/sai2-model/src/<a class="el" href="Sai2Model_8h_source.html">Sai2Model.h</a></li>
+<li>/home/runner/work/sai-model/sai-model/src/<a class="el" href="SaiModel_8h_source.html">SaiModel.h</a></li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->

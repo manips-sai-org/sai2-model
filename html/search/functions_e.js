@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['rotation_187',['rotation',['../classSai2Model_1_1Sai2Model.html#a1af6f8563c812cc7729d1b4fe129016f',1,'Sai2Model::Sai2Model']]],
-  ['rotationinworld_188',['rotationInWorld',['../classSai2Model_1_1Sai2Model.html#adb81b0ea2ff926d98728d2bdf8087e05',1,'Sai2Model::Sai2Model']]]
+  ['rotation_187',['rotation',['../classSaiModel_1_1SaiModel.html#a868f5a5c5fd596db3b3f7853e7183905',1,'SaiModel::SaiModel']]],
+  ['rotationinworld_188',['rotationInWorld',['../classSaiModel_1_1SaiModel.html#a0bb949c8cc13d5a10023fb3c307a6352',1,'SaiModel::SaiModel']]]
 ];

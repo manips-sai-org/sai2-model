@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['effort_217',['effort',['../structSai2Model_1_1JointLimit.html#a4e68109f44b2467196cb7ad96f11f049',1,'Sai2Model::JointLimit']]]
+  ['effort_217',['effort',['../structSaiModel_1_1JointLimit.html#a49f7c09a7792287a53d56810c017584d',1,'SaiModel::JointLimit']]]
 ];

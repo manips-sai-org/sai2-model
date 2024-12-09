@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['q_185',['q',['../classSai2Model_1_1Sai2Model.html#a336be2c66c1da8738094a4f1dfa8d0bc',1,'Sai2Model::Sai2Model']]],
-  ['qsize_186',['qSize',['../classSai2Model_1_1Sai2Model.html#ad8d75447f51437298f78c96421b3aec7',1,'Sai2Model::Sai2Model']]]
+  ['q_185',['q',['../classSaiModel_1_1SaiModel.html#a219b8ace7b7d6f6f4a107cc94de72b48',1,'SaiModel::SaiModel']]],
+  ['qsize_186',['qSize',['../classSaiModel_1_1SaiModel.html#a7ae6792ab4854cc8001abf61d8670eb8',1,'SaiModel::SaiModel']]]
 ];
