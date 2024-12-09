@@ -1,9 +1,9 @@
-#ifndef SAI2MODEL_JOINT_LIMITS_H_
-#define SAI2MODEL_JOINT_LIMITS_H_
+#ifndef SaiModel_JOINT_LIMITS_H_
+#define SaiModel_JOINT_LIMITS_H_
 
 #include <string>
 
-namespace Sai2Model {
+namespace SaiModel {
 
 /**
  * @brief A structure to store joint limits for a robot
@@ -33,6 +33,6 @@ struct JointLimit {
 		  effort(f) {}
 };
 
-}  // namespace Sai2Model
+}  // namespace SaiModel
 
-#endif	// SAI2MODEL_JOINT_LIMITS_H_
+#endif	// SaiModel_JOINT_LIMITS_H_

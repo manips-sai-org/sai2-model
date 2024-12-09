@@ -1,6 +1,6 @@
-// This tests the grasp matrix function of sai2 model interface.
+// This tests the grasp matrix function of sai model interface.
 
-#include <Sai2Model.h>
+#include <SaiModel.h>
 
 #include <iostream>
 #include <memory>
@@ -14,7 +14,7 @@ const string robot_file =
 
 int main() {
 	// load robot
-	auto linkage = std::make_shared<Sai2Model::Sai2Model>(robot_file);
+	auto linkage = std::make_shared<SaiModel::SaiModel>(robot_file);
 
 	// Make perfect tetrahedron
 	linkage->setQ(Vector3d(54.7356 / 180.0 * M_PI, 54.7356 / 180.0 * M_PI,
@@ -31,12 +31,12 @@ int main() {
 	//----------------------------------------
 	linkage->addEnvironmentalContact("link0", Vector3d(1, 0, 0),
 									 Matrix3d::Identity(),
-									 Sai2Model::ContactType::SurfaceContact);
+									 SaiModel::ContactType::SurfaceContact);
 	linkage->addEnvironmentalContact("link1", Vector3d(1, 0, 0),
 									 Matrix3d::Identity(),
-									 Sai2Model::ContactType::PointContact);
+									 SaiModel::ContactType::PointContact);
 
-	Sai2Model::GraspMatrixData grasp_matrix_data =
+	SaiModel::GraspMatrixData grasp_matrix_data =
 		linkage->environmentalGraspMatrixAtGeometricCenter();
 
 	cout << "--------------------------------------------" << endl;
@@ -65,7 +65,7 @@ int main() {
 	// add a third contact
 	linkage->addEnvironmentalContact("link2", Vector3d(1, 0, 0),
 									 Matrix3d::Identity(),
-									 Sai2Model::ContactType::PointContact);
+									 SaiModel::ContactType::PointContact);
 
 	grasp_matrix_data = linkage->environmentalGraspMatrixAtGeometricCenter();
 

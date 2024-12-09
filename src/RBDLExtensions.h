@@ -1,5 +1,5 @@
-#ifndef SAI2MODEL_RBDL_EXTENSIONS_H_
-#define SAI2MODEL_RBDL_EXTENSIONS_H_
+#ifndef SaiModel_RBDL_EXTENSIONS_H_
+#define SaiModel_RBDL_EXTENSIONS_H_
 
 #include <assert.h>
 
@@ -9,7 +9,7 @@
 
 using namespace RigidBodyDynamics;
 
-namespace Sai2Model {
+namespace SaiModel {
 
 /**
  * @brief A function to extend RBDL inverse kinematic function to include joint
@@ -29,6 +29,6 @@ RBDL_DLLAPI bool InverseKinematicsWithJointLimits(
 	Model &model, const Math::VectorNd &Qinit,
 	InverseKinematicsConstraintSet &CS, Math::VectorNd &QMin,
 	Math::VectorNd &QMax, Math::VectorNd &Qres);
-} /* namespace Sai2Model */
+} /* namespace SaiModel */
 
-#endif /* SAI2MODEL_RBDL_EXTENSIONS_H_ */
+#endif /* SaiModel_RBDL_EXTENSIONS_H_ */

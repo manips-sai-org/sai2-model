@@ -3,7 +3,7 @@
 // For the spherical joints, q contains the quaternion x, y and z components in
 // the middle of the q vector, and the w component of the quaternion is at the
 // end of the vector
-#include <Sai2Model.h>
+#include <SaiModel.h>
 
 #include <iostream>
 #include <memory>
@@ -16,7 +16,7 @@ const string robot_fname =
 int main(int argc, char** argv) {
 	cout << "Loading robot file: " << robot_fname << endl;
 
-	auto robot = std::make_shared<Sai2Model::Sai2Model>(robot_fname);
+	auto robot = std::make_shared<SaiModel::SaiModel>(robot_fname);
 
 	cout << endl << endl;
 	cout << "Display links. The base link is 0, links attached to "
@@ -58,13 +58,13 @@ int main(int argc, char** argv) {
 	cout << "dq: " << robot->dq().transpose() << endl;
 	cout << endl << endl;
 
-	cout << "joint names from Sai2Model call" << std::endl;
+	cout << "joint names from SaiModel call" << std::endl;
 	for (const auto& name : robot->jointNames()) {
 		std::cout << name << " , ";
 	}
 	cout << endl << endl;
 
-	cout << "joint names from Sai2Model individual call, looping on q_size "
+	cout << "joint names from SaiModel individual call, looping on q_size "
 			"indexes"
 		 << std::endl;
 	for (int i = 0; i < robot->qSize(); ++i) {

@@ -1,11 +1,11 @@
-# Sai2-Model
+# Sai-Model
 
-This is SAI2 robot model library for robot kinematics and dynamics.
+This is SAI robot model library for robot kinematics and dynamics.
 It uses [RBDL](https://rbdl.bitbucket.io/) and adds function to facilitate the implementation of the whole body control framework from Stanford Robotics Lab.
 
 ## Dependencies
-sai2-model depends on eigen3 and sai2-urdfreader.
-You can get sai2-urdfreader [there](https://github.com/manips-sai-org/sai2-urdfreader).
+sai-model depends on eigen3 and sai-urdfreader.
+You can get sai-urdfreader [there](https://github.com/manips-sai-org/sai-urdfreader).
 
 To install eigen3 on Ubuntu :
 ```
@@ -30,7 +30,7 @@ cd build
 cmake .. && make -j8
 cd ../..
 ```
- * Then you can make sai2-model from the base directory
+ * Then you can make sai-model from the base directory
 ```
 mkdir build
 cd build
@@ -45,7 +45,7 @@ cd build/examples/01-create_model_from_file
 ```
 
 ## Documentation
-The documentation can also be accessed online at the following [link](https://manips-sai-org.github.io/sai2-model/)
+The documentation can also be accessed online at the following [link](https://manips-sai-org.github.io/sai-model/)
 
 It can also be generated locally with doxygen:
 ```

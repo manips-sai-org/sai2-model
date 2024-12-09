@@ -1,4 +1,4 @@
-#include "UrdfToSai2Model.h"
+#include "UrdfToSaiModel.h"
 
 #include <assert.h>
 #include <rbdl/rbdl.h>
@@ -10,12 +10,12 @@
 #include <map>
 #include <stack>
 
-#include "Sai2ModelParserUtils.h"
+#include "SaiModelParserUtils.h"
 
-typedef my_shared_ptr<Sai2Urdfreader::Link> LinkPtr;
-typedef const my_shared_ptr<const Sai2Urdfreader::Link> ConstLinkPtr;
-typedef my_shared_ptr<Sai2Urdfreader::Joint> JointPtr;
-typedef my_shared_ptr<Sai2Urdfreader::ModelInterface> ModelPtr;
+typedef my_shared_ptr<SaiUrdfreader::Link> LinkPtr;
+typedef const my_shared_ptr<const SaiUrdfreader::Link> ConstLinkPtr;
+typedef my_shared_ptr<SaiUrdfreader::Joint> JointPtr;
+typedef my_shared_ptr<SaiUrdfreader::ModelInterface> ModelPtr;
 
 using namespace std;
 
@@ -38,7 +38,7 @@ bool construct_model(
 	std::map<int, double>& initial_joint_positions,
 	std::map<std::string, std::string>& joint_names_to_child_link_names_map,
 	std::map<std::string, std::string>& joint_names_to_parent_link_names_map,
-	std::vector<Sai2Model::JointLimit>& joint_limits, bool floating_base,
+	std::vector<SaiModel::JointLimit>& joint_limits, bool floating_base,
 	bool verbose) {
 	LinkPtr urdf_root_link;
 
@@ -154,8 +154,8 @@ bool construct_model(
 		JointPtr urdf_joint = joint_map[joint_names[j]];
 		LinkPtr urdf_parent = link_map[urdf_joint->parent_link_name];
 		LinkPtr urdf_child = link_map[urdf_joint->child_link_name];
-		if (urdf_joint->type != Sai2Urdfreader::Joint::FIXED &&
-			urdf_joint->type != Sai2Urdfreader::Joint::UNKNOWN) {
+		if (urdf_joint->type != SaiUrdfreader::Joint::FIXED &&
+			urdf_joint->type != SaiUrdfreader::Joint::UNKNOWN) {
 			joint_names_to_id_map[urdf_joint->name] = current_moveable_joint_id;
 			current_moveable_joint_id++;
 		}
@@ -171,8 +171,8 @@ bool construct_model(
 
 		// create the joint
 		Joint rbdl_joint;
-		if (urdf_joint->type == Sai2Urdfreader::Joint::REVOLUTE ||
-			urdf_joint->type == Sai2Urdfreader::Joint::CONTINUOUS) {
+		if (urdf_joint->type == SaiUrdfreader::Joint::REVOLUTE ||
+			urdf_joint->type == SaiUrdfreader::Joint::CONTINUOUS) {
 			Eigen::Vector3d axis = Eigen::Vector3d(
 				urdf_joint->axis.x, urdf_joint->axis.y, urdf_joint->axis.z);
 			if (axis.norm() < 1e-3) {
@@ -182,7 +182,7 @@ bool construct_model(
 				axis.normalize();
 			}
 			rbdl_joint = Joint(JointTypeRevolute, axis);
-		} else if (urdf_joint->type == Sai2Urdfreader::Joint::PRISMATIC) {
+		} else if (urdf_joint->type == SaiUrdfreader::Joint::PRISMATIC) {
 			Eigen::Vector3d axis = Eigen::Vector3d(
 				urdf_joint->axis.x, urdf_joint->axis.y, urdf_joint->axis.z);
 			if (axis.norm() < 1e-3) {
@@ -193,11 +193,11 @@ bool construct_model(
 			}
 			rbdl_joint =
 				Joint(SpatialVector(0., 0., 0., axis[0], axis[1], axis[2]));
-		} else if (urdf_joint->type == Sai2Urdfreader::Joint::SPHERICAL) {
+		} else if (urdf_joint->type == SaiUrdfreader::Joint::SPHERICAL) {
 			rbdl_joint = Joint(JointTypeSpherical);
-		} else if (urdf_joint->type == Sai2Urdfreader::Joint::FIXED) {
+		} else if (urdf_joint->type == SaiUrdfreader::Joint::FIXED) {
 			rbdl_joint = Joint(JointTypeFixed);
-		} else if (urdf_joint->type == Sai2Urdfreader::Joint::FLOATING) {
+		} else if (urdf_joint->type == SaiUrdfreader::Joint::FLOATING) {
 			// todo: what order of DoF should be used?
 			rbdl_joint = Joint(SpatialVector(0., 0., 0., 1., 0., 0.),
 							   SpatialVector(0., 0., 0., 0., 1., 0.),
@@ -205,7 +205,7 @@ bool construct_model(
 							   SpatialVector(1., 0., 0., 0., 0., 0.),
 							   SpatialVector(0., 1., 0., 0., 0., 0.),
 							   SpatialVector(0., 0., 1., 0., 0., 0.));
-		} else if (urdf_joint->type == Sai2Urdfreader::Joint::PLANAR) {
+		} else if (urdf_joint->type == SaiUrdfreader::Joint::PLANAR) {
 			// todo: which two directions should be used that are perpendicular
 			// to the specified axis?
 			cerr << "Error while processing joint '" << urdf_joint->name
@@ -283,7 +283,7 @@ bool construct_model(
 			cout << "  body name   : " << urdf_child->name << endl;
 		}
 
-		if (urdf_joint->type == Sai2Urdfreader::Joint::FLOATING) {
+		if (urdf_joint->type == SaiUrdfreader::Joint::FLOATING) {
 			Matrix3d zero_matrix = Matrix3d::Zero();
 			Body null_body(0., Vector3d::Zero(3), zero_matrix);
 			Joint joint_txtytz(JointTypeTranslationXYZ);
@@ -311,8 +311,8 @@ bool construct_model(
 		const int joint_q_index =
 			rbdl_model->mJoints[rbdl_model->mJoints.size() - 1].q_index;
 		if (urdf_joint->calibration) {
-			if (urdf_joint->type == Sai2Urdfreader::Joint::REVOLUTE ||
-				urdf_joint->type == Sai2Urdfreader::Joint::CONTINUOUS) {
+			if (urdf_joint->type == SaiUrdfreader::Joint::REVOLUTE ||
+				urdf_joint->type == SaiUrdfreader::Joint::CONTINUOUS) {
 				if (urdf_joint->calibration->rising) {
 					initial_joint_positions[joint_q_index] =
 						*(urdf_joint->calibration->rising);
@@ -320,7 +320,7 @@ bool construct_model(
 					initial_joint_positions[joint_q_index] =
 						*(urdf_joint->calibration->falling) * DEG_TO_RAD;
 				}
-			} else if (urdf_joint->type == Sai2Urdfreader::Joint::PRISMATIC) {
+			} else if (urdf_joint->type == SaiUrdfreader::Joint::PRISMATIC) {
 				if (urdf_joint->calibration->rising) {
 					initial_joint_positions[joint_q_index] =
 						*(urdf_joint->calibration->rising);
@@ -341,8 +341,8 @@ bool construct_model(
 		if (urdf_joint->limits) {
 			const auto& lim = urdf_joint->limits;
 			switch (urdf_joint->type) {
-				case Sai2Urdfreader::Joint::REVOLUTE:
-				case Sai2Urdfreader::Joint::PRISMATIC:
+				case SaiUrdfreader::Joint::REVOLUTE:
+				case SaiUrdfreader::Joint::PRISMATIC:
 					if (urdf_joint->limits->upper <=
 						urdf_joint->limits->lower) {
 						cerr << "error while processing limits on joint '"
@@ -353,13 +353,13 @@ bool construct_model(
 							 << endl;
 						break;
 					}
-					joint_limits.push_back(Sai2Model::JointLimit(
+					joint_limits.push_back(SaiModel::JointLimit(
 						urdf_joint->name, joint_q_index, lim->lower, lim->upper,
 						lim->velocity, lim->effort));
 					break;
 
-				case Sai2Urdfreader::Joint::CONTINUOUS:
-					joint_limits.push_back(Sai2Model::JointLimit(
+				case SaiUrdfreader::Joint::CONTINUOUS:
+					joint_limits.push_back(SaiModel::JointLimit(
 						urdf_joint->name, joint_q_index, -std::numeric_limits<double>::max(), std::numeric_limits<double>::max(),
 						lim->velocity, lim->effort));
 					break;
@@ -380,9 +380,9 @@ RBDL_DLLAPI bool URDFReadFromFile(
 	std::map<int, double>& initial_joint_positions,
 	std::map<std::string, std::string>& joint_names_to_child_link_names_map,
 	std::map<std::string, std::string>& joint_names_to_parent_link_names_map,
-	std::vector<Sai2Model::JointLimit>& joint_limits, bool floating_base,
+	std::vector<SaiModel::JointLimit>& joint_limits, bool floating_base,
 	bool verbose) {
-	std::string resolved_filename = Sai2Model::ReplaceUrdfPathPrefix(filename);
+	std::string resolved_filename = SaiModel::ReplaceUrdfPathPrefix(filename);
 	ifstream model_file(resolved_filename);
 	if (!model_file) {
 		cerr << "Error opening file '" << resolved_filename << "'." << endl;
@@ -414,11 +414,11 @@ RBDL_DLLAPI bool URDFReadFromString(
 	std::map<int, double>& initial_joint_positions,
 	std::map<std::string, std::string>& joint_names_to_child_link_names_map,
 	std::map<std::string, std::string>& joint_names_to_parent_link_names_map,
-	std::vector<Sai2Model::JointLimit>& joint_limits, bool floating_base,
+	std::vector<SaiModel::JointLimit>& joint_limits, bool floating_base,
 	bool verbose) {
 	assert(model);
 
-	ModelPtr urdf_model = Sai2Urdfreader::parseURDF(model_xml_string);
+	ModelPtr urdf_model = SaiUrdfreader::parseURDF(model_xml_string);
 
 	if (!construct_model(model, urdf_model, link_names_to_id_map,
 						 joint_names_to_id_map, initial_joint_positions,

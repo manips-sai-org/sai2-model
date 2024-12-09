@@ -1,4 +1,4 @@
-# script to install sai2-model
+# script to install sai-model
 
 cd rbdl
 mkdir -p build && cd build && cmake .. && make -j8

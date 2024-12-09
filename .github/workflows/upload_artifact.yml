@@ -17,17 +17,17 @@ jobs:
       - name: build-repo
         uses: ./.github/actions/build-repo
         with: 
-          token: ${{ secrets.SAI2_TOKEN }}
+          token: ${{ secrets.SAI_TOKEN }}
 
       - name: Copy Libraries to Archive
         run: |
-          cp build/libsai2-model.a ./libsai2-model.a
+          cp build/libsai-model.a ./libsai-model.a
           cp rbdl/build/librbdl.so.3.2.0 ./librbdl.so
 
-      - name: Archive Sai2-model Artifact
+      - name: Archive Sai-model Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: sai2-model-artifact
+          name: sai-model-artifact
           path: |
-            libsai2-model.a
+            libsai-model.a
             librbdl.so

@@ -9,18 +9,18 @@ runs:
   using: "composite"
   steps:
     - name: Install dependencies
-      uses: manips-sai-org/sai2-common/custom_github_actions/dependencies@master
+      uses: manips-sai-org/sai-common/custom_github_actions/dependencies@master
 
-    - name: Setup Sai2-urdfreader
-      uses: manips-sai-org/sai2-common/custom_github_actions/sai2-repositories@master
+    - name: Setup Sai-urdfreader
+      uses: manips-sai-org/sai-common/custom_github_actions/sai-repositories@master
       with:
         token: ${{ inputs.token }}
-        repo-name: sai2-urdfreader
+        repo-name: sai-urdfreader
 
-    - name: Build Sai2-Model
+    - name: Build Sai-Model
       shell: bash
       run: |
-        export CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:dep/sai2-urdfreader/build/
+        export CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:dep/sai-urdfreader/build/
         cd rbdl && mkdir build && cd build && cmake .. && make -j4
         cd ../../
         mkdir build && cd build && cmake -DBUILD_TESTS=ON .. && make -j4

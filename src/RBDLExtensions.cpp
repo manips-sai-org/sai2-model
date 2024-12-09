@@ -3,7 +3,7 @@
 using namespace RigidBodyDynamics;
 using namespace RigidBodyDynamics::Math;
 
-namespace Sai2Model {
+namespace SaiModel {
 
 RBDL_DLLAPI bool InverseKinematicsWithJointLimits(
 	Model &model, const Math::VectorNd &Qinit,
@@ -167,4 +167,4 @@ RBDL_DLLAPI bool InverseKinematicsWithJointLimits(
 	return false;
 }
 
-}  // namespace Sai2Model
+}  // namespace SaiModel

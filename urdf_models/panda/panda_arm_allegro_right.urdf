@@ -211,14 +211,14 @@
 	<link name="palm_link">
 		<visual>
 			<geometry>
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/base_link.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/base_link.obj" />
 			</geometry>
 			<origin rpy="0 0 0" xyz="0 0 0 " />
 		</visual>
 
 		<!-- <collision>
 			<geometry>
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/base_link.obj"/>
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/base_link.obj"/>
 			</geometry>
 		</collision> -->
 
@@ -246,14 +246,14 @@
 	<link name="index_0">
 		<visual>
 			<geometry>
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_0.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_0.0.obj" />
 			</geometry>
 			<material name="black" />
 		</visual>
 		<collision>
 			<geometry>
 				<!-- <box size="0.0196 0.0275 0.0164"/> -->
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_0.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_0.0.obj" />
 			</geometry>
 			<!-- <origin rpy="0 0 0" xyz="0 0 0.0082" /> -->
 		</collision>
@@ -275,14 +275,14 @@
 	<link name="index_1">
 		<visual>
 			<geometry>
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_1.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_1.0.obj" />
 			</geometry>
 			<material name="black" />
 		</visual>
 		<collision>
 			<geometry>
 				<!-- <box size="0.0196 0.0275 0.054"/> -->
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_1.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_1.0.obj" />
 			</geometry>
 			<!-- <origin rpy="0 0 0" xyz="0 0 0.027" /> -->
 		</collision>
@@ -304,13 +304,13 @@
 	<link name="index_2">
 		<visual>
 			<geometry>
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_2.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_2.0.obj" />
 			</geometry>
 			<material name="black" />
 		</visual>
 		<collision>
 			<geometry>
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_2.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_2.0.obj" />
 				<!-- <box size="0.0196 0.0275 0.0384"/> -->
 			</geometry>
 			<!-- <origin rpy="0 0 0" xyz="0 0 0.0192" /> -->
@@ -333,14 +333,14 @@
 	<link name="index_3">
 		<visual>
 			<geometry>
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_3.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_3.0.obj" />
 			</geometry>
 			<material name="black" />
 		</visual>
 		<collision>
 			<geometry>
 				<!-- <box size="0.0196 0.0275 0.0267"/> -->
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_3.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_3.0.obj" />
 			</geometry>
 			<!-- <origin rpy="0 0 0" xyz="0 0 0.01335" /> -->
 		</collision>
@@ -362,7 +362,7 @@
 	<link name="index_tip">
 		<visual>
 			<geometry>
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_3.0_tip.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_3.0_tip.obj" />
 			</geometry>
 			<material name="white">
 				<color rgba=".9 .9 .9 1" />
@@ -390,14 +390,14 @@
 	<link name="middle_0">
 		<visual>
 			<geometry>
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_0.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_0.0.obj" />
 			</geometry>
 			<material name="black" />
 		</visual>
 		<collision>
 			<geometry>
 				<!-- <box size="0.0196 0.0275 0.0164"/> -->
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_0.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_0.0.obj" />
 			</geometry>
 			<!-- <origin rpy="0 0 0" xyz="0 0 0.0082" /> -->
 		</collision>
@@ -419,14 +419,14 @@
 	<link name="middle_1">
 		<visual>
 			<geometry>
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_1.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_1.0.obj" />
 			</geometry>
 			<material name="black" />
 		</visual>
 		<collision>
 			<geometry>
 				<!-- <box size="0.0196 0.0275 0.054"/> -->
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_1.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_1.0.obj" />
 			</geometry>
 			<!-- <origin rpy="0 0 0" xyz="0 0 0.027" /> -->
 		</collision>
@@ -448,14 +448,14 @@
 	<link name="middle_2">
 		<visual>
 			<geometry>
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_2.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_2.0.obj" />
 			</geometry>
 			<material name="black" />
 		</visual>
 		<collision>
 			<geometry>
 				<!-- <box size="0.0196 0.0275 0.0384"/> -->
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_2.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_2.0.obj" />
 			</geometry>
 			<!-- <origin rpy="0 0 0" xyz="0 0 0.0192" /> -->
 		</collision>
@@ -477,14 +477,14 @@
 	<link name="middle_3">
 		<visual>
 			<geometry>
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_3.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_3.0.obj" />
 			</geometry>
 			<material name="black" />
 		</visual>
 		<collision>
 			<geometry>
 				<!-- <box size="0.0196 0.0275 0.0267"/> -->
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_3.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_3.0.obj" />
 			</geometry>
 			<!-- <origin rpy="0 0 0" xyz="0 0 0.01335" /> -->
 		</collision>
@@ -506,7 +506,7 @@
 	<link name="middle_tip">
 		<visual>
 			<geometry>
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_3.0_tip.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_3.0_tip.obj" />
 			</geometry>
 			<material name="white">
 				<color rgba=".9 .9 .9 1" />
@@ -535,14 +535,14 @@
 	<link name="ring_0">
 		<visual>
 			<geometry>
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_0.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_0.0.obj" />
 			</geometry>
 			<material name="black" />
 		</visual>
 		<collision>
 			<geometry>
 				<!-- <box size="0.0196 0.0275 0.0164"/> -->
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_0.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_0.0.obj" />
 			</geometry>
 			<!-- <origin rpy="0 0 0" xyz="0 0 0.0082" /> -->
 		</collision>
@@ -564,14 +564,14 @@
 	<link name="ring_1">
 		<visual>
 			<geometry>
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_1.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_1.0.obj" />
 			</geometry>
 			<material name="black" />
 		</visual>
 		<collision>
 			<geometry>
 				<!-- <box size="0.0196 0.0275 0.054"/> -->
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_1.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_1.0.obj" />
 			</geometry>
 			<!-- <origin rpy="0 0 0" xyz="0 0 0.027" /> -->
 		</collision>
@@ -593,14 +593,14 @@
 	<link name="ring_2">
 		<visual>
 			<geometry>
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_2.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_2.0.obj" />
 			</geometry>
 			<material name="black" />
 		</visual>
 		<collision>
 			<geometry>
 				<!-- <box size="0.0196 0.0275 0.0384"/> -->
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_2.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_2.0.obj" />
 			</geometry>
 			<!-- <origin rpy="0 0 0" xyz="0 0 0.0192" /> -->
 		</collision>
@@ -622,14 +622,14 @@
 	<link name="ring_3">
 		<visual>
 			<geometry>
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_3.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_3.0.obj" />
 			</geometry>
 			<material name="black" />
 		</visual>
 		<collision>
 			<geometry>
 				<!-- <box size="0.0196 0.0275 0.0267"/> -->
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_3.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_3.0.obj" />
 			</geometry>
 			<!-- <origin rpy="0 0 0" xyz="0 0 0.01335" /> -->
 		</collision>
@@ -651,7 +651,7 @@
 	<link name="ring_tip">
 		<visual>
 			<geometry>
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_3.0_tip.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_3.0_tip.obj" />
 			</geometry>
 			<material name="white">
 				<color rgba=".9 .9 .9 1" />
@@ -679,7 +679,7 @@
 	<link name="thumb_0">
 		<visual>
 			<geometry>
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_12.0_right.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_12.0_right.obj" />
 			</geometry>
 			<material name="black">
 				<color rgba=".2 .2 .2 1" />
@@ -689,7 +689,7 @@
 		<collision>
 			<geometry>
 				<!-- <box size="0.0358 0.034 0.0455"/> -->
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_12.0_right.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_12.0_right.obj" />
 			</geometry>
 			<!-- <origin rpy="0 0 0" xyz="-0.0179 0.009 0.0145" /> -->
 		</collision>
@@ -713,7 +713,7 @@
 	<link name="thumb_1">
 		<visual>
 			<geometry>
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_13.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_13.0.obj" />
 			</geometry>
 			<material name="black">
 				<color rgba=".2 .2 .2 1" />
@@ -722,7 +722,7 @@
 		<collision>
 			<geometry>
 				<!-- <box size="0.0196 0.0275 0.0177"/> -->
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_13.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_13.0.obj" />
 			</geometry>
 			<!-- <origin rpy="0 0 0" xyz="0 0 0.00885" /> -->
 		</collision>
@@ -744,7 +744,7 @@
 	<link name="thumb_2">
 		<visual>
 			<geometry>
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_14.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_14.0.obj" />
 			</geometry>
 			<material name="black">
 				<color rgba=".2 .2 .2 1" />
@@ -753,7 +753,7 @@
 		<collision>
 			<geometry>
 				<!-- <box size="0.0196 0.0275 0.0514"/> -->
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_14.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_14.0.obj" />
 			</geometry>
 			<!-- <origin rpy="0 0 0" xyz="0 0 0.0257" /> -->
 		</collision>
@@ -775,7 +775,7 @@
 	<link name="thumb_3">
 		<visual>
 			<geometry>
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_15.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_15.0.obj" />
 			</geometry>
 			<material name="black">
 			</material>
@@ -783,7 +783,7 @@
 		<collision>
 			<geometry>
 				<!-- <box size="0.0196 0.0275 0.0423"/> -->
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_15.0.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_15.0.obj" />
 			</geometry>
 			<!-- <origin rpy="0 0 0" xyz="0 0 0.02115" /> -->
 		</collision>
@@ -805,7 +805,7 @@
 	<link name="thumb_tip">
 		<visual>
 			<geometry>
-				<mesh filename="${SAI2_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_15.0_tip.obj" />
+				<mesh filename="${SAI_MODEL_URDF_FOLDER}/allegro_hand/meshes/link_15.0_tip.obj" />
 			</geometry>
 			<material name="white">
 				<color rgba=".9 .9 .9 1" />

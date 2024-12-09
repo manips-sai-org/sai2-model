@@ -1,5 +1,5 @@
 /*
- * Sai2Model.cpp
+ * SaiModel.cpp
  *
  *  Wrapper around RBDL plus functions to facilitate the whole body control
  * framework from Stanford robotics lab
@@ -8,9 +8,9 @@
  *      Author: Mikael Jorda
  */
 
-#include "Sai2Model.h"
+#include "SaiModel.h"
 
-#include <UrdfToSai2Model.h>
+#include <UrdfToSaiModel.h>
 
 #include "RBDLExtensions.h"
 
@@ -49,9 +49,9 @@ bool isPositiveDefinite(const MatrixXd& matrix) {
 
 }  // namespace
 
-namespace Sai2Model {
+namespace SaiModel {
 
-Sai2Model::Sai2Model(const string path_to_model_file, bool verbose) {
+SaiModel::SaiModel(const string path_to_model_file, bool verbose) {
 	_rbdl_model = new RigidBodyDynamics::Model();
 
 	// parse rbdl model from urdf
@@ -137,14 +137,14 @@ Sai2Model::Sai2Model(const string path_to_model_file, bool verbose) {
 	updateModel();
 }
 
-Sai2Model::~Sai2Model() {
+SaiModel::~SaiModel() {
 	delete _rbdl_model;
 	_rbdl_model = NULL;
 }
 
-void Sai2Model::setQ(const Eigen::VectorXd& q) {
+void SaiModel::setQ(const Eigen::VectorXd& q) {
 	if (q.size() != _q_size) {
-		throw invalid_argument("q size inconsistent in Sai2Model::setQ");
+		throw invalid_argument("q size inconsistent in SaiModel::setQ");
 		return;
 	}
 	for (const auto& sph_joint : _spherical_joints) {
@@ -161,23 +161,23 @@ void Sai2Model::setQ(const Eigen::VectorXd& q) {
 	_q = q;
 }
 
-void Sai2Model::setDq(const Eigen::VectorXd& dq) {
+void SaiModel::setDq(const Eigen::VectorXd& dq) {
 	if (dq.size() != _dof) {
-		throw invalid_argument("dq size inconsistent in Sai2Model::setDq");
+		throw invalid_argument("dq size inconsistent in SaiModel::setDq");
 		return;
 	}
 	_dq = dq;
 }
 
-void Sai2Model::setDdq(const Eigen::VectorXd& ddq) {
+void SaiModel::setDdq(const Eigen::VectorXd& ddq) {
 	if (ddq.size() != _dof) {
-		throw invalid_argument("ddq size inconsistent in Sai2Model::setDdq");
+		throw invalid_argument("ddq size inconsistent in SaiModel::setDdq");
 		return;
 	}
 	_ddq = ddq;
 }
 
-VectorXd Sai2Model::jointLimitsPositionLower() const {
+VectorXd SaiModel::jointLimitsPositionLower() const {
 	VectorXd lower_limits =
 		-numeric_limits<double>::max() * VectorXd::Ones(_q_size);
 	for (const auto& joint_limit : _joint_limits) {
@@ -192,7 +192,7 @@ VectorXd Sai2Model::jointLimitsPositionLower() const {
 	return lower_limits;
 }
 
-VectorXd Sai2Model::jointLimitsPositionUpper() const {
+VectorXd SaiModel::jointLimitsPositionUpper() const {
 	VectorXd upper_limits =
 		numeric_limits<double>::max() * VectorXd::Ones(_q_size);
 	for (const auto& joint_limit : _joint_limits) {
@@ -207,7 +207,7 @@ VectorXd Sai2Model::jointLimitsPositionUpper() const {
 	return upper_limits;
 }
 
-const Eigen::Quaterniond Sai2Model::sphericalQuat(
+const Eigen::Quaterniond SaiModel::sphericalQuat(
 	const std::string& joint_name) const {
 	for (auto joint : _spherical_joints) {
 		if (joint.joint_name == joint_name) {
@@ -221,7 +221,7 @@ const Eigen::Quaterniond Sai2Model::sphericalQuat(
 		joint_name);
 }
 
-void Sai2Model::setSphericalQuat(const std::string& joint_name,
+void SaiModel::setSphericalQuat(const std::string& joint_name,
 								 const Eigen::Quaterniond quat) {
 	for (auto joint : _spherical_joints) {
 		if (joint.joint_name == joint_name) {
@@ -239,45 +239,45 @@ void Sai2Model::setSphericalQuat(const std::string& joint_name,
 		joint_name);
 }
 
-void Sai2Model::setTRobotBase(const Affine3d& T) {
+void SaiModel::setTRobotBase(const Affine3d& T) {
 	Vector3d world_gravity = worldGravity();
 	_T_world_robot = T;
 	// world gravity in robot base frame changes
 	_rbdl_model->gravity = _T_world_robot.linear().transpose() * world_gravity;
 }
 
-bool Sai2Model::isLinkInRobot(const std::string& link_name) const {
+bool SaiModel::isLinkInRobot(const std::string& link_name) const {
 	if (_link_names_to_id_map.find(link_name) == _link_names_to_id_map.end()) {
 		return false;
 	}
 	return true;
 }
 
-void Sai2Model::updateKinematics() {
+void SaiModel::updateKinematics() {
 	UpdateKinematicsCustom(*_rbdl_model, &_q, &_dq, &_ddq);
 }
 
-void Sai2Model::updateModel() {
+void SaiModel::updateModel() {
 	updateKinematics();
 	updateDynamics();
 }
 
-void Sai2Model::updateModel(const Eigen::MatrixXd& M) {
+void SaiModel::updateModel(const Eigen::MatrixXd& M) {
 	updateKinematics();
 
 	if (!isPositiveDefinite(M)) {
 		throw invalid_argument(
-			"M is not symmetric positive definite Sai2Model::updateModel");
+			"M is not symmetric positive definite SaiModel::updateModel");
 	}
 	if (M.rows() != _dof) {
 		throw invalid_argument(
-			"M matrix dimensions inconsistent in Sai2Model::updateModel");
+			"M matrix dimensions inconsistent in SaiModel::updateModel");
 	}
 	_M = M;
 	updateInverseInertia();
 }
 
-VectorXd Sai2Model::jointGravityVector() {
+VectorXd SaiModel::jointGravityVector() {
 	VectorXd g = VectorXd::Zero(_dof);
 
 	vector<RigidBodyDynamics::Body>::iterator it_body;
@@ -295,7 +295,7 @@ VectorXd Sai2Model::jointGravityVector() {
 	return g;
 }
 
-VectorXd Sai2Model::coriolisForce() {
+VectorXd SaiModel::coriolisForce() {
 	// returns v + g. Need to substract the gravity from it
 	VectorXd b = VectorXd::Zero(_dof);
 	NonlinearEffects(*_rbdl_model, _q, _dq, b);
@@ -303,13 +303,13 @@ VectorXd Sai2Model::coriolisForce() {
 	return b - jointGravityVector();
 }
 
-VectorXd Sai2Model::coriolisPlusGravity() {
+VectorXd SaiModel::coriolisPlusGravity() {
 	VectorXd h = VectorXd::Zero(_dof);
 	NonlinearEffects(*_rbdl_model, _q, _dq, h);
 	return h;
 }
 
-MatrixXd Sai2Model::factorizedChristoffelMatrix() {
+MatrixXd SaiModel::factorizedChristoffelMatrix() {
 	MatrixXd C = MatrixXd::Zero(_dof, _dof);
 
 	VectorXd vi = VectorXd::Zero(_dof);
@@ -323,7 +323,7 @@ MatrixXd Sai2Model::factorizedChristoffelMatrix() {
 	return C;
 }
 
-MatrixXd Sai2Model::J(const string& link_name,
+MatrixXd SaiModel::J(const string& link_name,
 					  const Vector3d& pos_in_link) const {
 	MatrixXd J = MatrixXd::Zero(6, _dof);
 	CalcPointJacobian6D(*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link, J,
@@ -334,7 +334,7 @@ MatrixXd Sai2Model::J(const string& link_name,
 	return J;
 }
 
-MatrixXd Sai2Model::JWorldFrame(const string& link_name,
+MatrixXd SaiModel::JWorldFrame(const string& link_name,
 								const Vector3d& pos_in_link) const {
 	MatrixXd J = this->J(link_name, pos_in_link);
 	J.topRows<3>() = _T_world_robot.linear() * J.topRows<3>();
@@ -342,7 +342,7 @@ MatrixXd Sai2Model::JWorldFrame(const string& link_name,
 	return J;
 }
 
-MatrixXd Sai2Model::JLocalFrame(const string& link_name,
+MatrixXd SaiModel::JLocalFrame(const string& link_name,
 								const Vector3d& pos_in_link,
 								const Matrix3d& rot_in_link) const {
 	MatrixXd J = this->J(link_name, pos_in_link);
@@ -352,7 +352,7 @@ MatrixXd Sai2Model::JLocalFrame(const string& link_name,
 	return J;
 }
 
-MatrixXd Sai2Model::Jv(const string& link_name,
+MatrixXd SaiModel::Jv(const string& link_name,
 					   const Vector3d& pos_in_link) const {
 	MatrixXd J = MatrixXd::Zero(3, _dof);
 	CalcPointJacobian(*_rbdl_model, _q, linkIdRbdl(link_name), pos_in_link, J,
@@ -360,41 +360,41 @@ MatrixXd Sai2Model::Jv(const string& link_name,
 	return J;
 }
 
-MatrixXd Sai2Model::JvWorldFrame(const string& link_name,
+MatrixXd SaiModel::JvWorldFrame(const string& link_name,
 								 const Vector3d& pos_in_link) const {
 	return _T_world_robot.linear() * Jv(link_name, pos_in_link);
 }
 
-MatrixXd Sai2Model::JvLocalFrame(const string& link_name,
+MatrixXd SaiModel::JvLocalFrame(const string& link_name,
 								 const Vector3d& pos_in_link,
 								 const Matrix3d& rot_in_link) const {
 	return rotation(link_name, rot_in_link).transpose() *
 		   Jv(link_name, pos_in_link);
 }
 
-MatrixXd Sai2Model::Jw(const string& link_name) const {
+MatrixXd SaiModel::Jw(const string& link_name) const {
 	// compute the full jacobian at the center of the link and take rotational
 	// part
 	return J(link_name).bottomRows<3>();
 }
 
-MatrixXd Sai2Model::JwWorldFrame(const string& link_name) const {
+MatrixXd SaiModel::JwWorldFrame(const string& link_name) const {
 	return _T_world_robot.linear() * Jw(link_name);
 }
 
-MatrixXd Sai2Model::JwLocalFrame(const string& link_name,
+MatrixXd SaiModel::JwLocalFrame(const string& link_name,
 								 const Matrix3d& rot_in_link) const {
 	return rotation(link_name, rot_in_link).transpose() * Jw(link_name);
 }
 
-VectorXd Sai2Model::computeInverseKinematics(
+VectorXd SaiModel::computeInverseKinematics(
 	const vector<string>& link_names, const vector<Vector3d>& pos_in_links,
 	const vector<Vector3d>& desired_pos_world_frame) {
 	if (link_names.size() != pos_in_links.size() ||
 		link_names.size() != desired_pos_world_frame.size()) {
 		throw runtime_error(
 			"the number of link names, pos in links and desired positions must "
-			"match in Sai2Model::computeInverseKinematics\n");
+			"match in SaiModel::computeInverseKinematics\n");
 	}
 	if (link_names.empty()) {
 		cout << "Warning: trying to compute inverse kinematics with no goal. "
@@ -413,14 +413,14 @@ VectorXd Sai2Model::computeInverseKinematics(
 	return IKInternal(cs);
 }
 
-VectorXd Sai2Model::computeInverseKinematics(
+VectorXd SaiModel::computeInverseKinematics(
 	const vector<string>& link_names, const vector<Affine3d>& frames_in_links,
 	const vector<Affine3d>& desired_frames_locations_in_world_frame) {
 	if (link_names.size() != frames_in_links.size() ||
 		link_names.size() != desired_frames_locations_in_world_frame.size()) {
 		throw runtime_error(
 			"the number of link names, pos in links and desired positions must "
-			"match in Sai2Model::computeInverseKinematics\n");
+			"match in SaiModel::computeInverseKinematics\n");
 	}
 	if (link_names.empty()) {
 		cout << "Warning: trying to compute inverse kinematics with no goal. "
@@ -445,7 +445,7 @@ VectorXd Sai2Model::computeInverseKinematics(
 	return IKInternal(cs);
 }
 
-VectorXd Sai2Model::IKInternal(
+VectorXd SaiModel::IKInternal(
 	RigidBodyDynamics::InverseKinematicsConstraintSet& cs) {
 	cs.step_tol = 1e-9;
 	cs.constraint_tol = 1e-6;
@@ -471,7 +471,7 @@ VectorXd Sai2Model::IKInternal(
 	return q_res;
 }
 
-Affine3d Sai2Model::transform(const string& link_name,
+Affine3d SaiModel::transform(const string& link_name,
 							  const Vector3d& pos_in_link,
 							  const Matrix3d& rot_in_link) const {
 	unsigned int link_id = linkIdRbdl(link_name);
@@ -483,13 +483,13 @@ Affine3d Sai2Model::transform(const string& link_name,
 	return T;
 }
 
-Affine3d Sai2Model::transformInWorld(const string& link_name,
+Affine3d SaiModel::transformInWorld(const string& link_name,
 									 const Vector3d& pos_in_link,
 									 const Matrix3d& rot_in_link) const {
 	return _T_world_robot * transform(link_name, pos_in_link, rot_in_link);
 }
 
-Vector6d Sai2Model::velocity6d(const string link_name,
+Vector6d SaiModel::velocity6d(const string link_name,
 							   const Vector3d& pos_in_link) const {
 	Vector6d vel6d = CalcPointVelocity6D(
 		*_rbdl_model, _q, _dq, linkIdRbdl(link_name), pos_in_link, false);
@@ -497,7 +497,7 @@ Vector6d Sai2Model::velocity6d(const string link_name,
 	return vel6d;
 }
 
-Vector6d Sai2Model::velocity6dInWorld(const string link_name,
+Vector6d SaiModel::velocity6dInWorld(const string link_name,
 									  const Vector3d& pos_in_link) const {
 	Vector6d vel6d = velocity6d(link_name, pos_in_link);
 	vel6d.head(3) = _T_world_robot.linear() * vel6d.head(3);
@@ -505,7 +505,7 @@ Vector6d Sai2Model::velocity6dInWorld(const string link_name,
 	return vel6d;
 }
 
-Vector6d Sai2Model::acceleration6d(const string link_name,
+Vector6d SaiModel::acceleration6d(const string link_name,
 								   const Vector3d& pos_in_link) const {
 	// recompute accelerations only in rbdl model to make sure accelerations due
 	// to gravity are not included in the return value
@@ -515,7 +515,7 @@ Vector6d Sai2Model::acceleration6d(const string link_name,
 	acc6d.head(3).swap(acc6d.tail(3));
 	return acc6d;
 }
-Vector6d Sai2Model::acceleration6dInWorld(const string link_name,
+Vector6d SaiModel::acceleration6dInWorld(const string link_name,
 										  const Vector3d& pos_in_link) const {
 	Vector6d accel6d = acceleration6d(link_name, pos_in_link);
 	accel6d.head(3) = _T_world_robot.linear() * accel6d.head(3);
@@ -523,28 +523,28 @@ Vector6d Sai2Model::acceleration6dInWorld(const string link_name,
 	return accel6d;
 }
 
-Vector3d Sai2Model::position(const string& link_name,
+Vector3d SaiModel::position(const string& link_name,
 							 const Vector3d& pos_in_link) const {
 	return CalcBodyToBaseCoordinates(*_rbdl_model, _q, linkIdRbdl(link_name),
 									 pos_in_link, false);
 }
 
-Vector3d Sai2Model::positionInWorld(const string& link_name,
+Vector3d SaiModel::positionInWorld(const string& link_name,
 									const Vector3d& pos_in_link) const {
 	return _T_world_robot * position(link_name, pos_in_link);
 }
 
-Vector3d Sai2Model::linearVelocity(const string& link_name,
+Vector3d SaiModel::linearVelocity(const string& link_name,
 								   const Vector3d& pos_in_link) const {
 	return CalcPointVelocity(*_rbdl_model, _q, _dq, linkIdRbdl(link_name),
 							 pos_in_link, false);
 }
-Vector3d Sai2Model::linearVelocityInWorld(const string& link_name,
+Vector3d SaiModel::linearVelocityInWorld(const string& link_name,
 										  const Vector3d& pos_in_link) const {
 	return _T_world_robot.linear() * linearVelocity(link_name, pos_in_link);
 }
 
-Vector3d Sai2Model::linearAcceleration(const string& link_name,
+Vector3d SaiModel::linearAcceleration(const string& link_name,
 									   const Vector3d& pos_in_link) const {
 	// recompute accelerations only in rbdl model to make sure accelerations due
 	// to gravity are not included in the return value
@@ -552,12 +552,12 @@ Vector3d Sai2Model::linearAcceleration(const string& link_name,
 	return CalcPointAcceleration(*_rbdl_model, _q, _dq, _ddq,
 								 linkIdRbdl(link_name), pos_in_link, false);
 }
-Vector3d Sai2Model::linearAccelerationInWorld(
+Vector3d SaiModel::linearAccelerationInWorld(
 	const string& link_name, const Vector3d& pos_in_link) const {
 	return _T_world_robot.linear() * linearAcceleration(link_name, pos_in_link);
 }
 
-Matrix3d Sai2Model::rotation(const string& link_name,
+Matrix3d SaiModel::rotation(const string& link_name,
 							 const Matrix3d& rot_in_link) const {
 	return CalcBodyWorldOrientation(*_rbdl_model, _q, linkIdRbdl(link_name),
 									false)
@@ -565,34 +565,34 @@ Matrix3d Sai2Model::rotation(const string& link_name,
 		   rot_in_link;
 }
 
-Matrix3d Sai2Model::rotationInWorld(const string& link_name,
+Matrix3d SaiModel::rotationInWorld(const string& link_name,
 									const Matrix3d& rot_in_link) const {
 	return _T_world_robot.linear() * rotation(link_name, rot_in_link);
 }
 
-Vector3d Sai2Model::angularVelocity(const string& link_name) const {
+Vector3d SaiModel::angularVelocity(const string& link_name) const {
 	return velocity6d(link_name, Vector3d::Zero()).tail(3);
 }
 
-Vector3d Sai2Model::angularVelocityInWorld(const string& link_name) const {
+Vector3d SaiModel::angularVelocityInWorld(const string& link_name) const {
 	return _T_world_robot.linear() * angularVelocity(link_name);
 }
 
-Vector3d Sai2Model::angularAcceleration(const string& link_name) const {
+Vector3d SaiModel::angularAcceleration(const string& link_name) const {
 	return acceleration6d(link_name, Vector3d::Zero()).tail(3);
 }
-Vector3d Sai2Model::angularAccelerationInWorld(const string& link_name) const {
+Vector3d SaiModel::angularAccelerationInWorld(const string& link_name) const {
 	return _T_world_robot.linear() * angularAcceleration(link_name);
 }
 
-unsigned int Sai2Model::linkIdRbdl(const string& link_name) const {
+unsigned int SaiModel::linkIdRbdl(const string& link_name) const {
 	if (_link_names_to_id_map.find(link_name) == _link_names_to_id_map.end()) {
 		throw invalid_argument("link [" + link_name + "] does not exist");
 	}
 	return _link_names_to_id_map.at(link_name);
 }
 
-int Sai2Model::jointIndex(const string& joint_name) const {
+int SaiModel::jointIndex(const string& joint_name) const {
 	if (_joint_names_to_id_map.find(joint_name) ==
 		_joint_names_to_id_map.end()) {
 		throw invalid_argument("joint [" + joint_name + "] does not exist");
@@ -601,7 +601,7 @@ int Sai2Model::jointIndex(const string& joint_name) const {
 		.q_index;
 }
 
-int Sai2Model::sphericalJointIndexW(const string& joint_name) const {
+int SaiModel::sphericalJointIndexW(const string& joint_name) const {
 	if (_joint_names_to_id_map.find(joint_name) ==
 		_joint_names_to_id_map.end()) {
 		throw invalid_argument("joint [" + joint_name + "] does not exist");
@@ -615,7 +615,7 @@ int Sai2Model::sphericalJointIndexW(const string& joint_name) const {
 	throw invalid_argument("joint [" + joint_name + "] is not spherical");
 }
 
-std::string Sai2Model::jointName(const int joint_id) const {
+std::string SaiModel::jointName(const int joint_id) const {
 	if (joint_id < 0 || joint_id >= _q_size) {
 		throw std::invalid_argument(
 			"cannot get joint name for id out of bounds");
@@ -623,7 +623,7 @@ std::string Sai2Model::jointName(const int joint_id) const {
 	return _joint_id_to_names_map.at(joint_id);
 }
 
-std::string Sai2Model::childLinkName(const std::string& joint_name) const {
+std::string SaiModel::childLinkName(const std::string& joint_name) const {
 	if (_joint_names_to_id_map.find(joint_name) ==
 		_joint_names_to_id_map.end()) {
 		throw invalid_argument("joint [" + joint_name + "] does not exist");
@@ -631,7 +631,7 @@ std::string Sai2Model::childLinkName(const std::string& joint_name) const {
 	return _joint_names_to_child_link_names_map.at(joint_name);
 }
 
-std::string Sai2Model::parentLinkName(const std::string& joint_name) const {
+std::string SaiModel::parentLinkName(const std::string& joint_name) const {
 	if (_joint_names_to_id_map.find(joint_name) ==
 		_joint_names_to_id_map.end()) {
 		throw invalid_argument("joint [" + joint_name + "] does not exist");
@@ -639,7 +639,7 @@ std::string Sai2Model::parentLinkName(const std::string& joint_name) const {
 	return _joint_names_to_parent_link_names_map.at(joint_name);
 }
 
-std::vector<std::string> Sai2Model::jointNames() const {
+std::vector<std::string> SaiModel::jointNames() const {
 	std::vector<std::string> names;
 	names.reserve(_joint_id_to_names_map.size());
 
@@ -650,12 +650,12 @@ std::vector<std::string> Sai2Model::jointNames() const {
 	return names;
 }
 
-LinkMassParams Sai2Model::getLinkMassParams(const string& link_name) const {
+LinkMassParams SaiModel::getLinkMassParams(const string& link_name) const {
 	RigidBodyDynamics::Body b = _rbdl_model->mBodies.at(linkIdRbdl(link_name));
 	return LinkMassParams(b.mMass, b.mCenterOfMass, b.mInertia);
 }
 
-Vector3d Sai2Model::comPosition() const {
+Vector3d SaiModel::comPosition() const {
 	Vector3d robot_com = Vector3d::Zero();
 	double robot_mass = 0.0;
 	Vector3d center_of_mass_global_frame;
@@ -672,7 +672,7 @@ Vector3d Sai2Model::comPosition() const {
 	return robot_com / robot_mass;
 }
 
-MatrixXd Sai2Model::comJacobian() const {
+MatrixXd SaiModel::comJacobian() const {
 	MatrixXd Jv_com = MatrixXd::Zero(3, _dof);
 	MatrixXd link_Jv;
 	double robot_mass = 0.0;
@@ -689,13 +689,13 @@ MatrixXd Sai2Model::comJacobian() const {
 	return Jv_com / robot_mass;
 }
 
-Eigen::MatrixXd Sai2Model::taskInertiaMatrix(
+Eigen::MatrixXd SaiModel::taskInertiaMatrix(
 	const MatrixXd& task_jacobian) const {
 	// check the task jacobian is compatible with the robot model
 	if (task_jacobian.cols() != _dof) {
 		throw invalid_argument(
 			"Jacobian size inconsistent with DOF of robot model in "
-			"Sai2Model::taksInertiaMatrix");
+			"SaiModel::taksInertiaMatrix");
 	}
 
 	// resize Matrices
@@ -706,13 +706,13 @@ Eigen::MatrixXd Sai2Model::taskInertiaMatrix(
 	return inv_inertia.llt().solve(MatrixXd::Identity(k, k));
 }
 
-MatrixXd Sai2Model::taskInertiaMatrixWithPseudoInv(
+MatrixXd SaiModel::taskInertiaMatrixWithPseudoInv(
 	const MatrixXd& task_jacobian) const {
 	// check the task jacobian is compatible with the robot model
 	if (task_jacobian.cols() != _dof) {
 		throw invalid_argument(
 			"Jacobian size inconsistent with DOF of robot model in "
-			"Sai2Model::taksInertiaMatrixWithPseudoInv");
+			"SaiModel::taksInertiaMatrixWithPseudoInv");
 	}
 
 	// resize Matrices
@@ -725,37 +725,37 @@ MatrixXd Sai2Model::taskInertiaMatrixWithPseudoInv(
 	return computePseudoInverse(inv_inertia);
 }
 
-MatrixXd Sai2Model::dynConsistentInverseJacobian(
+MatrixXd SaiModel::dynConsistentInverseJacobian(
 	const MatrixXd& task_jacobian) const {
 	// check the task jacobian is compatible with the robot model
 	if (task_jacobian.cols() != _dof) {
 		throw invalid_argument(
 			"Jacobian size inconsistent with DOF of robot model in "
-			"Sai2Model::dynConsistentInverseJacobian");
+			"SaiModel::dynConsistentInverseJacobian");
 	}
 	return _M_inv * task_jacobian.transpose() *
 		   taskInertiaMatrix(task_jacobian);
 }
 
-MatrixXd Sai2Model::nullspaceMatrix(const MatrixXd& task_jacobian) const {
+MatrixXd SaiModel::nullspaceMatrix(const MatrixXd& task_jacobian) const {
 	// check matrices dimmnsions
 	if (task_jacobian.cols() != _dof) {
 		throw invalid_argument(
 			"jacobian matrix dimensions inconsistent with model dof in "
-			"Sai2Model::nullspaceMatrix");
+			"SaiModel::nullspaceMatrix");
 	}
 
 	MatrixXd Jbar = dynConsistentInverseJacobian(task_jacobian);
 	return (MatrixXd::Identity(_dof, _dof) - Jbar * task_jacobian);
 }
 
-OpSpaceMatrices Sai2Model::operationalSpaceMatrices(
+OpSpaceMatrices SaiModel::operationalSpaceMatrices(
 	const MatrixXd& task_jacobian) const {
 	// check matrices have the right size
 	if (task_jacobian.cols() != _dof) {
 		throw invalid_argument(
 			"Jacobian size inconsistent with DOF of robot model in "
-			"Sai2Model::operationalSpaceMatrices");
+			"SaiModel::operationalSpaceMatrices");
 	}
 
 	// Compute the matrices
@@ -765,7 +765,7 @@ OpSpaceMatrices Sai2Model::operationalSpaceMatrices(
 	return OpSpaceMatrices(task_jacobian, Lambda, Jbar, N);
 }
 
-void Sai2Model::addEnvironmentalContact(const string link,
+void SaiModel::addEnvironmentalContact(const string link,
 										const Vector3d pos_in_link,
 										const Matrix3d orientation,
 										const ContactType contact_type) {
@@ -774,13 +774,13 @@ void Sai2Model::addEnvironmentalContact(const string link,
 		if (it->contact_link_name == link) {
 			throw invalid_argument(
 				"Environmental contact on link " + link +
-				" already exists in Sai2Model::addEnvironmentalContact()");
+				" already exists in SaiModel::addEnvironmentalContact()");
 		}
 	}
 	_environmental_contacts.push_back(
 		ContactModel(link, pos_in_link, orientation, contact_type));
 }
-void Sai2Model::deleteEnvironmentalContact(const string link_name) {
+void SaiModel::deleteEnvironmentalContact(const string link_name) {
 	vector<ContactModel> new_contacts;
 	for (vector<ContactModel>::iterator it = _environmental_contacts.begin();
 		 it != _environmental_contacts.end(); ++it) {
@@ -791,7 +791,7 @@ void Sai2Model::deleteEnvironmentalContact(const string link_name) {
 	_environmental_contacts = new_contacts;
 }
 
-void Sai2Model::updateEnvironmentalContact(const string link,
+void SaiModel::updateEnvironmentalContact(const string link,
 										   const Vector3d pos_in_link,
 										   const Matrix3d orientation,
 										   const ContactType contact_type) {
@@ -806,10 +806,10 @@ void Sai2Model::updateEnvironmentalContact(const string link,
 	}
 	throw invalid_argument(
 		"Environmental contact on link " + link +
-		" does not exist in Sai2Model::updateManipulationContact()");
+		" does not exist in SaiModel::updateManipulationContact()");
 }
 
-void Sai2Model::addManipulationContact(const string link,
+void SaiModel::addManipulationContact(const string link,
 									   const Vector3d pos_in_link,
 									   const Matrix3d orientation,
 									   const ContactType contact_type) {
@@ -818,14 +818,14 @@ void Sai2Model::addManipulationContact(const string link,
 		if (it->contact_link_name == link) {
 			throw invalid_argument(
 				"Environmental contact on link " + link +
-				" already exists in Sai2Model::addManipulationContact()");
+				" already exists in SaiModel::addManipulationContact()");
 		}
 	}
 	_manipulation_contacts.push_back(
 		ContactModel(link, pos_in_link, orientation, contact_type));
 }
 
-void Sai2Model::deleteManipulationContact(const string link_name) {
+void SaiModel::deleteManipulationContact(const string link_name) {
 	vector<ContactModel> new_contacts;
 	for (vector<ContactModel>::iterator it = _manipulation_contacts.begin();
 		 it != _manipulation_contacts.end(); ++it) {
@@ -836,7 +836,7 @@ void Sai2Model::deleteManipulationContact(const string link_name) {
 	_manipulation_contacts = new_contacts;
 }
 
-void Sai2Model::updateManipulationContact(const string link,
+void SaiModel::updateManipulationContact(const string link,
 										  const Vector3d pos_in_link,
 										  const Matrix3d orientation,
 										  const ContactType contact_type) {
@@ -851,10 +851,10 @@ void Sai2Model::updateManipulationContact(const string link,
 	}
 	throw invalid_argument(
 		"Environmental contact on link " + link +
-		" does not exist in Sai2Model::updateManipulationContact()");
+		" does not exist in SaiModel::updateManipulationContact()");
 }
 
-GraspMatrixData Sai2Model::manipulationGraspMatrix(
+GraspMatrixData SaiModel::manipulationGraspMatrix(
 	const Vector3d& desired_resultant_point,
 	const bool resultant_in_world_frame,
 	const bool contact_forces_in_local_frames) const {
@@ -875,7 +875,7 @@ GraspMatrixData Sai2Model::manipulationGraspMatrix(
 	return G_data;
 }
 
-GraspMatrixData Sai2Model::manipulationGraspMatrixAtGeometricCenter(
+GraspMatrixData SaiModel::manipulationGraspMatrixAtGeometricCenter(
 	const bool resultant_in_world_frame,
 	const bool contact_forces_in_local_frames) const {
 	vector<Vector3d> contact_locations;
@@ -952,7 +952,7 @@ GraspMatrixData Sai2Model::manipulationGraspMatrixAtGeometricCenter(
 	return G_data;
 }
 
-GraspMatrixData Sai2Model::environmentalGraspMatrix(
+GraspMatrixData SaiModel::environmentalGraspMatrix(
 	const Vector3d& desired_resultant_point,
 	const bool resultant_in_world_frame,
 	const bool contact_forces_in_local_frames) const {
@@ -973,7 +973,7 @@ GraspMatrixData Sai2Model::environmentalGraspMatrix(
 	return G_data;
 }
 
-GraspMatrixData Sai2Model::environmentalGraspMatrixAtGeometricCenter(
+GraspMatrixData SaiModel::environmentalGraspMatrixAtGeometricCenter(
 	const bool resultant_in_world_frame,
 	const bool contact_forces_in_local_frames) const {
 	vector<Vector3d> contact_locations;
@@ -1050,7 +1050,7 @@ GraspMatrixData Sai2Model::environmentalGraspMatrixAtGeometricCenter(
 	return G_data;
 }
 
-void Sai2Model::Sai2Model::displayJoints() {
+void SaiModel::SaiModel::displayJoints() {
 	cout << "\nRobot Joints :" << endl;
 	for (map<string, int>::iterator it = _joint_names_to_id_map.begin();
 		 it != _joint_names_to_id_map.end(); ++it) {
@@ -1059,7 +1059,7 @@ void Sai2Model::Sai2Model::displayJoints() {
 	cout << endl;
 }
 
-void Sai2Model::displayLinks() {
+void SaiModel::displayLinks() {
 	cout << "\nRobot Links :" << endl;
 	for (map<string, int>::iterator it = _link_names_to_id_map.begin();
 		 it != _link_names_to_id_map.end(); ++it) {
@@ -1068,7 +1068,7 @@ void Sai2Model::displayLinks() {
 	cout << endl;
 }
 
-void Sai2Model::updateDynamics() {
+void SaiModel::updateDynamics() {
 	if (_M.rows() != _dof || _M.cols() != _dof) {
 		_M.setZero(_dof, _dof);
 	}
@@ -1077,9 +1077,9 @@ void Sai2Model::updateDynamics() {
 	updateInverseInertia();
 }
 
-void Sai2Model::updateInverseInertia() { _M_inv = _M.inverse(); }
+void SaiModel::updateInverseInertia() { _M_inv = _M.inverse(); }
 
-VectorXd Sai2Model::modifiedNewtonEuler(const bool consider_gravity,
+VectorXd SaiModel::modifiedNewtonEuler(const bool consider_gravity,
 										const VectorXd& q, const VectorXd& dq,
 										const VectorXd& dqa,
 										const VectorXd& ddq) {
@@ -1249,7 +1249,7 @@ Vector3d orientationError(const Matrix3d& desired_orientation,
 		cout << "Q1: " << Q1.norm() << endl;
 		cout << "Q2: " << Q2.norm() << endl;
 		throw invalid_argument(
-			"Invalid rotation matrices in Sai2Model::orientationError");
+			"Invalid rotation matrices in SaiModel::orientationError");
 	} else {
 		Vector3d rc1 = current_orientation.block<3, 1>(0, 0);
 		Vector3d rc2 = current_orientation.block<3, 1>(0, 1);
@@ -1287,17 +1287,17 @@ GraspMatrixData graspMatrixAtGeometricCenter(
 	if (n < 2) {
 		throw invalid_argument(
 			"invalid number of contact points (2 points min) in "
-			"Sai2Model::graspMatrixAtGeometricCenter\n");
+			"SaiModel::graspMatrixAtGeometricCenter\n");
 	}
 	if (n > 4) {
 		throw invalid_argument(
 			"invalid number of contact points (4 points max) in "
-			"Sai2Model::graspMatrixAtGeometricCenter\n");
+			"SaiModel::graspMatrixAtGeometricCenter\n");
 	}
 	if (contact_types.size() != n) {
 		throw invalid_argument(
 			"argument contact_locations and contact_types need to be of the "
-			"same length in Sai2Model::graspMatrixAtGeometricCenter\n");
+			"same length in SaiModel::graspMatrixAtGeometricCenter\n");
 	}
 
 	// TODO : support line contact
@@ -1479,7 +1479,7 @@ GraspMatrixData graspMatrixAtGeometricCenter(
 						"Should not arrive here (number of contact points "
 						"is "
 						"2, number of surface contacts incoherent) in "
-						"Sai2Model::graspMatrixAtGeometricCenter\n");
+						"SaiModel::graspMatrixAtGeometricCenter\n");
 			}
 			break;
 		}
@@ -1521,7 +1521,7 @@ GraspMatrixData graspMatrixAtGeometricCenter(
 					"Should not happen (number of contact points is 3, "
 					"number "
 					"of surface contacts incoherent) in "
-					"Sai2Model::graspMatrixAtGeometricCenter\n");
+					"SaiModel::graspMatrixAtGeometricCenter\n");
 			} else if (k == 0) {
 				// populate G
 				G = MatrixXd::Zero(9, 9);
@@ -1601,7 +1601,7 @@ GraspMatrixData graspMatrixAtGeometricCenter(
 					"Should not arrive here (number of contact points is "
 					"4, "
 					"number of surface contacts incoherent) in "
-					"Sai2Model::graspMatrixAtGeometricCenter\n");
+					"SaiModel::graspMatrixAtGeometricCenter\n");
 			} else if (k == 0) {
 				// populate G
 				G = MatrixXd::Zero(12, 12);
@@ -1637,10 +1637,10 @@ GraspMatrixData graspMatrixAtGeometricCenter(
 			throw runtime_error(
 				"Should not arrive here (number of contact points is not "
 				"2, 3 "
-				"or 4) in Sai2Model::graspMatrixAtGeometricCenter \n");
+				"or 4) in SaiModel::graspMatrixAtGeometricCenter \n");
 	}
 
 	return GraspMatrixData(G, G_inv, R, geometric_center);
 }
 
-}  // namespace Sai2Model
+}  // namespace SaiModel

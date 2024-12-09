@@ -1,10 +1,10 @@
-#ifndef SAI2_MODEL_PARSER_UTILS_H_
-#define SAI2_MODEL_PARSER_UTILS_H_
+#ifndef SAI_MODEL_PARSER_UTILS_H_
+#define SAI_MODEL_PARSER_UTILS_H_
 
 #include <map>
 #include <string>
 
-namespace Sai2Model {
+namespace SaiModel {
 
 extern std::map<std::string, std::string> URDF_FOLDERS;
 
@@ -22,6 +22,6 @@ extern std::map<std::string, std::string> URDF_FOLDERS;
  */
 std::string ReplaceUrdfPathPrefix(const std::string& path);
 
-}  // namespace Sai2Model
+}  // namespace SaiModel
 
-#endif	// SAI2_MODEL_PARSER_UTILS_H_
+#endif	// SAI_MODEL_PARSER_UTILS_H_
