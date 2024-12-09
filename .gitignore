@@ -38,4 +38,4 @@ docs/html/
 # DS store file
 **/.DS_Store
 
-src/parser/Sai2Model_UrdfFolder.h
+src/parser/SaiModel_UrdfFolder.h

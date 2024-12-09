@@ -1,5 +1,5 @@
 // 04-joint linits
-#include <Sai2Model.h>
+#include <SaiModel.h>
 
 #include <iostream>
 #include <memory>
@@ -12,7 +12,7 @@ const string robot_fname =
 int main(int argc, char** argv) {
 	cout << "Loading robot file: " << robot_fname << endl;
 
-	auto robot = std::make_shared<Sai2Model::Sai2Model>(robot_fname);
+	auto robot = std::make_shared<SaiModel::SaiModel>(robot_fname);
 
 	cout << endl
 		 << "Joint limits are parsed automatically in the urdf file."

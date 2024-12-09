@@ -1,17 +1,17 @@
 /*
- * Sai2Model.h
+ * SaiModel.h
  *
  *  Created on: Dec 14, 2016
  *      Author: Mikael Jorda
  */
 
-#ifndef SAI2MODEL_H_
-#define SAI2MODEL_H_
+#ifndef SaiModel_H_
+#define SaiModel_H_
 
 #include <rbdl/rbdl.h>
 
 #include "JointLimits.h"
-#include "parser/Sai2ModelParserUtils.h"
+#include "parser/SaiModelParserUtils.h"
 
 using namespace std;
 using namespace Eigen;
@@ -20,7 +20,7 @@ namespace Eigen {
 typedef Matrix<double, 6, 1> Vector6d;
 }  // namespace Eigen
 
-namespace Sai2Model {
+namespace SaiModel {
 
 /**
  * @brief A structure to store the mass parameters of a link
@@ -179,7 +179,7 @@ struct ContactModel {
  * velocities, jacobians, operational space matrices, grasp matrices, etc.
  *
  */
-class Sai2Model {
+class SaiModel {
 public:
 	/**
 	 * @brief Construct a new Sai 2 Model object from a URDF file
@@ -187,13 +187,13 @@ public:
 	 * @param path_to_model_file path to the URDF file
 	 * @param verbose whether to print debug information
 	 */
-	Sai2Model(const string path_to_model_file, bool verbose = false);
-	~Sai2Model();
+	SaiModel(const string path_to_model_file, bool verbose = false);
+	~SaiModel();
 
 	// disallow empty, copy and asssign constructors
-	Sai2Model() = delete;
-	Sai2Model(Sai2Model const&) = delete;
-	Sai2Model& operator=(Sai2Model const&) = delete;
+	SaiModel() = delete;
+	SaiModel(SaiModel const&) = delete;
+	SaiModel& operator=(SaiModel const&) = delete;
 
 	/// @brief getter for joint positions
 	const Eigen::VectorXd& q() const { return _q; }
@@ -1191,6 +1191,6 @@ GraspMatrixData graspMatrixAtGeometricCenter(
 	const vector<Vector3d>& contact_locations,
 	const vector<ContactType>& contact_types);
 
-} /* namespace Sai2Model */
+} /* namespace SaiModel */
 
-#endif /* SAI2MODEL_H_ */
+#endif /* SaiModel_H_ */

@@ -1,8 +1,8 @@
-#include "Sai2ModelParserUtils.h"
+#include "SaiModelParserUtils.h"
 
-#include "Sai2Model_UrdfFolder.h"
+#include "SaiModel_UrdfFolder.h"
 
-namespace Sai2Model {
+namespace SaiModel {
 
 std::map<std::string, std::string> URDF_FOLDERS;
 
@@ -10,8 +10,8 @@ std::map<std::string, std::string> URDF_FOLDERS;
 // automatic initialization of the URDF folders
 struct UrdfFolderInitializer {
 	UrdfFolderInitializer() {
-		URDF_FOLDERS["SAI2_MODEL_URDF_FOLDER"] =
-			std::string(SAI2_MODEL_URDF_FOLDER);
+		URDF_FOLDERS["SAI_MODEL_URDF_FOLDER"] =
+			std::string(SAI_MODEL_URDF_FOLDER);
 	}
 };
 static UrdfFolderInitializer urdfFolderInitializer;
@@ -26,4 +26,4 @@ std::string ReplaceUrdfPathPrefix(const std::string& path) {
 	}
 	return path;
 }
-}  // namespace Sai2Model
+}  // namespace SaiModel

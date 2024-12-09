@@ -3,7 +3,7 @@
 // Jacobians, the mass matrix, task space inertia and dynamically consistent
 // inverse of the jacobian
 
-#include <Sai2Model.h>
+#include <SaiModel.h>
 
 #include <iostream>
 
@@ -15,7 +15,7 @@ const string robot_fname =
 int main(int argc, char** argv) {
 	cout << "Loading robot file: " << robot_fname << endl;
 
-	Sai2Model::Sai2Model* robot = new Sai2Model::Sai2Model(robot_fname);
+	SaiModel::SaiModel* robot = new SaiModel::SaiModel(robot_fname);
 	int dof = robot->dof();
 
 	const string ee_link = "link2";
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
 
 	// operational space matrices
 	Eigen::MatrixXd J_task = J.row(2);
-	Sai2Model::OpSpaceMatrices op_space_matrices =
+	SaiModel::OpSpaceMatrices op_space_matrices =
 		robot->operationalSpaceMatrices(J_task);
 	cout << endl;
 	cout << "------------------------------------------------------" << endl;

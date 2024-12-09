@@ -1,15 +1,15 @@
 find_package(GTest REQUIRED)
 
-set(CMAKE_TEST_OUTPUT_DIRECTORY Tests_Sai2Model)
+set(CMAKE_TEST_OUTPUT_DIRECTORY Tests_SaiModel)
 
 # add unit tests
 add_executable(tests
-    Tests_Sai2Model.cpp
+    Tests_SaiModel.cpp
 )
 
 target_link_libraries(tests
-    PRIVATE ${SAI2-MODEL_LIBRARIES}
-    PRIVATE ${SAI2-URDF_LIBRARIES}
+    PRIVATE ${SAI-MODEL_LIBRARIES}
+    PRIVATE ${SAI-URDF_LIBRARIES}
 	PRIVATE GTest::GTest
 	PRIVATE GTest::Main
 )
@@ -26,6 +26,6 @@ add_custom_command(
 enable_testing()
 
 # Add a test that runs the test executable
-add_test(NAME Tests_Sai2Model
+add_test(NAME Tests_SaiModel
     COMMAND tests
 )

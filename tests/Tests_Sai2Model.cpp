@@ -1,7 +1,7 @@
-#include <Sai2Model.h>
+#include <SaiModel.h>
 #include <gtest/gtest.h>
 
-namespace Sai2Model {
+namespace SaiModel {
 
 using namespace Eigen;
 
@@ -9,12 +9,12 @@ const std::string rr_urdf = "./urdf/rrbot.urdf";
 const std::string rrp_urdf = "./urdf/rrpbot.urdf";
 const std::string rpspr_urdf = "./urdf/rpsprbot.urdf";
 
-class Sai2ModelTest : public ::testing::Test {
+class SaiModelTest : public ::testing::Test {
 protected:
 	void SetUp() override {
-		model_rrbot = new Sai2Model(rr_urdf);
-		model_rrpbot = new Sai2Model(rrp_urdf);
-		model_rpsprbot = new Sai2Model(rpspr_urdf);
+		model_rrbot = new SaiModel(rr_urdf);
+		model_rrpbot = new SaiModel(rrp_urdf);
+		model_rpsprbot = new SaiModel(rpspr_urdf);
 	}
 
 	void TearDown() override {
@@ -45,9 +45,9 @@ protected:
 					  Vector3d(1.0 / sqrt(3), 1.0 / sqrt(3), 1.0 / sqrt(3)))));
 	}
 
-	Sai2Model* model_rrbot;
-	Sai2Model* model_rrpbot;
-	Sai2Model* model_rpsprbot;
+	SaiModel* model_rrbot;
+	SaiModel* model_rrpbot;
+	SaiModel* model_rpsprbot;
 };
 
 template <typename DerivedA, typename DerivedB>
@@ -81,16 +81,16 @@ bool checkEigenMatricesEqual(const Eigen::MatrixBase<DerivedA>& expected,
 	return equal;
 }
 
-TEST_F(Sai2ModelTest, ConstructDescruct) {}
+TEST_F(SaiModelTest, ConstructDescruct) {}
 
-TEST_F(Sai2ModelTest, DofAndQsize) {
+TEST_F(SaiModelTest, DofAndQsize) {
 	EXPECT_EQ(model_rrpbot->dof(), 3);
 	EXPECT_EQ(model_rrpbot->qSize(), 3);
 	EXPECT_EQ(model_rpsprbot->dof(), 7);
 	EXPECT_EQ(model_rpsprbot->qSize(), 8);
 }
 
-TEST_F(Sai2ModelTest, SetAndGetQ) {
+TEST_F(SaiModelTest, SetAndGetQ) {
 	// invalid q size
 	VectorXd q = VectorXd::Zero(model_rrpbot->qSize() + 1);
 	EXPECT_THROW(model_rrpbot->setQ(q), std::invalid_argument);
@@ -112,7 +112,7 @@ TEST_F(Sai2ModelTest, SetAndGetQ) {
 	EXPECT_EQ(q, model_rpsprbot->q());
 }
 
-TEST_F(Sai2ModelTest, SetAndGetDq) {
+TEST_F(SaiModelTest, SetAndGetDq) {
 	// invalid size
 	VectorXd dq = VectorXd::Zero(model_rrpbot->dof() + 1);
 	EXPECT_THROW(model_rrpbot->setDq(dq), std::invalid_argument);
@@ -124,7 +124,7 @@ TEST_F(Sai2ModelTest, SetAndGetDq) {
 	EXPECT_EQ(dq, model_rrpbot->dq());
 }
 
-TEST_F(Sai2ModelTest, SetAndGetDdq) {
+TEST_F(SaiModelTest, SetAndGetDdq) {
 	// invalid size
 	VectorXd ddq = VectorXd::Zero(model_rrpbot->dof() + 1);
 	EXPECT_THROW(model_rrpbot->setDdq(ddq), std::invalid_argument);
@@ -136,7 +136,7 @@ TEST_F(Sai2ModelTest, SetAndGetDdq) {
 	EXPECT_EQ(ddq, model_rrpbot->ddq());
 }
 
-TEST_F(Sai2ModelTest, SphericalQuat) {
+TEST_F(SaiModelTest, SphericalQuat) {
 	std::string valid_sph_joint = "j2";
 	std::string invalid_sph_joint = "j1";
 	Quaterniond quat(1.0, 0.0, 1.0, 0.0);
@@ -152,7 +152,7 @@ TEST_F(Sai2ModelTest, SphericalQuat) {
 	EXPECT_EQ(quat, model_rpsprbot->sphericalQuat(valid_sph_joint));
 }
 
-TEST_F(Sai2ModelTest, WorldGravity) {
+TEST_F(SaiModelTest, WorldGravity) {
 	Vector3d expected_world_gravity = Vector3d(0, 0, -9.81);
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_world_gravity,
 										model_rrpbot->worldGravity()));
@@ -163,7 +163,7 @@ TEST_F(Sai2ModelTest, WorldGravity) {
 										model_rrpbot->worldGravity()));
 }
 
-TEST_F(Sai2ModelTest, TRobotBase) {
+TEST_F(SaiModelTest, TRobotBase) {
 	Affine3d expected_T_base = Affine3d::Identity();
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_T_base.linear(),
 										model_rrpbot->TRobotBase().linear()));
@@ -182,14 +182,14 @@ TEST_F(Sai2ModelTest, TRobotBase) {
 								model_rrpbot->TRobotBase().translation()));
 }
 
-TEST_F(Sai2ModelTest, IsLinkInRobot) {
+TEST_F(SaiModelTest, IsLinkInRobot) {
 	EXPECT_TRUE(model_rrpbot->isLinkInRobot("link0"));
 	EXPECT_TRUE(model_rrpbot->isLinkInRobot("link1"));
 	EXPECT_TRUE(model_rrpbot->isLinkInRobot("link2"));
 	EXPECT_FALSE(model_rrpbot->isLinkInRobot("link3"));
 }
 
-TEST_F(Sai2ModelTest, SphericalJointsDescriptions) {
+TEST_F(SaiModelTest, SphericalJointsDescriptions) {
 	EXPECT_TRUE(model_rrpbot->sphericalJoints().empty());
 	EXPECT_FALSE(model_rpsprbot->sphericalJoints().empty());
 	EXPECT_EQ(model_rpsprbot->sphericalJoints().size(), 1);
@@ -199,7 +199,7 @@ TEST_F(Sai2ModelTest, SphericalJointsDescriptions) {
 	EXPECT_EQ(model_rpsprbot->sphericalJoints().at(0).w_index, 7);
 }
 
-TEST_F(Sai2ModelTest, JointName) {
+TEST_F(SaiModelTest, JointName) {
 	EXPECT_THROW(model_rrpbot->jointName(model_rrpbot->qSize()),
 				 invalid_argument);
 	std::vector<std::string> expected_joint_names = {"j0", "j1", "j2"};
@@ -212,7 +212,7 @@ TEST_F(Sai2ModelTest, JointName) {
 	EXPECT_EQ(model_rpsprbot->jointName(7), "j2");
 }
 
-TEST_F(Sai2ModelTest, JointNames) {
+TEST_F(SaiModelTest, JointNames) {
 	const auto joint_names = model_rrpbot->jointNames();
 	EXPECT_EQ(joint_names.size(), model_rrpbot->dof());
 	EXPECT_EQ(model_rpsprbot->jointNames().size(), model_rpsprbot->qSize());
@@ -228,7 +228,7 @@ TEST_F(Sai2ModelTest, JointNames) {
 	}
 }
 
-TEST_F(Sai2ModelTest, JointLimits) {
+TEST_F(SaiModelTest, JointLimits) {
 	const auto joint_limits = model_rrpbot->jointLimits();
 	EXPECT_EQ(joint_limits.size(), model_rrpbot->qSize());
 	EXPECT_EQ(model_rpsprbot->jointLimits().size(),
@@ -252,7 +252,7 @@ TEST_F(Sai2ModelTest, JointLimits) {
 	}
 }
 
-TEST_F(Sai2ModelTest, JointIndex) {
+TEST_F(SaiModelTest, JointIndex) {
 	EXPECT_THROW(model_rrpbot->jointIndex("j3"), invalid_argument);
 	for (int i = 0; i < model_rrpbot->qSize(); ++i) {
 		EXPECT_EQ(model_rrpbot->jointIndex(model_rrpbot->jointName(i)), i);
@@ -261,14 +261,14 @@ TEST_F(Sai2ModelTest, JointIndex) {
 	EXPECT_EQ(model_rpsprbot->jointIndex("j2"), 2);
 }
 
-TEST_F(Sai2ModelTest, SphericalJointIndexW) {
+TEST_F(SaiModelTest, SphericalJointIndexW) {
 	EXPECT_THROW(model_rpsprbot->sphericalJointIndexW("non_existing_joint"),
 				 invalid_argument);
 	EXPECT_THROW(model_rpsprbot->sphericalJointIndexW("j0"), invalid_argument);
 	EXPECT_EQ(model_rpsprbot->sphericalJointIndexW("j2"), 7);
 }
 
-TEST_F(Sai2ModelTest, UpdateKinematics) {
+TEST_F(SaiModelTest, UpdateKinematics) {
 	std::string eef_link = "link2";
 	Vector3d pos_in_link = Vector3d::Zero();
 	// check the position of a link and the jacobian and the mass matrix
@@ -315,7 +315,7 @@ TEST_F(Sai2ModelTest, UpdateKinematics) {
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_M_inv, model_rrpbot->MInv()));
 }
 
-TEST_F(Sai2ModelTest, UpdateModel) {
+TEST_F(SaiModelTest, UpdateModel) {
 	std::string eef_link = "link2";
 	Vector3d pos_in_link = Vector3d::Zero();
 	// check the position of a link and the jacobian and the mass matrix
@@ -395,7 +395,7 @@ TEST_F(Sai2ModelTest, UpdateModel) {
 	EXPECT_TRUE(checkEigenMatricesEqual(external_M_inv, model_rrpbot->MInv()));
 }
 
-TEST_F(Sai2ModelTest, InverseKinematicsPosition) {
+TEST_F(SaiModelTest, InverseKinematicsPosition) {
 	Affine3d T_robot_base =
 		Affine3d(Translation3d(Vector3d(0.0, 0.3, 0.2))) *
 		Affine3d(AngleAxisd(M_PI / 3, Vector3d::UnitX()).toRotationMatrix());
@@ -459,7 +459,7 @@ TEST_F(Sai2ModelTest, InverseKinematicsPosition) {
 	EXPECT_DOUBLE_EQ(q_ik(1), model_rrbot->jointLimits().at(1).position_lower);
 }
 
-TEST_F(Sai2ModelTest, InverseKinematicsPosAndOri) {
+TEST_F(SaiModelTest, InverseKinematicsPosAndOri) {
 	MoveModelsBaseFrame();
 	const string eef_link = "link2";
 	const Vector3d pos_in_link = Vector3d(0.0, 0.0, 0.0);
@@ -503,7 +503,7 @@ TEST_F(Sai2ModelTest, InverseKinematicsPosAndOri) {
 	}
 }
 
-TEST_F(Sai2ModelTest, JointGravity) {
+TEST_F(SaiModelTest, JointGravity) {
 	VectorXd joint_gravity = model_rrpbot->jointGravityVector();
 	VectorXd expected_gravity = VectorXd::Zero(model_rrpbot->dof());
 	expected_gravity << 0, 0, 9.81;
@@ -531,7 +531,7 @@ TEST_F(Sai2ModelTest, JointGravity) {
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_gravity, joint_gravity));
 }
 
-TEST_F(Sai2ModelTest, Coriolis) {
+TEST_F(SaiModelTest, Coriolis) {
 	// this is zero when joint velocities are zero
 	VectorXd coriolis = model_rrpbot->coriolisForce();
 	VectorXd expected_coriolis = VectorXd::Zero(model_rrpbot->dof());
@@ -556,7 +556,7 @@ TEST_F(Sai2ModelTest, Coriolis) {
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_coriolis, coriolis));
 }
 
-TEST_F(Sai2ModelTest, CoriolisPlusGravity) {
+TEST_F(SaiModelTest, CoriolisPlusGravity) {
 	VectorXd coriolis = VectorXd::Zero(model_rrpbot->dof());
 	VectorXd gravity = VectorXd::Zero(model_rrpbot->dof());
 	VectorXd coriolis_plus_gravity = VectorXd::Zero(model_rrpbot->dof());
@@ -577,7 +577,7 @@ TEST_F(Sai2ModelTest, CoriolisPlusGravity) {
 }
 
 // TODO: looks like this function does not work as intended
-// TEST_F(Sai2ModelTest, factorizedChristoffelMatrix) {
+// TEST_F(SaiModelTest, factorizedChristoffelMatrix) {
 // 	VectorXd coriolis = VectorXd::Zero(model_rrpbot->dof());
 // 	MatrixXd C = MatrixXd::Zero(model_rrpbot->dof(), model_rrpbot->dof());
 // 	for (int i = 0; i < 10; i++) {
@@ -592,7 +592,7 @@ TEST_F(Sai2ModelTest, CoriolisPlusGravity) {
 // 	}
 // }
 
-TEST_F(Sai2ModelTest, Jv) {
+TEST_F(SaiModelTest, Jv) {
 	const int dof = model_rrpbot->dof();
 	const std::string link_name = "link2";
 	const Vector3d pos_in_link(0.1, 0.2, 0.5);
@@ -629,7 +629,7 @@ TEST_F(Sai2ModelTest, Jv) {
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_J, Jv));
 }
 
-TEST_F(Sai2ModelTest, Jw) {
+TEST_F(SaiModelTest, Jw) {
 	const int dof = model_rpsprbot->dof();
 	const std::string link_name = "link4";
 	const Vector3d pos_in_link(0.1, 0.2, 0.5);
@@ -669,7 +669,7 @@ TEST_F(Sai2ModelTest, Jw) {
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_J, Jw));
 }
 
-TEST_F(Sai2ModelTest, Jacobian) {
+TEST_F(SaiModelTest, Jacobian) {
 	const int dof = model_rpsprbot->dof();
 	const std::string link_name = "link4";
 	const Vector3d pos_in_link(0.1, 0.2, 0.5);
@@ -708,7 +708,7 @@ TEST_F(Sai2ModelTest, Jacobian) {
 	}
 }
 
-TEST_F(Sai2ModelTest, ComputePosition) {
+TEST_F(SaiModelTest, ComputePosition) {
 	const int dof = model_rpsprbot->dof();
 	const std::string link_name = "link4";
 	const Vector3d pos_in_link(0.1, 0.2, 0.5);
@@ -731,7 +731,7 @@ TEST_F(Sai2ModelTest, ComputePosition) {
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_pos, pos));
 }
 
-TEST_F(Sai2ModelTest, ComputeVelocity) {
+TEST_F(SaiModelTest, ComputeVelocity) {
 	const int dof = model_rpsprbot->dof();
 	const std::string link_name = "link4";
 	const Vector3d pos_in_link(0.1, 0.2, 0.5);
@@ -765,7 +765,7 @@ TEST_F(Sai2ModelTest, ComputeVelocity) {
 	EXPECT_TRUE(checkEigenMatricesEqual(vel, Jv * model_rpsprbot->dq()));
 }
 
-TEST_F(Sai2ModelTest, ComputeAcceleration) {
+TEST_F(SaiModelTest, ComputeAcceleration) {
 	const int dof = model_rpsprbot->dof();
 	const std::string link_name = "link4";
 	const Vector3d pos_in_link(0.1, 0.2, 0.5);
@@ -795,7 +795,7 @@ TEST_F(Sai2ModelTest, ComputeAcceleration) {
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_acc, acc));
 }
 
-TEST_F(Sai2ModelTest, ComputeOrientation) {
+TEST_F(SaiModelTest, ComputeOrientation) {
 	const int dof = model_rpsprbot->dof();
 	const std::string link_name = "link4";
 	const Matrix3d rot_in_link =
@@ -823,7 +823,7 @@ TEST_F(Sai2ModelTest, ComputeOrientation) {
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_rot, rot));
 }
 
-TEST_F(Sai2ModelTest, ComputeAngularVelocity) {
+TEST_F(SaiModelTest, ComputeAngularVelocity) {
 	const int dof = model_rpsprbot->dof();
 	const std::string link_name = "link4";
 	MoveModelsBaseFrame();
@@ -856,7 +856,7 @@ TEST_F(Sai2ModelTest, ComputeAngularVelocity) {
 	EXPECT_TRUE(checkEigenMatricesEqual(angvel, Jw * model_rpsprbot->dq()));
 }
 
-TEST_F(Sai2ModelTest, ComputeAngularAcceleration) {
+TEST_F(SaiModelTest, ComputeAngularAcceleration) {
 	const int dof = model_rpsprbot->dof();
 	const std::string link_name = "link4";
 	MoveModelsBaseFrame();
@@ -885,7 +885,7 @@ TEST_F(Sai2ModelTest, ComputeAngularAcceleration) {
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_angacc, angacc));
 }
 
-TEST_F(Sai2ModelTest, ComputeTransform) {
+TEST_F(SaiModelTest, ComputeTransform) {
 	const int dof = model_rpsprbot->dof();
 	const std::string link_name = "link4";
 	const Vector3d pos_in_link(0.1, 0.2, 0.5);
@@ -918,7 +918,7 @@ TEST_F(Sai2ModelTest, ComputeTransform) {
 	}
 }
 
-TEST_F(Sai2ModelTest, Velocity6d) {
+TEST_F(SaiModelTest, Velocity6d) {
 	const int dof = model_rpsprbot->dof();
 	const std::string link_name = "link4";
 	const Vector3d pos_in_link(0.1, 0.2, 0.5);
@@ -950,7 +950,7 @@ TEST_F(Sai2ModelTest, Velocity6d) {
 	}
 }
 
-TEST_F(Sai2ModelTest, Acceleration6d) {
+TEST_F(SaiModelTest, Acceleration6d) {
 	const int dof = model_rpsprbot->dof();
 	const std::string link_name = "link4";
 	const Vector3d pos_in_link(0.1, 0.2, 0.5);
@@ -985,7 +985,7 @@ TEST_F(Sai2ModelTest, Acceleration6d) {
 	}
 }
 
-TEST_F(Sai2ModelTest, LinkMass) {
+TEST_F(SaiModelTest, LinkMass) {
 	LinkMassParams mass_params = model_rrbot->getLinkMassParams("link1");
 	EXPECT_DOUBLE_EQ(1.5, mass_params.mass);
 	EXPECT_TRUE(
@@ -994,7 +994,7 @@ TEST_F(Sai2ModelTest, LinkMass) {
 										mass_params.inertia));
 }
 
-TEST_F(Sai2ModelTest, ComPosition) {
+TEST_F(SaiModelTest, ComPosition) {
 	Vector3d robot_com, expected_com;
 	SetNewQSphericalModel();
 	model_rpsprbot->updateKinematics();
@@ -1003,7 +1003,7 @@ TEST_F(Sai2ModelTest, ComPosition) {
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_com, robot_com));
 }
 
-TEST_F(Sai2ModelTest, ComJacobian) {
+TEST_F(SaiModelTest, ComJacobian) {
 	MatrixXd com_jacobian = MatrixXd::Zero(3, model_rpsprbot->dof());
 	MatrixXd expected_com_jacobian = com_jacobian;
 	SetNewQSphericalModel();
@@ -1015,7 +1015,7 @@ TEST_F(Sai2ModelTest, ComJacobian) {
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_com_jacobian, com_jacobian));
 }
 
-TEST_F(Sai2ModelTest, TaskInertia) {
+TEST_F(SaiModelTest, TaskInertia) {
 	const int dof = model_rpsprbot->dof();
 	const std::string link_name = "link4";
 	const Vector3d pos_in_link(0.1, 0.2, 0.5);
@@ -1038,7 +1038,7 @@ TEST_F(Sai2ModelTest, TaskInertia) {
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_lambda, Lambda));
 }
 
-TEST_F(Sai2ModelTest, TaskInertiaPseudoInv) {
+TEST_F(SaiModelTest, TaskInertiaPseudoInv) {
 	const int dof = model_rrbot->dof();
 	const std::string link_name = "link1";
 	const Vector3d pos_in_link(0.0, 0.0, 0.3);
@@ -1076,7 +1076,7 @@ TEST_F(Sai2ModelTest, TaskInertiaPseudoInv) {
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_Lambda_pseudo_inv, Lambda));
 }
 
-TEST_F(Sai2ModelTest, DynConsistentJacobian) {
+TEST_F(SaiModelTest, DynConsistentJacobian) {
 	const int dof = model_rpsprbot->dof();
 	const std::string link_name = "link4";
 	const Vector3d pos_in_link(0.1, 0.2, 0.5);
@@ -1100,7 +1100,7 @@ TEST_F(Sai2ModelTest, DynConsistentJacobian) {
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_Jbar, Jbar));
 }
 
-TEST_F(Sai2ModelTest, Nullspace) {
+TEST_F(SaiModelTest, Nullspace) {
 	const int dof = model_rpsprbot->dof();
 	const std::string link_name = "link4";
 	const Vector3d pos_in_link(0.1, 0.2, 0.5);
@@ -1122,7 +1122,7 @@ TEST_F(Sai2ModelTest, Nullspace) {
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_N, N));
 }
 
-TEST_F(Sai2ModelTest, OpSpaceMatrices) {
+TEST_F(SaiModelTest, OpSpaceMatrices) {
 	const int dof = model_rpsprbot->dof();
 	const std::string link_name = "link4";
 	const Vector3d pos_in_link(0.1, 0.2, 0.5);
@@ -1150,7 +1150,7 @@ TEST_F(Sai2ModelTest, OpSpaceMatrices) {
 	}
 }
 
-TEST_F(Sai2ModelTest, MatrixRange) {
+TEST_F(SaiModelTest, MatrixRange) {
 	MatrixXd J = model_rrbot->Jv("link1");
 	MatrixXd JRange = matrixRangeBasis(J);
 	MatrixXd expected_Range = MatrixXd::Zero(3, 1);
@@ -1158,7 +1158,7 @@ TEST_F(Sai2ModelTest, MatrixRange) {
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_Range, JRange));
 }
 
-TEST_F(Sai2ModelTest, OrientationError) {
+TEST_F(SaiModelTest, OrientationError) {
 	Vector3d delta_phi = Vector3d::Zero();
 	Vector3d expected_delta_phi = Vector3d::Zero();
 	Matrix3d rotation1 = Matrix3d::Identity();
@@ -1189,14 +1189,14 @@ TEST_F(Sai2ModelTest, OrientationError) {
 	EXPECT_TRUE(checkEigenMatricesEqual(expected_delta_phi, delta_phi));
 }
 
-TEST_F(Sai2ModelTest, CrossProductOperator) {
+TEST_F(SaiModelTest, CrossProductOperator) {
 	Vector3d v = Vector3d::Random();
 	Matrix3d v_cross = Matrix3d::Zero();
 	v_cross << 0, -v(2), v(1), v(2), 0, -v(0), -v(1), v(0), 0;
 	EXPECT_TRUE(checkEigenMatricesEqual(v_cross, crossProductOperator(v)));
 }
 
-TEST_F(Sai2ModelTest, GraspMatrixAtGeometricCenter) {
+TEST_F(SaiModelTest, GraspMatrixAtGeometricCenter) {
 	// 2 point contact case
 	std::vector<Vector3d> contact_locations;
 	contact_locations.push_back(Vector3d(0.1, 0.2, 0.5));
@@ -1444,4 +1444,4 @@ int main(int argc, char** argv) {
 	return RUN_ALL_TESTS();
 }
 
-}  // namespace Sai2Model
+}  // namespace SaiModel
