@@ -1243,7 +1243,7 @@ Vector3d orientationError(const Matrix3d& desired_orientation,
 				  Matrix3d::Identity();
 	Matrix3d Q2 = current_orientation * current_orientation.transpose() -
 				  Matrix3d::Identity();
-	if (Q1.norm() > 0.0001 || Q2.norm() > 0.0001) {
+	if (Q1.norm() > 0.001 || Q2.norm() > 0.001) {
 		cout << "des orientation:\n" << desired_orientation << endl;
 		cout << "cur orientation:\n" << current_orientation << endl;
 		cout << "Q1: " << Q1.norm() << endl;
